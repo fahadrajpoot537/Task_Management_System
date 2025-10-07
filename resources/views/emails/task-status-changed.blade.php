@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Task Assigned - {{ config('app.name') }}</title>
+    <title>Task Status Changed - {{ config('app.name') }}</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -30,7 +30,14 @@
             padding: 15px;
             border-radius: 5px;
             margin: 15px 0;
-            border-left: 4px solid #667eea;
+            border-left: 4px solid #ffc107;
+        }
+        .status-change {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #2196f3;
         }
         .badge {
             display: inline-block;
@@ -46,6 +53,7 @@
         .badge-pending { background: #6c757d; color: white; }
         .badge-in-progress { background: #007bff; color: white; }
         .badge-completed { background: #28a745; color: white; }
+        .badge-submit-for-approval { background: #17a2b8; color: white; }
         .footer {
             text-align: center;
             margin-top: 20px;
@@ -63,9 +71,9 @@
     </div>
     
     <div class="content">
-        <p>Hello {{ $assignedUser->name }},</p>
+        <p>Hello,</p>
         
-        <p>A new task has been assigned to you:</p>
+        <p>The status of a task has been changed:</p>
         
         <div class="task-details">
             <h3>{{ $task->title }}</h3>
@@ -77,6 +85,7 @@
             @if($task->project)
                 <p><strong>Project:</strong> {{ $task->project->title }}</p>
             @endif
+            
             @if($task->priority)
                 <p><strong>Priority:</strong> 
                     @if(is_object($task->priority))
@@ -91,30 +100,44 @@
                 </p>
             @endif
             
-            @if($task->status)
-                <p><strong>Status:</strong> 
-                    <span class="badge badge-{{ $task->status->color ?? 'pending' }}">
-                        {{ $task->status->name }}
-                    </span>
-                </p>
-            @endif
-            
             @if($task->due_date)
                 <p><strong>Due Date:</strong> {{ $task->due_date->format('M d, Y') }}</p>
             @endif
             
-            @if($task->estimated_hours)
-                <p><strong>Estimated Hours:</strong> {{ $task->estimated_hours }} hours</p>
+            @if($task->assignedTo)
+                <p><strong>Assigned To:</strong> {{ $task->assignedTo->name }}</p>
             @endif
             
-            <p><strong>Assigned By:</strong> {{ $task->assignedBy->name }}</p>
+            <p><strong>Updated By:</strong> {{ $task->assignedBy->name }}</p>
+        </div>
+        
+        <div class="status-change">
+            <h4>Status Change</h4>
+            <p><strong>Previous Status:</strong> 
+                @if($oldStatus)
+                    <span class="badge badge-{{ $oldStatus->color ?? 'pending' }}">
+                        {{ $oldStatus->name }}
+                    </span>
+                @else
+                    <span class="badge badge-pending">No Status</span>
+                @endif
+            </p>
+            <p><strong>New Status:</strong> 
+                <span class="badge badge-{{ $newStatus->color ?? 'pending' }}">
+                    {{ $newStatus->name }}
+                </span>
+            </p>
+            
+            @if($newStatus->name === 'Submit for Approval')
+                <p><strong>Action Required:</strong> This task is now pending approval. Please review and take appropriate action.</p>
+            @endif
         </div>
         
         <p>You can view and manage this task by logging into your account.</p>
         
         <div style="text-align: center; margin: 20px 0;">
             <a href="{{ config('app.url') }}/tasks/{{ $task->id }}" 
-               style="background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+               style="background: #ffc107; color: black; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
                 View Task Details
             </a>
         </div>

@@ -6,6 +6,7 @@ use App\Mail\UserInvitation;
 use App\Models\Log;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\PasswordGeneratorService;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\Hash;
@@ -81,8 +82,8 @@ class UserManager extends Component
 
         $this->validate();
 
-        // Generate a temporary password
-        $tempPassword = 'temp' . rand(1000, 9999);
+        // Generate a secure temporary password
+        $tempPassword = PasswordGeneratorService::generateTempPassword();
         
         $newUser = User::create([
             'name' => $this->name,

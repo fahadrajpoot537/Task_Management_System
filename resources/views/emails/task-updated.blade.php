@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Task Assigned - {{ config('app.name') }}</title>
+    <title>Task Updated - {{ config('app.name') }}</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -30,7 +30,14 @@
             padding: 15px;
             border-radius: 5px;
             margin: 15px 0;
-            border-left: 4px solid #667eea;
+            border-left: 4px solid #ffc107;
+        }
+        .change-notice {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #ffc107;
         }
         .badge {
             display: inline-block;
@@ -46,6 +53,7 @@
         .badge-pending { background: #6c757d; color: white; }
         .badge-in-progress { background: #007bff; color: white; }
         .badge-completed { background: #28a745; color: white; }
+        .badge-submit-for-approval { background: #17a2b8; color: white; }
         .footer {
             text-align: center;
             margin-top: 20px;
@@ -63,9 +71,16 @@
     </div>
     
     <div class="content">
-        <p>Hello {{ $assignedUser->name }},</p>
+        <p>Hello,</p>
         
-        <p>A new task has been assigned to you:</p>
+        <p>A task has been updated:</p>
+        
+        <div class="change-notice">
+            <h4>Update Notice</h4>
+            <p><strong>Change Type:</strong> {{ $changeType }}</p>
+            <p><strong>Updated By:</strong> {{ $assignedBy->name }}</p>
+            <p><strong>Date:</strong> {{ now()->format('M d, Y \a\t g:i A') }}</p>
+        </div>
         
         <div class="task-details">
             <h3>{{ $task->title }}</h3>
@@ -77,6 +92,7 @@
             @if($task->project)
                 <p><strong>Project:</strong> {{ $task->project->title }}</p>
             @endif
+            
             @if($task->priority)
                 <p><strong>Priority:</strong> 
                     @if(is_object($task->priority))
@@ -107,15 +123,17 @@
                 <p><strong>Estimated Hours:</strong> {{ $task->estimated_hours }} hours</p>
             @endif
             
-            <p><strong>Assigned By:</strong> {{ $task->assignedBy->name }}</p>
+            @if($task->assignedTo)
+                <p><strong>Assigned To:</strong> {{ $task->assignedTo->name }}</p>
+            @endif
         </div>
         
-        <p>You can view and manage this task by logging into your account.</p>
+        <p>You can view the updated task by logging into your account.</p>
         
         <div style="text-align: center; margin: 20px 0;">
             <a href="{{ config('app.url') }}/tasks/{{ $task->id }}" 
-               style="background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
-                View Task Details
+               style="background: #ffc107; color: black; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                View Updated Task
             </a>
         </div>
     </div>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Task Assigned - {{ config('app.name') }}</title>
+    <title>Task Created - {{ config('app.name') }}</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -30,7 +30,7 @@
             padding: 15px;
             border-radius: 5px;
             margin: 15px 0;
-            border-left: 4px solid #667eea;
+            border-left: 4px solid #28a745;
         }
         .badge {
             display: inline-block;
@@ -63,9 +63,9 @@
     </div>
     
     <div class="content">
-        <p>Hello {{ $assignedUser->name }},</p>
+        <p>Hello,</p>
         
-        <p>A new task has been assigned to you:</p>
+        <p>A new task has been created:</p>
         
         <div class="task-details">
             <h3>{{ $task->title }}</h3>
@@ -77,6 +77,7 @@
             @if($task->project)
                 <p><strong>Project:</strong> {{ $task->project->title }}</p>
             @endif
+            
             @if($task->priority)
                 <p><strong>Priority:</strong> 
                     @if(is_object($task->priority))
@@ -107,14 +108,18 @@
                 <p><strong>Estimated Hours:</strong> {{ $task->estimated_hours }} hours</p>
             @endif
             
-            <p><strong>Assigned By:</strong> {{ $task->assignedBy->name }}</p>
+            @if($task->assignedTo)
+                <p><strong>Assigned To:</strong> {{ $task->assignedTo->name }}</p>
+            @endif
+            
+            <p><strong>Created By:</strong> {{ $task->assignedBy->name }}</p>
         </div>
         
         <p>You can view and manage this task by logging into your account.</p>
         
         <div style="text-align: center; margin: 20px 0;">
             <a href="{{ config('app.url') }}/tasks/{{ $task->id }}" 
-               style="background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+               style="background: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
                 View Task Details
             </a>
         </div>
