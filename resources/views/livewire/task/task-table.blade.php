@@ -184,6 +184,7 @@
                         <th width="10%">Status</th>
                         <th class="d-none d-md-table-cell" width="8%">Due Date</th>
                         <th class="d-none d-xl-table-cell" width="6%">Hours</th>
+                        <th class="d-none d-lg-table-cell" width="8%">Nature</th>
                         <th class="d-none d-lg-table-cell" width="12%">Notes</th>
                         <th width="8%">Actions</th>
                     </tr>
@@ -266,6 +267,13 @@
                             <td class="d-none d-xl-table-cell">
                                 <input type="number" class="form-control form-control-sm" wire:model="newTaskEstimatedHours" 
                                        placeholder="Hours" min="0" step="0.5">
+                            </td>
+                            <td class="d-none d-lg-table-cell">
+                                <select class="form-select form-select-sm" wire:model="newTaskNature">
+                                    <option value="daily">Daily</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="monthly">Monthly</option>
+                                </select>
                             </td>
                             <td class="d-none d-lg-table-cell">
                                 <button class="btn btn-sm btn-outline-secondary" 
@@ -589,6 +597,9 @@
                                             <span class="text-muted">-</span>
                                         @endif
                                     </div>
+                                </td>
+                                <td class="d-none d-lg-table-cell">
+                                    <span class="badge bg-info">{{ $task->nature_of_task_display }}</span>
                                 </td>
                                 <td class="d-none d-lg-table-cell">
                                     <div class="notes-container">
