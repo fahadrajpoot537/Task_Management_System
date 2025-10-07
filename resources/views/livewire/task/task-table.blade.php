@@ -235,11 +235,11 @@
                                     @endforeach
                                 </select>
                                 @if($this->canManagePriorities())
-                                    <small class="text-muted">
-                                        <a href="#" wire:click="toggleCustomPriorityForm" class="text-decoration-none">
-                                            <i class="bi bi-plus-circle"></i> Add Custom Priority
-                                        </a>
-                                    </small>
+                                <small class="text-muted">
+                                    <a href="#" wire:click="toggleCustomPriorityForm" class="text-decoration-none">
+                                        <i class="bi bi-plus-circle"></i> Add Custom Priority
+                                    </a>
+                                </small>
                                 @endif
                             </td>
                             <td class="d-none d-lg-table-cell">
@@ -250,11 +250,11 @@
                                     @endforeach
                                 </select>
                                 @if($this->canManageCategories())
-                                    <small class="text-muted">
-                                        <a href="#" wire:click="toggleCustomCategoryForm" class="text-decoration-none">
-                                            <i class="bi bi-plus-circle"></i> Add Custom Category
-                                        </a>
-                                    </small>
+                                <small class="text-muted">
+                                    <a href="#" wire:click="toggleCustomCategoryForm" class="text-decoration-none">
+                                        <i class="bi bi-plus-circle"></i> Add Custom Category
+                                    </a>
+                                </small>
                                 @endif
                             </td>
                             <td>
@@ -372,7 +372,7 @@
                                                     <span class="badge bg-{{ $task->priority->color ?? 'secondary' }} badge-sm">
                                                         {{ $task->priority->name }}
                                                     </span>
-                                                @else
+                                            @else
                                                     <span class="badge bg-secondary badge-sm">
                                                         {{ ucfirst($task->priority) }}
                                                     </span>
@@ -406,7 +406,7 @@
                                                             {{ $task->category->name }}
                                                         </span>
                                                     @endif
-                                                @endif
+                                            @endif
                                             </div>
                                         </div>
                                     </div>
@@ -470,12 +470,12 @@
                                                 </li>
                                             @endforeach
                                             @if($this->canManagePriorities())
-                                                <li><hr class="dropdown-divider"></li>
-                                                <li>
-                                                    <a class="dropdown-item" href="#" wire:click="toggleCustomPriorityForm">
-                                                        <i class="bi bi-plus-circle me-2"></i>Add Custom Priority
-                                                    </a>
-                                                </li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <a class="dropdown-item" href="#" wire:click="toggleCustomPriorityForm">
+                                                    <i class="bi bi-plus-circle me-2"></i>Add Custom Priority
+                                                </a>
+                                            </li>
                                             @endif
                                         </ul>
                                     </div>
@@ -516,12 +516,12 @@
                                                 </li>
                                             @endforeach
                                             @if($this->canManageCategories())
-                                                <li><hr class="dropdown-divider"></li>
-                                                <li>
-                                                    <a class="dropdown-item" href="#" wire:click="toggleCustomCategoryForm">
-                                                        <i class="bi bi-plus-circle me-2"></i>Add Custom Category
-                                                    </a>
-                                                </li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <a class="dropdown-item" href="#" wire:click="toggleCustomCategoryForm">
+                                                    <i class="bi bi-plus-circle me-2"></i>Add Custom Category
+                                                </a>
+                                            </li>
                                             @endif
                                         </ul>
                                     </div>
@@ -551,12 +551,12 @@
                                                 @endif
                                             @endforeach
                                             @if($this->canManageStatuses())
-                                                <li><hr class="dropdown-divider"></li>
-                                                <li>
-                                                    <a class="dropdown-item" href="#" wire:click="toggleCustomStatusForm">
-                                                        <i class="bi bi-plus-circle me-2"></i>Add Custom Status
-                                                    </a>
-                                                </li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <a class="dropdown-item" href="#" wire:click="toggleCustomStatusForm">
+                                                    <i class="bi bi-plus-circle me-2"></i>Add Custom Status
+                                                </a>
+                                            </li>
                                             @endif
                                         </ul>
                                     </div>
@@ -603,7 +603,7 @@
                                                         wire:click="openNotesModal({{ $task->id }}, 'commit')" 
                                                         title="Commit Notes">
                                                     <i class="bi bi-git"></i>
-                                                </button>
+                                            </button>
                                             @endif
                                             @if($task->noteComments->count() > 0)
                                                 <div class="mt-1">
@@ -614,11 +614,11 @@
                                             @endif
                                         @else
                                             @if(auth()->user()->isSuperAdmin() || auth()->user()->isAdmin() || $task->assigned_by_user_id === auth()->id())
-                                                <button class="btn btn-sm btn-outline-secondary" 
+                                            <button class="btn btn-sm btn-outline-secondary" 
                                                         wire:click="openNotesModal({{ $task->id }}, 'commit')" 
-                                                        title="Add Notes">
-                                                    <i class="bi bi-plus-circle me-1"></i>Add Notes
-                                                </button>
+                                                    title="Add Notes">
+                                                <i class="bi bi-plus-circle me-1"></i>Add Notes
+                                            </button>
                                             @else
                                                 <span class="text-muted">No notes</span>
                                             @endif
@@ -1034,7 +1034,7 @@
                         @if($this->canEditNotes())
                             <button type="button" class="btn btn-success" wire:click="openNotesModal({{ $notesModalTaskId }}, 'commit')">
                                 <i class="bi bi-git me-1"></i>Commit Notes
-                            </button>
+                        </button>
                         @endif
                     @endif
                 </div>
