@@ -28,6 +28,10 @@ class Task extends Model
         'actual_hours',
         'due_date',
         'assigned_to_user_id',
+        'nature_of_task',
+        'is_recurring',
+        'parent_task_id',
+        'next_recurrence_date',
         'assigned_by_user_id',
         'notes',
         'started_at',
@@ -228,6 +232,43 @@ class Task extends Model
             'early' => "Early by {$delayInfo['early_days']} days",
             'on_time' => 'On Time',
             default => 'No Due Date'
+        };
+    }
+
+    /**
+     * Get the parent task for recurring tasks.
+     */
+    public function parentTask(): BelongsTo
+    {
+        return $this->belongsTo(Task::class, 'parent_task_id');
+    }
+
+    /**
+     * Get the child tasks for recurring tasks.
+     */
+    public function childTasks(): HasMany
+    {
+        return $this->hasMany(Task::class, 'parent_task_id');
+    }
+
+    /**
+     * Check if task is recurring.
+     */
+    public function isRecurring(): bool
+    {
+        return $this->is_recurring;
+    }
+
+    /**
+     * Get nature of task display name.
+     */
+    public function getNatureOfTaskDisplayAttribute(): string
+    {
+        return match($this->nature_of_task) {
+            'daily' => 'Daily',
+            'weekly' => 'Weekly',
+            'monthly' => 'Monthly',
+            default => 'Daily'
         };
     }
 }
