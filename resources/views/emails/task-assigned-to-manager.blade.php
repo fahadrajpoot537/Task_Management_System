@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Task Assigned - {{ config('app.name') }}</title>
+    <title>Employee Task Assignment - {{ config('app.name') }}</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -14,7 +14,7 @@
             padding: 20px;
         }
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #007bff 0%, #6610f2 100%);
             color: white;
             padding: 20px;
             text-align: center;
@@ -30,7 +30,14 @@
             padding: 15px;
             border-radius: 5px;
             margin: 15px 0;
-            border-left: 4px solid #667eea;
+            border-left: 4px solid #007bff;
+        }
+        .employee-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #2196f3;
         }
         .badge {
             display: inline-block;
@@ -59,16 +66,23 @@
 <body>
     <div class="header">
         <h1>{{ config('app.name') }}</h1>
-        <h2>{{ $subject }}</h2>
+        <h2>👥 Your Employee Has Been Assigned a Task</h2>
     </div>
     
     <div class="content">
-        <p>Hello {{ $assignedUser->name }},</p>
+        <p>Hello Manager,</p>
         
-        <p>A new task has been assigned to you:</p>
+        <p>One of your team members has been assigned a new task. Here are the details:</p>
+        
+        <div class="employee-info">
+            <h4>👤 Employee Information</h4>
+            <p><strong>Employee Name:</strong> {{ $assignedUser->name }}</p>
+            <p><strong>Employee Email:</strong> {{ $assignedUser->email }}</p>
+        </div>
         
         <div class="task-details">
-            <h3>{{ $task->title }}</h3>
+            <h3>📋 Task Details</h3>
+            <h4>{{ $task->title }}</h4>
             
             @if($task->description)
                 <p><strong>Description:</strong><br>{{ $task->description }}</p>
@@ -77,6 +91,7 @@
             @if($task->project)
                 <p><strong>Project:</strong> {{ $task->project->title }}</p>
             @endif
+            
             @if($task->priority)
                 <p><strong>Priority:</strong> 
                     @if(is_object($task->priority))
@@ -110,11 +125,11 @@
             <p><strong>Assigned By:</strong> {{ $task->assignedBy->name }}</p>
         </div>
         
-        <p>You can view and manage this task by logging into your account.</p>
+        <p><strong>Manager Action:</strong> You may want to follow up with your employee to ensure they understand the task requirements and have the necessary resources.</p>
         
         <div style="text-align: center; margin: 20px 0;">
             <a href="{{ config('app.url') }}/tasks/{{ $task->id }}" 
-               style="background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+               style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
                 View Task Details
             </a>
         </div>
@@ -122,7 +137,7 @@
     
     <div class="footer">
         <p>This is an automated message from {{ config('app.name') }}.</p>
-        <p>If you have any questions, please contact your manager or administrator.</p>
+        <p>As a manager, you can monitor your team's task progress through the dashboard.</p>
     </div>
 </body>
 </html>

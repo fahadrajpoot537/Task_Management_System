@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Task Assigned - {{ config('app.name') }}</title>
+    <title>New Comment Added - {{ config('app.name') }}</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -30,7 +30,14 @@
             padding: 15px;
             border-radius: 5px;
             margin: 15px 0;
-            border-left: 4px solid #667eea;
+            border-left: 4px solid #17a2b8;
+        }
+        .comment-section {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border-left: 4px solid #2196f3;
         }
         .badge {
             display: inline-block;
@@ -46,6 +53,7 @@
         .badge-pending { background: #6c757d; color: white; }
         .badge-in-progress { background: #007bff; color: white; }
         .badge-completed { background: #28a745; color: white; }
+        .badge-submit-for-approval { background: #17a2b8; color: white; }
         .footer {
             text-align: center;
             margin-top: 20px;
@@ -53,6 +61,13 @@
             border-top: 1px solid #dee2e6;
             color: #6c757d;
             font-size: 14px;
+        }
+        .comment-text {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border: 1px solid #dee2e6;
         }
     </style>
 </head>
@@ -63,9 +78,9 @@
     </div>
     
     <div class="content">
-        <p>Hello {{ $assignedUser->name }},</p>
+        <p>Hello,</p>
         
-        <p>A new task has been assigned to you:</p>
+        <p>A new comment has been added to a task:</p>
         
         <div class="task-details">
             <h3>{{ $task->title }}</h3>
@@ -77,6 +92,7 @@
             @if($task->project)
                 <p><strong>Project:</strong> {{ $task->project->title }}</p>
             @endif
+            
             @if($task->priority)
                 <p><strong>Priority:</strong> 
                     @if(is_object($task->priority))
@@ -103,18 +119,26 @@
                 <p><strong>Due Date:</strong> {{ $task->due_date->format('M d, Y') }}</p>
             @endif
             
-            @if($task->estimated_hours)
-                <p><strong>Estimated Hours:</strong> {{ $task->estimated_hours }} hours</p>
+            @if($task->assignedTo)
+                <p><strong>Assigned To:</strong> {{ $task->assignedTo->name }}</p>
             @endif
-            
-            <p><strong>Assigned By:</strong> {{ $task->assignedBy->name }}</p>
         </div>
         
-        <p>You can view and manage this task by logging into your account.</p>
+        <div class="comment-section">
+            <h4>New Comment</h4>
+            <p><strong>Comment by:</strong> {{ $commenter ? $commenter->name : 'Unknown User' }}</p>
+            <p><strong>Date:</strong> {{ $comment->created_at ? $comment->created_at->format('M d, Y \a\t g:i A') : now()->format('M d, Y \a\t g:i A') }}</p>
+            
+            <div class="comment-text">
+                {{ $comment->comment }}
+            </div>
+        </div>
+        
+        <p>You can view the task and all comments by logging into your account.</p>
         
         <div style="text-align: center; margin: 20px 0;">
             <a href="{{ config('app.url') }}/tasks/{{ $task->id }}" 
-               style="background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+               style="background: #17a2b8; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
                 View Task Details
             </a>
         </div>
