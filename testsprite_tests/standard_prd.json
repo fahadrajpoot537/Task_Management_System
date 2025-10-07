@@ -1,0 +1,447 @@
+{
+  "meta": {
+    "project": "Task Management System",
+    "date": "2025-10-04",
+    "prepared_by": "Software Development Manager"
+  },
+  "product_overview": "The Task Management System is a comprehensive Laravel 10 and Livewire 3 based web application designed to facilitate efficient project and task management in organizational settings. It incorporates dynamic task handling with status, priority, and category management, role-based access control, real-time updates, email notifications, and responsive design for seamless user experience across devices.",
+  "core_goals": [
+    "Provide a secure authentication system with role-based access control defining Super Admin, Admin, Manager, and Employee roles.",
+    "Enable efficient project creation and management to organize work into defined projects with timelines.",
+    "Offer a robust task management system allowing creation, assignment, status tracking, priority and category classification, with support for notes and file attachments.",
+    "Implement dynamic inline management of task statuses, priorities, and categories to allow customization without leaving the task interface.",
+    "Deliver real-time updates and dashboard analytics to keep users informed of project and task statuses and progress.",
+    "Ensure responsive design with light/dark themes and mobile-friendly UI for use across multiple device types.",
+    "Support activity logging and email notifications to maintain audit trails and improve team communication."
+  ],
+  "key_features": [
+    "Role-Based Authentication and Authorization: Secure login, registration, and hierarchical permissions ensuring users access only authorized features.",
+    "Project Management: Creation and management of projects with defined start and end dates.",
+    "Task Management System: Create, assign, prioritize, categorize, track status, add notes and attachments to tasks.",
+    "Dynamic Dropdown Management: Inline addition and management of task statuses, priorities, and categories without page reloads.",
+    "Email Notifications: Automated email alerts for task assignments and important system notifications.",
+    "Team Management: Assign employees to managers and control task assignments within teams.",
+    "Dashboard Analytics: Real-time statistics and visual analytics for projects and task progress.",
+    "Activity Logging: Comprehensive tracking of user actions including task and project modifications.",
+    "Responsive and Themed UI: Bootstrap 5 based design with light/dark mode toggle and mobile-friendly layout."
+  ],
+  "user_flow_summary": [
+    "Users register or login based on role credentials with secure password validation and session management.",
+    "Super Admin manages users, roles, and permissions; views and controls all projects and tasks; accesses team and permission management modules.",
+    "Admins create and manage projects and tasks; view all users but cannot modify roles or permissions.",
+    "Managers view and manage projects and tasks assigned to their team; assign tasks to employees under their supervision.",
+    "Employees create projects and tasks; view assigned tasks; update task statuses and add notes or attachments as work progresses.",
+    "Users dynamically add new task statuses, priorities, and categories inline during task creation or editing.",
+    "System sends email notifications automatically upon task assignments and relevant updates.",
+    "All user actions related to tasks, projects, and authentication are logged for auditing.",
+    "Users access a dashboard that displays real-time analytics and project/task statuses with interactive elements."
+  ],
+  "validation_criteria": [
+    "Users can only access features permitted by their role; unauthorized actions are blocked.",
+    "Tasks can be created with all required fields: title, description, project assignment, assignee, priority, category, status, due date, estimated hours, and notes.",
+    "Inline adds for task statuses, priorities, and categories update dropdowns immediately without page reload.",
+    "Email notifications are sent reliably upon task assignment and properly rendered from templates.",
+    "Dashboard statistics accurately reflect the current state of projects and tasks.",
+    "Activity logs capture all critical user actions with timestamps.",
+    "Responsive UI adjusts seamlessly across desktop and mobile devices and toggles correctly between light and dark themes.",
+    "Authentication system securely handles password encryption, input validations, and session management.",
+    "Database migrations and seeders run successfully to prepare and populate the system.",
+    "File attachments can be uploaded, linked to tasks, and accessed safely."
+  ],
+  "code_summary": {
+    "tech_stack": [
+      "PHP",
+      "Laravel",
+      "Livewire",
+      "MySQL",
+      "Bootstrap 5",
+      "JavaScript"
+    ],
+    "features": [
+      {
+        "name": "Task Management System",
+        "description": "Complete task management system with dynamic status, priority, and category management",
+        "files": [
+          "app/Livewire/Task/TaskTable.php",
+          "resources/views/livewire/task/task-table.blade.php",
+          "app/Livewire/Task/TaskCreate.php",
+          "resources/views/livewire/task/task-create.blade.php",
+          "app/Models/Task.php",
+          "app/Models/TaskStatus.php",
+          "app/Models/TaskPriority.php",
+          "app/Models/TaskCategory.php"
+        ],
+        "api_doc": {
+          "openapi": "3.0.0",
+          "info": {
+            "title": "Task Management API",
+            "version": "1.0.0",
+            "description": "API for managing tasks with dynamic status, priority, and category"
+          },
+          "paths": {
+            "/tasks": {
+              "get": {
+                "summary": "Get all tasks",
+                "responses": {
+                  "200": {
+                    "description": "List of tasks"
+                  }
+                }
+              },
+              "post": {
+                "summary": "Create new task",
+                "requestBody": {
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "title": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "project_id": {
+                            "type": "integer"
+                          },
+                          "assigned_to_user_id": {
+                            "type": "integer"
+                          },
+                          "priority_id": {
+                            "type": "integer"
+                          },
+                          "category_id": {
+                            "type": "integer"
+                          },
+                          "status_id": {
+                            "type": "integer"
+                          },
+                          "due_date": {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          "estimated_hours": {
+                            "type": "number"
+                          },
+                          "notes": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "/task-statuses": {
+              "get": {
+                "summary": "Get all task statuses",
+                "responses": {
+                  "200": {
+                    "description": "List of task statuses"
+                  }
+                }
+              },
+              "post": {
+                "summary": "Create new task status",
+                "requestBody": {
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "color": {
+                            "type": "string"
+                          },
+                          "is_default": {
+                            "type": "boolean"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "/task-priorities": {
+              "get": {
+                "summary": "Get all task priorities",
+                "responses": {
+                  "200": {
+                    "description": "List of task priorities"
+                  }
+                }
+              },
+              "post": {
+                "summary": "Create new task priority",
+                "requestBody": {
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "color": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "/task-categories": {
+              "get": {
+                "summary": "Get all task categories",
+                "responses": {
+                  "200": {
+                    "description": "List of task categories"
+                  }
+                }
+              },
+              "post": {
+                "summary": "Create new task category",
+                "requestBody": {
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "icon": {
+                            "type": "string"
+                          },
+                          "color": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "Dynamic Dropdown Management",
+        "description": "Inline add functionality for status, priority, and category dropdowns",
+        "files": [
+          "app/Livewire/Task/TaskTable.php",
+          "resources/views/livewire/task/task-table.blade.php",
+          "app/Livewire/Admin/TaskStatusManager.php",
+          "app/Livewire/Admin/TaskPriorityManager.php",
+          "app/Livewire/Admin/TaskCategoryManager.php"
+        ],
+        "api_doc": {
+          "openapi": "3.0.0",
+          "info": {
+            "title": "Dynamic Dropdown API",
+            "version": "1.0.0",
+            "description": "API for managing dynamic dropdowns with inline add functionality"
+          },
+          "paths": {
+            "/admin/task-statuses": {
+              "get": {
+                "summary": "Manage task statuses",
+                "responses": {
+                  "200": {
+                    "description": "Task status management page"
+                  }
+                }
+              }
+            },
+            "/admin/task-priorities": {
+              "get": {
+                "summary": "Manage task priorities",
+                "responses": {
+                  "200": {
+                    "description": "Task priority management page"
+                  }
+                }
+              }
+            },
+            "/admin/task-categories": {
+              "get": {
+                "summary": "Manage task categories",
+                "responses": {
+                  "200": {
+                    "description": "Task category management page"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "User Authentication & Authorization",
+        "description": "Role-based access control system",
+        "files": [
+          "app/Models/User.php",
+          "app/Models/Role.php",
+          "app/Models/Permission.php",
+          "app/Livewire/Auth/Login.php",
+          "app/Livewire/Auth/Register.php"
+        ],
+        "api_doc": {
+          "openapi": "3.0.0",
+          "info": {
+            "title": "Authentication API",
+            "version": "1.0.0",
+            "description": "API for user authentication and authorization"
+          },
+          "paths": {
+            "/login": {
+              "post": {
+                "summary": "User login",
+                "requestBody": {
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "email": {
+                            "type": "string",
+                            "format": "email"
+                          },
+                          "password": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "/register": {
+              "post": {
+                "summary": "User registration",
+                "requestBody": {
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "email": {
+                            "type": "string",
+                            "format": "email"
+                          },
+                          "password": {
+                            "type": "string"
+                          },
+                          "password_confirmation": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "Project Management",
+        "description": "Project creation and management system",
+        "files": [
+          "app/Models/Project.php",
+          "app/Livewire/Project/ProjectDetails.php",
+          "resources/views/livewire/project/project-details.blade.php"
+        ],
+        "api_doc": {
+          "openapi": "3.0.0",
+          "info": {
+            "title": "Project Management API",
+            "version": "1.0.0",
+            "description": "API for managing projects"
+          },
+          "paths": {
+            "/projects": {
+              "get": {
+                "summary": "Get all projects",
+                "responses": {
+                  "200": {
+                    "description": "List of projects"
+                  }
+                }
+              },
+              "post": {
+                "summary": "Create new project",
+                "requestBody": {
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "title": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "start_date": {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          "end_date": {
+                            "type": "string",
+                            "format": "date"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "Dashboard Analytics",
+        "description": "Dashboard with statistics and analytics",
+        "files": [
+          "app/Livewire/Dashboard/Dashboard.php",
+          "resources/views/livewire/dashboard/dashboard.blade.php"
+        ],
+        "api_doc": {
+          "openapi": "3.0.0",
+          "info": {
+            "title": "Dashboard API",
+            "version": "1.0.0",
+            "description": "API for dashboard statistics and analytics"
+          },
+          "paths": {
+            "/dashboard": {
+              "get": {
+                "summary": "Get dashboard statistics",
+                "responses": {
+                  "200": {
+                    "description": "Dashboard statistics"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}
