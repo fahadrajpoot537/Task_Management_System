@@ -11,6 +11,7 @@ use App\Models\TaskCategory;
 use App\Models\TaskNoteComment;
 use App\Models\User;
 use App\Services\EmailNotificationService;
+use App\Services\RecurringTaskService;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -52,6 +53,7 @@ class TaskTable extends Component
     public $newTaskDueDate = '';
     public $newTaskEstimatedHours = '';
     public $newTaskNotes = '';
+    public $newTaskNature = 'daily';
     
     // Modal properties
     public $showNotesModal = false;
@@ -158,6 +160,7 @@ class TaskTable extends Component
             'newTaskDueDate' => 'nullable|date',
             'newTaskEstimatedHours' => 'nullable|numeric|min:0',
             'newTaskNotes' => 'nullable|string',
+            'newTaskNature' => 'required|in:daily,weekly,monthly',
         ]);
 
         // Get default status
@@ -174,6 +177,8 @@ class TaskTable extends Component
             'due_date' => $this->newTaskDueDate,
             'estimated_hours' => $this->newTaskEstimatedHours,
             'notes' => $this->newTaskNotes,
+            'nature_of_task' => $this->newTaskNature,
+            'is_recurring' => $this->newTaskNature !== 'daily', // Only daily tasks are not recurring by default
             'assigned_by_user_id' => auth()->id(),
         ]);
 
@@ -304,6 +309,12 @@ class TaskTable extends Component
         }
         
         $this->emailService->sendTaskStatusChangedNotification($task, $oldStatus, $newStatus);
+
+        // Process recurring task if status is "Submit for Approval"
+        if ($newStatus->name === 'Submit for Approval') {
+            $recurringService = new RecurringTaskService();
+            $recurringService->processRecurringTask($task);
+        }
 
         session()->flash('success', 'Task status updated successfully!');
     }
