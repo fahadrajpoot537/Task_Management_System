@@ -10,13 +10,37 @@ use App\Models\User;
 use App\Models\TaskStatus;
 use App\Models\TaskPriority;
 use App\Models\TaskCategory;
+use App\Services\EmailNotificationService;
 use Livewire\Component;
 use Livewire\WithFileUploads;
-use Illuminate\Support\Facades\Mail;
 
 class TaskCreate extends Component
 {
     use WithFileUploads;
+
+    protected $emailService;
+
+    public function mount()
+    {
+        $this->emailService = new EmailNotificationService();
+        $this->emailService->configureMailSettings();
+        
+        $user = auth()->user();
+        
+        // Set default assigned user based on role
+        if ($user->isEmployee()) {
+            $this->assigned_to_user_id = $user->id;
+        }
+    }
+
+    public function boot()
+    {
+        // Ensure email service is initialized even if mount() wasn't called
+        if (!$this->emailService) {
+            $this->emailService = new EmailNotificationService();
+            $this->emailService->configureMailSettings();
+        }
+    }
 
     public $project_id = '';
     public $title = '';
@@ -57,16 +81,6 @@ class TaskCreate extends Component
         'attachments.*' => 'nullable|file|max:10240', // 10MB max
     ];
 
-    public function mount()
-    {
-        $user = auth()->user();
-        
-        // Set default assigned user based on role
-        if ($user->isEmployee()) {
-            $this->assigned_to_user_id = $user->id;
-        }
-    }
-
     public function createTask()
     {
         $this->validate();
@@ -101,17 +115,15 @@ class TaskCreate extends Component
         // Log the creation
         Log::createLog(auth()->id(), 'create_task', "Created task: {$task->title}");
 
-        // Send email notification to assigned user
-        $assignedUser = User::find($this->assigned_to_user_id);
-        Mail::to($assignedUser->email)->send(new TaskAssigned($task));
-
-        // Send email notification to super admin
-        $superAdmin = User::whereHas('role', function($query) {
-            $query->where('name', 'super_admin');
-        })->first();
+        // Send email notifications
+        if (!$this->emailService) {
+            $this->emailService = new EmailNotificationService();
+            $this->emailService->configureMailSettings();
+        }
         
-        if ($superAdmin && $superAdmin->id !== auth()->id()) {
-            Mail::to($superAdmin->email)->send(new TaskAssigned($task, 'New task created'));
+        $this->emailService->sendTaskCreatedNotification($task);
+        if ($task->assignedTo) {
+            $this->emailService->sendTaskAssignedNotification($task);
         }
 
         session()->flash('success', 'Task created successfully.');
