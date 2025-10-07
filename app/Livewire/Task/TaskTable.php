@@ -10,12 +10,30 @@ use App\Models\TaskPriority;
 use App\Models\TaskCategory;
 use App\Models\TaskNoteComment;
 use App\Models\User;
+use App\Services\EmailNotificationService;
 use Livewire\Component;
 use Livewire\WithPagination;
 
 class TaskTable extends Component
 {
     use WithPagination;
+
+    protected $emailService;
+
+    public function mount()
+    {
+        $this->emailService = new EmailNotificationService();
+        $this->emailService->configureMailSettings();
+    }
+
+    public function boot()
+    {
+        // Ensure email service is initialized even if mount() wasn't called
+        if (!$this->emailService) {
+            $this->emailService = new EmailNotificationService();
+            $this->emailService->configureMailSettings();
+        }
+    }
 
     public $search = '';
     public $projectFilter = '';
@@ -162,6 +180,17 @@ class TaskTable extends Component
         // Log the creation
         Log::createLog(auth()->id(), 'create_task', "Created task: {$task->title}");
 
+        // Send email notifications
+        if (!$this->emailService) {
+            $this->emailService = new EmailNotificationService();
+            $this->emailService->configureMailSettings();
+        }
+        
+        $this->emailService->sendTaskCreatedNotification($task);
+        if ($task->assignedTo) {
+            $this->emailService->sendTaskAssignedNotification($task);
+        }
+
         session()->flash('success', 'Task created successfully!');
         $this->resetNewTaskFields();
     }
@@ -195,6 +224,14 @@ class TaskTable extends Component
 
         // Log the update
         Log::createLog(auth()->id(), 'update_task', "Updated task: {$task->title}");
+
+        // Send email notification for task update
+        if (!$this->emailService) {
+            $this->emailService = new EmailNotificationService();
+            $this->emailService->configureMailSettings();
+        }
+        
+        $this->emailService->sendTaskUpdatedNotification($task, 'Task Details Updated');
 
         session()->flash('success', 'Task updated successfully!');
         $this->cancelEditing();
@@ -251,14 +288,22 @@ class TaskTable extends Component
             }
         }
 
-        $oldStatus = $task->status ? $task->status->name : 'No Status';
+        $oldStatus = $task->status;
         $task->update(['status_id' => $statusId]);
         $task->load('status');
         
-        $newStatus = $task->status->name;
+        $newStatus = $task->status;
 
         // Log the status change
-        Log::createLog(auth()->id(), 'update_task_status', "Changed task '{$task->title}' status from {$oldStatus} to {$newStatus}");
+        Log::createLog(auth()->id(), 'update_task_status', "Changed task '{$task->title}' status from " . ($oldStatus ? $oldStatus->name : 'No Status') . " to {$newStatus->name}");
+
+        // Send email notification for status change
+        if (!$this->emailService) {
+            $this->emailService = new EmailNotificationService();
+            $this->emailService->configureMailSettings();
+        }
+        
+        $this->emailService->sendTaskStatusChangedNotification($task, $oldStatus, $newStatus);
 
         session()->flash('success', 'Task status updated successfully!');
     }
@@ -271,6 +316,14 @@ class TaskTable extends Component
         // Log the priority change
         Log::createLog(auth()->id(), 'update_task_priority', "Changed task '{$task->title}' priority");
 
+        // Send email notification for priority change
+        if (!$this->emailService) {
+            $this->emailService = new EmailNotificationService();
+            $this->emailService->configureMailSettings();
+        }
+        
+        $this->emailService->sendTaskUpdatedNotification($task, 'Task Priority Updated');
+
         session()->flash('success', 'Task priority updated successfully!');
     }
 
@@ -281,6 +334,14 @@ class TaskTable extends Component
 
         // Log the category change
         Log::createLog(auth()->id(), 'update_task_category', "Changed task '{$task->title}' category");
+
+        // Send email notification for category change
+        if (!$this->emailService) {
+            $this->emailService = new EmailNotificationService();
+            $this->emailService->configureMailSettings();
+        }
+        
+        $this->emailService->sendTaskUpdatedNotification($task, 'Task Category Updated');
 
         session()->flash('success', 'Task category updated successfully!');
     }
@@ -336,7 +397,7 @@ class TaskTable extends Component
         ]);
 
         if ($this->notesModalTaskId && $this->notesModalTaskId != 0) {
-            TaskNoteComment::create([
+            $comment = TaskNoteComment::create([
                 'task_id' => $this->notesModalTaskId,
                 'user_id' => auth()->id(),
                 'comment' => $this->newComment,
@@ -345,6 +406,14 @@ class TaskTable extends Component
             // Log the comment addition
             $task = Task::findOrFail($this->notesModalTaskId);
             Log::createLog(auth()->id(), 'add_task_note_comment', "Added comment to task '{$task->title}'");
+
+            // Send email notification for the comment
+            if (!$this->emailService) {
+                $this->emailService = new EmailNotificationService();
+                $this->emailService->configureMailSettings();
+            }
+            
+            $this->emailService->sendTaskNoteCommentNotification($task, $comment);
 
             session()->flash('success', 'Comment added successfully!');
             $this->newComment = '';
