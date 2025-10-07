@@ -1,0 +1,16 @@
+{
+  "status": "commited",
+  "type": "backend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:8000",
+  "backendAuthType": "public",
+  "executionArgs": {
+    "projectName": "myapp",
+    "projectPath": "C:\\xampp\\htdocs\\myapp",
+    "testIds": [],
+    "additionalInstruction": "Test the task creation form at /tasks/create route. Focus on testing the dynamic dropdown functionality for status, priority, and category. Verify that users can add new items inline through the + buttons in each dropdown. Test form validation and submission.",
+    "envs": {
+      "API_KEY": "sk-user-pytrFby6JBoe__e88-COR4cI4cSLsNerA-kdXVg1g1m9IFZkD57F7tG_y2-oOitrHWowv5os7paTGMuxe0BTP-RwT7FUwq277KNPUsKVa3CB1vYkV2wj_tUm_pba-EvgaNQ"
+    }
+  }
+}

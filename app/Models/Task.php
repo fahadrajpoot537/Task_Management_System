@@ -1,0 +1,233 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class Task extends Model
+{
+    use HasFactory;
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
+    protected $fillable = [
+        'project_id',
+        'title',
+        'description',
+        'priority_id',
+        'category_id',
+        'status_id',
+        'duration',
+        'estimated_hours',
+        'actual_hours',
+        'due_date',
+        'assigned_to_user_id',
+        'assigned_by_user_id',
+        'notes',
+        'started_at',
+        'completed_at',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'due_date' => 'date',
+        'started_at' => 'datetime',
+        'completed_at' => 'datetime',
+    ];
+
+    /**
+     * Get the project that owns the task.
+     */
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
+    }
+
+    /**
+     * Get the user that the task is assigned to.
+     */
+    public function assignedTo(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_to_user_id');
+    }
+
+    /**
+     * Get the user that assigned the task.
+     */
+    public function assignedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_by_user_id');
+    }
+
+    /**
+     * Get the status that owns the task.
+     */
+    public function status(): BelongsTo
+    {
+        return $this->belongsTo(TaskStatus::class);
+    }
+
+    /**
+     * Get the priority that owns the task.
+     */
+    public function priority(): BelongsTo
+    {
+        return $this->belongsTo(TaskPriority::class);
+    }
+
+    /**
+     * Get the category that owns the task.
+     */
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(TaskCategory::class);
+    }
+
+    /**
+     * Get the attachments for the task.
+     */
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(Attachment::class);
+    }
+
+    /**
+     * Get the note comments for the task.
+     */
+    public function noteComments(): HasMany
+    {
+        return $this->hasMany(TaskNoteComment::class)->orderBy('created_at', 'desc');
+    }
+
+    /**
+     * Check if task is overdue.
+     */
+    public function getIsOverdueAttribute(): bool
+    {
+        return $this->due_date && $this->due_date->isPast() && (!$this->status || $this->status->name !== 'Complete');
+    }
+
+
+    /**
+     * Get time tracking status.
+     */
+    public function getTimeTrackingStatusAttribute(): string
+    {
+        if ($this->status && $this->status->name === 'Complete' && $this->completed_at) {
+            return 'completed';
+        } elseif ($this->status && $this->status->name === 'In Progress' && $this->started_at) {
+            return 'in_progress';
+        } elseif ($this->status && $this->status->name === 'In Progress' && !$this->started_at) {
+            return 'ready_to_start';
+        } else {
+            return 'not_started';
+        }
+    }
+
+    /**
+     * Get estimated vs actual hours comparison.
+     */
+    public function getHoursComparisonAttribute(): array
+    {
+        $estimated = $this->estimated_hours ?? 0;
+        $actual = $this->actual_hours ?? 0;
+        
+        return [
+            'estimated' => $estimated,
+            'actual' => $actual,
+            'difference' => $actual - $estimated,
+            'percentage' => $estimated > 0 ? round(($actual / $estimated) * 100, 1) : 0,
+        ];
+    }
+
+    /**
+     * Get task delay information.
+     */
+    public function getDelayInfoAttribute(): array
+    {
+        if (!$this->due_date || !$this->completed_at) {
+            return [
+                'is_delayed' => false,
+                'is_early' => false,
+                'delay_days' => 0,
+                'early_days' => 0,
+                'status' => 'no_completion_date'
+            ];
+        }
+
+        $dueDate = $this->due_date;
+        $completedDate = $this->completed_at->toDateString();
+        $dueDateStr = $dueDate->toDateString();
+
+        if ($completedDate > $dueDateStr) {
+            // Task was delayed
+            $delayDays = $dueDate->diffInDays($this->completed_at, false);
+            return [
+                'is_delayed' => true,
+                'is_early' => false,
+                'delay_days' => $delayDays,
+                'early_days' => 0,
+                'status' => 'delayed'
+            ];
+        } elseif ($completedDate < $dueDateStr) {
+            // Task was completed early
+            $earlyDays = $this->completed_at->diffInDays($dueDate, false);
+            return [
+                'is_delayed' => false,
+                'is_early' => true,
+                'delay_days' => 0,
+                'early_days' => $earlyDays,
+                'status' => 'early'
+            ];
+        } else {
+            // Task completed on time
+            return [
+                'is_delayed' => false,
+                'is_early' => false,
+                'delay_days' => 0,
+                'early_days' => 0,
+                'status' => 'on_time'
+            ];
+        }
+    }
+
+    /**
+     * Get delay badge class.
+     */
+    public function getDelayBadgeClassAttribute(): string
+    {
+        $delayInfo = $this->delay_info;
+        
+        return match($delayInfo['status']) {
+            'delayed' => 'bg-danger',
+            'early' => 'bg-success',
+            'on_time' => 'bg-primary',
+            default => 'bg-secondary'
+        };
+    }
+
+    /**
+     * Get delay badge text.
+     */
+    public function getDelayBadgeTextAttribute(): string
+    {
+        $delayInfo = $this->delay_info;
+        
+        return match($delayInfo['status']) {
+            'delayed' => "Delayed by {$delayInfo['delay_days']} days",
+            'early' => "Early by {$delayInfo['early_days']} days",
+            'on_time' => 'On Time',
+            default => 'No Due Date'
+        };
+    }
+}

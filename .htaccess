@@ -1,0 +1,32 @@
+# Redirect all requests to public directory
+RewriteEngine On
+RewriteRule ^(.*)$ public/$1 [L]
+
+# Security: Deny access to sensitive directories
+<DirectoryMatch "/(app|bootstrap|config|database|resources|routes|storage|tests|vendor)">
+    Order allow,deny
+    Deny from all
+</DirectoryMatch>
+
+# Security: Deny access to sensitive files
+<FilesMatch "\.(env|log|sql|md|txt|json|lock|xml|yml|yaml)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Security: Deny access to Laravel specific files
+<FilesMatch "^(artisan|composer\.(json|lock)|package\.(json|lock)|webpack\.mix\.js|\.gitignore|\.gitattributes|phpunit\.xml|\.env\.example)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Prevent directory browsing
+Options -Indexes
+
+# Security headers
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options nosniff
+    Header always set X-Frame-Options DENY
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
