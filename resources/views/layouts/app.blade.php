@@ -428,15 +428,15 @@ use Illuminate\Support\Facades\Storage;
         }
 
         .btn-outline-primary {
-            color: var(--blue-600);
-            border-color: var(--blue-600);
+            color: var(--primary-color);
+            border-color: var(--primary-color);
             border-radius: 0.75rem;
             font-weight: 600;
         }
 
         .btn-outline-primary:hover {
-            background-color: var(--blue-600);
-            border-color: var(--blue-600);
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
         }
 
         .form-control, .form-select {
@@ -604,10 +604,10 @@ use Illuminate\Support\Facades\Storage;
 
         /* Profile Dropdown Styles */
         .profile-dropdown {
-            background: rgba(255, 255, 255, 0.98);
-            border: 1px solid rgba(2, 132, 199, 0.1);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
             border-radius: 1rem;
-            box-shadow: 0 12px 40px rgba(2, 132, 199, 0.15);
+            box-shadow: 0 12px 40px var(--shadow-color);
             backdrop-filter: blur(10px);
             padding: 0.5rem 0;
             min-width: 280px;
@@ -616,14 +616,14 @@ use Illuminate\Support\Facades\Storage;
 
         .profile-dropdown .dropdown-header {
             padding: 1rem 1.5rem;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.6) 100%);
-            border-bottom: 1px solid rgba(2, 132, 199, 0.1);
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
             margin-bottom: 0.5rem;
         }
 
         .profile-dropdown .dropdown-item {
             padding: 0.75rem 1.5rem;
-            color: var(--blue-800);
+            color: var(--text-primary);
             font-weight: 500;
             transition: all 0.2s ease;
             border-radius: 0.5rem;
@@ -631,39 +631,39 @@ use Illuminate\Support\Facades\Storage;
         }
 
         .profile-dropdown .dropdown-item:hover {
-            background: linear-gradient(135deg, var(--blue-50) 0%, var(--blue-100) 100%);
-            color: var(--blue-700);
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
             transform: translateX(4px);
         }
 
         .profile-dropdown .dropdown-item.text-danger:hover {
-            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-            color: #dc2626;
+            background: var(--bg-tertiary);
+            color: var(--danger-color);
         }
 
         .profile-dropdown .dropdown-divider {
             margin: 0.5rem 0;
-            border-color: rgba(2, 132, 199, 0.1);
+            border-color: var(--border-color);
         }
 
         .profile-avatar img {
             object-fit: cover;
-            border: 2px solid rgba(255, 255, 255, 0.3);
+            border: 2px solid var(--border-color);
             transition: all 0.3s ease;
         }
 
         .profile-avatar:hover img {
-            border-color: var(--blue-400);
+            border-color: var(--primary-color);
             transform: scale(1.05);
         }
 
         .avatar-placeholder {
-            border: 2px solid rgba(255, 255, 255, 0.3);
+            border: 2px solid var(--border-color);
             transition: all 0.3s ease;
         }
 
         .avatar-placeholder:hover {
-            border-color: var(--blue-400);
+            border-color: var(--primary-color);
             transform: scale(1.05);
         }
 
@@ -1464,7 +1464,7 @@ use Illuminate\Support\Facades\Storage;
         }
 
         .modal-header {
-            background: linear-gradient(135deg, var(--blue-600) 0%, var(--blue-700) 100%);
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             color: white;
             border-radius: 1rem 1rem 0 0;
             border-bottom: none;
@@ -1479,19 +1479,21 @@ use Illuminate\Support\Facades\Storage;
         }
 
         .modal-footer {
-            border-top: 1px solid var(--blue-200);
+            border-top: 1px solid var(--border-color);
             padding: 1rem 2rem;
         }
 
         .notes-content {
-            background: var(--light-blue-50);
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
             padding: 1.5rem;
             border-radius: 0.75rem;
-            border: 1px solid var(--blue-200);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
         }
 
         .notes-view .text-muted {
-            color: var(--blue-500) !important;
+            color: var(--text-secondary) !important;
         }
 
         .modal-backdrop {
@@ -1962,7 +1964,7 @@ use Illuminate\Support\Facades\Storage;
                                 @if(auth()->user()->avatar)
                                     <img src="{{ Storage::url(auth()->user()->avatar) }}" alt="{{ auth()->user()->name }}" class="rounded-circle" width="32" height="32">
                                 @else
-                                    <div class="avatar-placeholder rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; background: linear-gradient(135deg, var(--blue-500) 0%, var(--blue-600) 100%); color: white; font-weight: 600; font-size: 0.875rem;">
+                                    <div class="avatar-placeholder rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); color: white; font-weight: 600; font-size: 0.875rem;">
                                         {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
                                     </div>
                                 @endif
@@ -1976,7 +1978,7 @@ use Illuminate\Support\Facades\Storage;
                                         @if(auth()->user()->avatar)
                                             <img src="{{ Storage::url(auth()->user()->avatar) }}" alt="{{ auth()->user()->name }}" class="rounded-circle" width="48" height="48">
                                         @else
-                                            <div class="avatar-placeholder rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; background: linear-gradient(135deg, var(--blue-500) 0%, var(--blue-600) 100%); color: white; font-weight: 600; font-size: 1.25rem;">
+                                            <div class="avatar-placeholder rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); color: white; font-weight: 600; font-size: 1.25rem;">
                                                 {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
                                             </div>
                                         @endif

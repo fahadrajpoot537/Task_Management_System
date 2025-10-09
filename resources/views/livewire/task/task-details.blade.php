@@ -85,7 +85,7 @@
                     @if($task->notes)
                     <div class="mb-3">
                         <strong>Notes:</strong>
-                        <div class="mt-2 p-3 bg-light rounded">
+                        <div class="mt-2 p-3 rounded" style="background-color: var(--bg-tertiary);">
                             {!! nl2br(e($task->notes)) !!}
                         </div>
                     </div>
@@ -158,13 +158,13 @@
                                             <small class="text-muted">Attachments:</small>
                                             <div class="d-flex flex-wrap gap-2 mt-1">
                                                 @foreach($comment->attachments as $attachment)
-                                                    <div class="attachment-item d-flex align-items-center bg-light p-2 rounded">
+                                                    <div class="attachment-item d-flex align-items-center p-2 rounded" style="background-color: var(--bg-tertiary);">
                                                         <i class="bi bi-paperclip me-2"></i>
                                                         <a href="{{ route('attachments.download', $attachment->id) }}" 
                                                            class="text-decoration-none">
                                                             {{ $attachment->file_name }}
                                                         </a>
-                                                        <small class="text-muted ms-2">({{ number_format($attachment->file_size / 1024, 1) }} KB)</small>
+                                                        <small class="text-muted ms-2">({{ $attachment->formatted_file_size }})</small>
                                                     </div>
                                                 @endforeach
                                             </div>
@@ -229,7 +229,7 @@
                                     <div>
                                         <i class="bi bi-paperclip me-2"></i>
                                         <strong>{{ $attachment->file_name }}</strong>
-                                        <small class="text-muted ms-2">({{ $attachment->file_size }})</small>
+                                        <small class="text-muted ms-2">({{ $attachment->formatted_file_size }})</small>
                                         <br>
                                         <small class="text-muted">
                                             Uploaded by {{ $attachment->uploadedBy->name }} 

@@ -443,7 +443,7 @@
 
         /* Prevent horizontal scrolling globally */
         .chat-container * {
-            max-width: 100%;
+            /* max-width: 100%; */
             box-sizing: border-box;
         }
 
@@ -2746,10 +2746,150 @@
             }
         }
 
+        // Polling control system
+        let pollingEnabled = true;
+        let pollingInterval = null;
+
+        // Function to disable polling
+        function disablePolling() {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
+            pollingEnabled = false;
+            console.log('Polling disabled');
+        }
+
+        // Function to enable polling
+        function enablePolling() {
+            if (!pollingEnabled) {
+                pollingEnabled = true;
+                console.log('Polling enabled');
+            }
+        }
+
+        // Monitor active tab and control polling
+        function monitorTabState() {
+            setInterval(() => {
+                const savedView = localStorage.getItem('contactsView');
+                const allHeaderBtn = document.getElementById('allHeaderBtn');
+                
+                if (savedView === 'all' && allHeaderBtn && allHeaderBtn.classList.contains('active')) {
+                    // All contacts is active - disable polling
+                    if (pollingEnabled) {
+                        disablePolling();
+                    }
+                } else {
+                    // Recent or Search is active - enable polling
+                    if (!pollingEnabled) {
+                        enablePolling();
+                    }
+                }
+            }, 500); // Check every 500ms
+        }
+
+        // Robust state restoration function
+        function restoreActiveTabState() {
+            const recentHeaderBtn = document.getElementById('recentHeaderBtn');
+            const allHeaderBtn = document.getElementById('allHeaderBtn');
+            const searchHeaderBtn = document.getElementById('searchHeaderBtn');
+            const searchContainer = document.getElementById('searchContainer');
+            const recentSection = document.getElementById('recentSection');
+            const allContactsSection = document.getElementById('allContactsSection');
+
+            if (recentHeaderBtn && allHeaderBtn && searchHeaderBtn && searchContainer && recentSection && allContactsSection) {
+                const savedView = localStorage.getItem('contactsView') || 'recent';
+
+                if (savedView === 'recent') {
+                    recentHeaderBtn.classList.add('active');
+                    allHeaderBtn.classList.remove('active');
+                    searchHeaderBtn.classList.remove('active');
+                    recentSection.style.display = 'block';
+                    allContactsSection.style.display = 'none';
+                    searchContainer.style.display = 'none';
+                } else if (savedView === 'all') {
+                    allHeaderBtn.classList.add('active');
+                    recentHeaderBtn.classList.remove('active');
+                    searchHeaderBtn.classList.remove('active');
+                    recentSection.style.display = 'none';
+                    allContactsSection.style.display = 'block';
+                    searchContainer.style.display = 'none';
+                } else if (savedView === 'search') {
+                    searchHeaderBtn.classList.add('active');
+                    recentHeaderBtn.classList.remove('active');
+                    allHeaderBtn.classList.remove('active');
+                    recentSection.style.display = 'none';
+                    allContactsSection.style.display = 'block';
+                    searchContainer.style.display = 'block';
+                }
+            }
+        }
+
+        // Continuous state monitoring (backup mechanism)
+        function startStateMonitoring() {
+            setInterval(() => {
+                const savedView = localStorage.getItem('contactsView');
+                const allHeaderBtn = document.getElementById('allHeaderBtn');
+                const recentHeaderBtn = document.getElementById('recentHeaderBtn');
+                
+                if (savedView === 'all' && allHeaderBtn && !allHeaderBtn.classList.contains('active')) {
+                    console.log('State mismatch detected, restoring All contacts view');
+                    restoreActiveTabState();
+                } else if (savedView === 'recent' && recentHeaderBtn && !recentHeaderBtn.classList.contains('active')) {
+                    console.log('State mismatch detected, restoring Recent contacts view');
+                    restoreActiveTabState();
+                }
+            }, 1000); // Check every second
+        }
+
+        // Enhanced polling control - intercept Livewire polling
+        function interceptLivewirePolling() {
+            // Override Livewire's polling mechanism
+            const originalPoll = Livewire.poll;
+            if (originalPoll) {
+                Livewire.poll = function(interval, method) {
+                    const savedView = localStorage.getItem('contactsView');
+                    if (savedView === 'all') {
+                        console.log('Blocking Livewire polling - All contacts is active');
+                        return; // Don't poll when All contacts is active
+                    }
+                    return originalPoll.call(this, interval, method);
+                };
+            }
+        }
+
+        // Alternative approach - disable polling via DOM manipulation
+        function controlPollingViaDOM() {
+            setInterval(() => {
+                const savedView = localStorage.getItem('contactsView');
+                const chatContainer = document.querySelector('.chat-container');
+                
+                if (savedView === 'all') {
+                    // Remove polling attribute when All contacts is active
+                    if (chatContainer && chatContainer.hasAttribute('wire:poll.5s')) {
+                        chatContainer.removeAttribute('wire:poll.5s');
+                        console.log('Removed polling attribute - All contacts active');
+                    }
+                } else {
+                    // Add polling attribute when Recent or Search is active
+                    if (chatContainer && !chatContainer.hasAttribute('wire:poll.5s')) {
+                        chatContainer.setAttribute('wire:poll.5s', 'refreshComponent');
+                        console.log('Added polling attribute - Recent/Search active');
+                    }
+                }
+            }, 1000); // Check every second
+        }
+
         // Initialize when DOM is ready
         document.addEventListener('DOMContentLoaded', function() {
             // Auto-scroll on page load if there are messages
             scrollToBottom();
+
+            // Start state monitoring
+            startStateMonitoring();
+
+            // Start polling control
+            controlPollingViaDOM();
 
             // Header button functionality
             const recentHeaderBtn = document.getElementById('recentHeaderBtn');
@@ -2807,6 +2947,13 @@
 
                     // Save state
                     localStorage.setItem('contactsView', 'recent');
+
+                    // Immediately enable polling for Recent contacts
+                    const chatContainer = document.querySelector('.chat-container');
+                    if (chatContainer && !chatContainer.hasAttribute('wire:poll.5s')) {
+                        chatContainer.setAttribute('wire:poll.5s', 'refreshComponent');
+                        console.log('Immediately enabled polling - switched to Recent contacts');
+                    }
                 });
 
                 allHeaderBtn.addEventListener('click', function() {
@@ -2828,6 +2975,13 @@
 
                     // Save state
                     localStorage.setItem('contactsView', 'all');
+
+                    // Immediately disable polling for All contacts
+                    const chatContainer = document.querySelector('.chat-container');
+                    if (chatContainer && chatContainer.hasAttribute('wire:poll.5s')) {
+                        chatContainer.removeAttribute('wire:poll.5s');
+                        console.log('Immediately disabled polling - switched to All contacts');
+                    }
                 });
 
                 searchHeaderBtn.addEventListener('click', function() {
@@ -2841,6 +2995,13 @@
 
                     // Save state
                     localStorage.setItem('contactsView', 'search');
+
+                    // Immediately enable polling for Search
+                    const chatContainer = document.querySelector('.chat-container');
+                    if (chatContainer && !chatContainer.hasAttribute('wire:poll.5s')) {
+                        chatContainer.setAttribute('wire:poll.5s', 'refreshComponent');
+                        console.log('Immediately enabled polling - switched to Search');
+                    }
 
                     // Focus on search input
                     const searchInput = document.getElementById('contactSearch');
@@ -3245,6 +3406,33 @@
                         sidebar.style.transform = 'translateX(-100%)';
                     }
                 }
+            });
+        });
+
+        // Enhanced Livewire event listeners
+        document.addEventListener('livewire:updated', function() {
+            console.log('Livewire updated, restoring state...');
+            setTimeout(() => {
+                restoreActiveTabState();
+            }, 100);
+        });
+
+        document.addEventListener('livewire:init', function() {
+            console.log('Livewire init, restoring state...');
+            setTimeout(() => {
+                restoreActiveTabState();
+            }, 100);
+        });
+
+        // Additional hook for Livewire commits
+        document.addEventListener('livewire:init', () => {
+            Livewire.hook('commit', ({ component, commit, respond, succeed, fail }) => {
+                succeed(() => {
+                    setTimeout(() => {
+                        console.log('Livewire commit succeeded, restoring state...');
+                        restoreActiveTabState();
+                    }, 50);
+                });
             });
         });
     </script>
