@@ -58,6 +58,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/tasks', \App\Livewire\Task\TaskTable::class)->name('tasks.index');
     Route::get('/tasks/create', TaskCreate::class)->name('tasks.create');
     Route::get('/tasks/{taskId}', TaskDetails::class)->name('tasks.details');
+    
+    // Attachments
+    Route::get('/attachments/{attachment}/download', [App\Http\Controllers\AttachmentController::class, 'download'])->name('attachments.download');
 
     // Chat
     Route::get('/chat', \App\Livewire\SlackLikeChatComponent::class)->name('chat');
