@@ -21,7 +21,7 @@
         </div>
 
         <!-- Filters -->
-        <div class="p-3 border-bottom">
+        <div class="p-3 border-bottom bg-light">
             <div class="row g-2">
                 <div class="col-12 col-md-3">
                     <div class="input-group">
@@ -61,6 +61,49 @@
                             <option value="{{ $user->id }}">{{ $user->name }}</option>
                         @endforeach
                     </select>
+                </div>
+            </div>
+            
+            <!-- Mobile Filter Toggle -->
+            <div class="d-md-none mt-2">
+                <button class="btn btn-outline-secondary btn-sm w-100" type="button" data-bs-toggle="collapse" data-bs-target="#mobileFilters" aria-expanded="false">
+                    <i class="bi bi-funnel me-2"></i>More Filters
+                </button>
+                <div class="collapse mt-2" id="mobileFilters">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <select class="form-select form-select-sm" wire:model.live="projectFilter">
+                                <option value="">All Projects</option>
+                                @foreach($this->projects as $project)
+                                    <option value="{{ $project->id }}">{{ $project->title }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <select class="form-select form-select-sm" wire:model.live="statusFilter">
+                                <option value="">All Status</option>
+                                @foreach($this->statuses as $status)
+                                    <option value="{{ $status->id }}">{{ $status->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <select class="form-select form-select-sm" wire:model.live="categoryFilter">
+                                <option value="">All Categories</option>
+                                @foreach($this->categories as $category)
+                                    <option value="{{ $category->id }}">{{ $category->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <select class="form-select form-select-sm" wire:model.live="assigneeFilter">
+                                <option value="">All Assignees</option>
+                                @foreach($this->users as $user)
+                                    <option value="{{ $user->id }}">{{ $user->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -175,22 +218,22 @@
         </div>
 
         <!-- Task Table -->
-        <div class="table-responsive">
-            <table id="tasksTable" class="table table-hover mb-0">
-                <thead class="table-dark">
+        <div class="table-responsive" style="overflow-x: auto; max-height: 70vh;">
+            <table id="tasksTable" class="table table-hover table-striped mb-0">
+                <thead class="table-dark sticky-top">
                     <tr>
-                        <th class="d-none d-md-table-cell" width="4%">#</th>
-                        <th width="25%">Title</th>
-                        <th class="d-none d-lg-table-cell" width="12%">Project</th>
-                        <th class="d-none d-xl-table-cell" width="12%">Assignee</th>
-                        <th class="d-none d-lg-table-cell" width="8%">Priority</th>
-                        <th class="d-none d-lg-table-cell" width="8%">Category</th>
-                        <th width="10%">Status</th>
-                        <th class="d-none d-md-table-cell" width="8%">Due Date</th>
-                        <th class="d-none d-xl-table-cell" width="6%">Hours</th>
-                        <th class="d-none d-lg-table-cell" width="8%">Nature</th>
-                        <th class="d-none d-lg-table-cell" width="12%">Notes</th>
-                        <th width="8%">Actions</th>
+                        <th class="d-none d-md-table-cell" style="min-width: 50px;">#</th>
+                        <th style="min-width: 250px;">Title</th>
+                        <th class="d-none d-lg-table-cell" style="min-width: 120px;">Project</th>
+                        <th class="d-none d-xl-table-cell" style="min-width: 150px;">Assignee</th>
+                        <th class="d-none d-lg-table-cell" style="min-width: 100px;">Priority</th>
+                        <th class="d-none d-lg-table-cell" style="min-width: 100px;">Category</th>
+                        <th style="min-width: 120px;">Status</th>
+                        <th class="d-none d-md-table-cell" style="min-width: 120px;">Due Date</th>
+                        <th class="d-none d-xl-table-cell" style="min-width: 80px;">Hours</th>
+                        <th class="d-none d-lg-table-cell" style="min-width: 100px;">Nature</th>
+                        <th class="d-none d-lg-table-cell" style="min-width: 150px;">Notes</th>
+                        <th style="min-width: 100px;">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -738,6 +781,44 @@
         }
 
         /* Responsive table styles */
+        .table-responsive {
+            position: relative;
+            border: none;
+            border-radius: 0;
+            overflow-x: auto !important;
+            overflow-y: auto;
+        }
+        
+        .table-responsive .sticky-top {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: #212529 !important;
+        }
+        
+        .table-responsive table {
+            min-width: 1200px !important; /* Ensure table has minimum width for horizontal scroll */
+            width: 100%;
+        }
+        
+        .table-responsive::-webkit-scrollbar {
+            height: 8px;
+        }
+        
+        .table-responsive::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        .table-responsive::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        
+        .table-responsive::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        
         @media (max-width: 768px) {
             .table-responsive {
                 border: none;
@@ -753,6 +834,10 @@
             
             .dropdown-menu {
                 font-size: 0.8rem;
+            }
+            
+            .table-responsive table {
+                min-width: 800px !important; /* Smaller minimum width on mobile */
             }
         }
 
@@ -813,20 +898,44 @@
             z-index: 1000;
         }
 
-        .table-responsive {
-            overflow: visible !important;
-        }
 
         .task-table {
-            overflow: visible !important;
+            position: relative;
+            overflow: hidden;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            background: white;
+        }
+
+        .task-table .table-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 1.5rem;
+            border-radius: 0.5rem 0.5rem 0 0;
+        }
+
+        .task-table .table-responsive {
+            overflow-x: auto !important;
+            overflow-y: auto;
+            max-height: 70vh;
+            border: none;
+            border-radius: 0 0 0.5rem 0.5rem;
+            width: 100%;
+            display: block;
         }
 
         .task-table .table {
-            overflow: visible !important;
+            margin-bottom: 0;
+            min-width: 1200px; /* Force horizontal scroll */
+            width: 100%;
         }
 
         .task-table .table td {
             position: relative;
+        }
+
+        .task-table .p-3 {
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
         }
 
         /* Mobile-specific styles */
@@ -838,8 +947,89 @@
             .notes-preview {
                 font-size: 0.7rem !important;
             }
+            
+            /* Hide desktop table on mobile, show mobile cards */
+            .table-responsive {
+                display: none;
+            }
+            
+            .mobile-task-cards {
+                display: block;
+            }
+        }
+        
+        @media (min-width: 992px) {
+            /* Hide mobile cards on desktop, show table */
+            .mobile-task-cards {
+                display: none;
+            }
+            
+            .table-responsive {
+                display: block;
+            }
         }
 
+        /* Mobile task cards styling */
+        .task-table .mobile-task-cards {
+            padding: 1rem;
+            background: white;
+            border-radius: 0 0 0.5rem 0.5rem;
+        }
+        
+        .mobile-task-item {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .mobile-task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+        }
+        
+        .mobile-task-title {
+            font-weight: 600;
+            font-size: 1rem;
+            color: #212529;
+            margin-bottom: 0.25rem;
+        }
+        
+        .mobile-task-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .mobile-task-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
+        
+        .mobile-task-notes {
+            font-size: 0.875rem;
+            color: #495057;
+            line-height: 1.4;
+            margin-bottom: 0.75rem;
+            padding: 0.5rem;
+            background-color: #f8f9fa;
+            border-radius: 0.25rem;
+        }
+        
+        .mobile-task-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
         /* Ensure proper spacing on mobile */
         @media (max-width: 768px) {
             .task-row td {
@@ -848,6 +1038,14 @@
             
             .btn-group .btn {
                 margin: 0 1px;
+            }
+            
+            .task-table .mobile-task-cards {
+                padding: 0.5rem;
+            }
+            
+            .mobile-task-item {
+                padding: 0.75rem;
             }
         }
     </style>
