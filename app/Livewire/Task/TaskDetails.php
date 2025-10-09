@@ -5,6 +5,7 @@ namespace App\Livewire\Task;
 use App\Models\Log;
 use App\Models\Task;
 use App\Models\TaskStatus;
+use App\Models\TaskNoteComment;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -15,17 +16,21 @@ class TaskDetails extends Component
     public Task $task;
     public $newNote = '';
     public $newAttachments = [];
+    public $newComment = '';
+    public $commentAttachments = [];
 
     protected $rules = [
         'newNote' => 'nullable|string',
         'newAttachments.*' => 'nullable|file|max:10240', // 10MB max
+        'newComment' => 'nullable|string',
+        'commentAttachments.*' => 'nullable|file|max:10240', // 10MB max
     ];
 
     public function mount($taskId)
     {
         $user = auth()->user();
         
-        $this->task = Task::with(['project', 'assignedTo', 'assignedBy', 'attachments.uploadedBy'])
+        $this->task = Task::with(['project', 'assignedTo', 'assignedBy', 'attachments.uploadedBy', 'noteComments.user', 'noteComments.attachments'])
             ->findOrFail($taskId);
             
         // Check if user can access this task
@@ -212,6 +217,75 @@ class TaskDetails extends Component
     public function getStatusesProperty()
     {
         return TaskStatus::orderBy('name')->get();
+    }
+
+    public function addComment()
+    {
+        $this->validate([
+            'newComment' => 'required|string',
+            'commentAttachments.*' => 'nullable|file|max:10240'
+        ]);
+
+        // Create the comment
+        $comment = TaskNoteComment::create([
+            'task_id' => $this->task->id,
+            'user_id' => auth()->id(),
+            'comment' => $this->newComment,
+        ]);
+
+        // Handle comment attachments
+        if ($this->commentAttachments) {
+            foreach ($this->commentAttachments as $attachment) {
+                $path = $attachment->store('comment-attachments');
+                
+                $comment->attachments()->create([
+                    'file_path' => $path,
+                    'file_name' => $attachment->getClientOriginalName(),
+                    'file_size' => $attachment->getSize(),
+                    'uploaded_by_user_id' => auth()->id(),
+                ]);
+            }
+        }
+
+        // Log the comment addition
+        Log::createLog(auth()->id(), 'add_task_comment', 
+            "Added comment to task: {$this->task->title}");
+
+        $this->newComment = '';
+        $this->commentAttachments = [];
+        $this->task->load('noteComments.user', 'noteComments.attachments');
+        
+        session()->flash('success', 'Comment added successfully.');
+    }
+
+    public function deleteComment($commentId)
+    {
+        $user = auth()->user();
+        $comment = TaskNoteComment::findOrFail($commentId);
+        
+        // Check if user can delete this comment
+        if (!$user->isSuperAdmin() && !$user->isAdmin()) {
+            if ($comment->user_id !== $user->id) {
+                session()->flash('error', 'You can only delete your own comments.');
+                return;
+            }
+        }
+
+        // Delete comment attachments
+        foreach ($comment->attachments as $attachment) {
+            if (file_exists(storage_path('app/' . $attachment->file_path))) {
+                unlink(storage_path('app/' . $attachment->file_path));
+            }
+        }
+
+        // Log the deletion
+        Log::createLog(auth()->id(), 'delete_task_comment', 
+            "Deleted comment from task: {$this->task->title}");
+
+        $comment->delete();
+        $this->task->load('noteComments.user', 'noteComments.attachments');
+        
+        session()->flash('success', 'Comment deleted successfully.');
     }
 
     public function render()

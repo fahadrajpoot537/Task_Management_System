@@ -13,7 +13,12 @@ return new class extends Migration
     {
         Schema::create('channel_members', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('channel_id')->constrained()->cascadeOnDelete();
+            $table->timestamp('joined_at')->useCurrent();
             $table->timestamps();
+            
+            $table->unique(['user_id', 'channel_id']);
         });
     }
 
