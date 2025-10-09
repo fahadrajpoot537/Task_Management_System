@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TaskNoteComment extends Model
 {
@@ -35,5 +36,13 @@ class TaskNoteComment extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the attachments for the comment.
+     */
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(Attachment::class, 'comment_id');
     }
 }

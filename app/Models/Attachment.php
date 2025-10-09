@@ -17,8 +17,10 @@ class Attachment extends Model
      */
     protected $fillable = [
         'task_id',
+        'comment_id',
         'file_path',
         'file_name',
+        'file_size',
         'uploaded_by_user_id',
     ];
 
@@ -28,6 +30,14 @@ class Attachment extends Model
     public function task(): BelongsTo
     {
         return $this->belongsTo(Task::class);
+    }
+
+    /**
+     * Get the comment that owns the attachment.
+     */
+    public function comment(): BelongsTo
+    {
+        return $this->belongsTo(TaskNoteComment::class, 'comment_id');
     }
 
     /**

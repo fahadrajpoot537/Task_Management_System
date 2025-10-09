@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Storage;
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2029,6 +2031,17 @@ use Illuminate\Support\Facades\Storage;
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('tasks.*') ? 'active' : '' }}" href="{{ route('tasks.index') }}" title="Tasks">
                                 <i class="bi bi-list-task"></i>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('chat') ? 'active' : '' }}" href="{{ route('chat') }}" title="Chat">
+                                <i class="bi bi-chat-dots"></i>
+                            </a>
+                        </li>
+                     
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('slack-chat') ? 'active' : '' }}" href="{{ route('slack-chat') }}" title="Slack-like Chat">
+                                <i class="bi bi-people"></i>
                             </a>
                         </li>
                         

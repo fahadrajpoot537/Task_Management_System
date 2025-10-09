@@ -93,10 +93,99 @@
                 </div>
             </div>
 
-            <!-- Add Note -->
+            <!-- Comments Section -->
             <div class="card mb-4">
                 <div class="card-header">
-                    <h6 class="mb-0">Add Note</h6>
+                    <h6 class="mb-0">Comments & Discussion</h6>
+                </div>
+                <div class="card-body">
+                    <!-- Add Comment Form -->
+                    <form wire:submit="addComment" class="mb-4">
+                        <div class="mb-3">
+                            <textarea class="form-control @error('newComment') is-invalid @enderror" 
+                                      wire:model="newComment" rows="3" 
+                                      placeholder="Add a comment..."></textarea>
+                            @error('newComment')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        
+                        <!-- File Upload for Comments -->
+                        <div class="mb-3">
+                            <label class="form-label">Attach Files (Optional)</label>
+                            <input type="file" class="form-control" wire:model="commentAttachments" multiple>
+                            <div class="form-text">You can upload multiple files (max 10MB each)</div>
+                            @error('commentAttachments.*')
+                                <div class="text-danger small">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-chat-dots me-1"></i>Add Comment
+                        </button>
+                    </form>
+
+                    <!-- Comments List -->
+                    @if($task->noteComments->count() > 0)
+                        <div class="comments-list">
+                            @foreach($task->noteComments->sortByDesc('created_at') as $comment)
+                                <div class="comment-item border-bottom pb-3 mb-3">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
+                                                {{ substr($comment->user->name, 0, 1) }}
+                                            </div>
+                                            <div>
+                                                <strong>{{ $comment->user->name }}</strong>
+                                                <small class="text-muted ms-2">{{ $comment->created_at->format('M d, Y H:i') }}</small>
+                                            </div>
+                                        </div>
+                                        @if(auth()->user()->isSuperAdmin() || auth()->user()->isAdmin() || $comment->user_id === auth()->id())
+                                            <button class="btn btn-sm btn-outline-danger" 
+                                                    onclick="confirmDeleteComment({{ $comment->id }})">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        @endif
+                                    </div>
+                                    
+                                    <div class="comment-content mb-2">
+                                        {{ $comment->comment }}
+                                    </div>
+                                    
+                                    <!-- Comment Attachments -->
+                                    @if($comment->attachments && $comment->attachments->count() > 0)
+                                        <div class="comment-attachments">
+                                            <small class="text-muted">Attachments:</small>
+                                            <div class="d-flex flex-wrap gap-2 mt-1">
+                                                @foreach($comment->attachments as $attachment)
+                                                    <div class="attachment-item d-flex align-items-center bg-light p-2 rounded">
+                                                        <i class="bi bi-paperclip me-2"></i>
+                                                        <a href="{{ route('attachments.download', $attachment->id) }}" 
+                                                           class="text-decoration-none">
+                                                            {{ $attachment->file_name }}
+                                                        </a>
+                                                        <small class="text-muted ms-2">({{ number_format($attachment->file_size / 1024, 1) }} KB)</small>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <div class="text-center text-muted py-4">
+                            <i class="bi bi-chat-dots fs-1"></i>
+                            <p class="mt-2">No comments yet. Be the first to comment!</p>
+                        </div>
+                    @endif
+                </div>
+            </div>
+
+            <!-- Add Note (Legacy) -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">Add Note (Legacy)</h6>
                 </div>
                 <div class="card-body">
                     <form wire:submit="addNote">
@@ -108,7 +197,7 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
-                        <button type="submit" class="btn btn-primary btn-sm">
+                        <button type="submit" class="btn btn-secondary btn-sm">
                             <i class="bi bi-plus-circle me-1"></i>Add Note
                         </button>
                     </form>
@@ -253,8 +342,28 @@
         </div>
     </div>
 
+    <!-- Delete Comment Confirmation Modal -->
+    <div class="modal fade" id="deleteCommentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Delete</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this comment? This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteCommentBtn">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         let attachmentIdToDelete = null;
+        let commentIdToDelete = null;
 
         function confirmDeleteAttachment(attachmentId) {
             attachmentIdToDelete = attachmentId;
@@ -262,10 +371,24 @@
             modal.show();
         }
 
+        function confirmDeleteComment(commentId) {
+            commentIdToDelete = commentId;
+            const modal = new bootstrap.Modal(document.getElementById('deleteCommentModal'));
+            modal.show();
+        }
+
         document.getElementById('confirmDeleteAttachmentBtn').addEventListener('click', function() {
             if (attachmentIdToDelete) {
                 @this.deleteAttachment(attachmentIdToDelete);
                 const modal = bootstrap.Modal.getInstance(document.getElementById('deleteAttachmentModal'));
+                modal.hide();
+            }
+        });
+
+        document.getElementById('confirmDeleteCommentBtn').addEventListener('click', function() {
+            if (commentIdToDelete) {
+                @this.deleteComment(commentIdToDelete);
+                const modal = bootstrap.Modal.getInstance(document.getElementById('deleteCommentModal'));
                 modal.hide();
             }
         });
