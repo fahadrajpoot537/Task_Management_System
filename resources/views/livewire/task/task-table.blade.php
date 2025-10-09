@@ -114,7 +114,11 @@
                 <div class="mobile-task-item" wire:key="mobile-task-{{ $task->id }}">
                     <div class="mobile-task-header">
                         <div>
-                            <div class="mobile-task-title">{{ $task->title }}</div>
+                            <div class="mobile-task-title">
+                                <a href="{{ route('tasks.details', $task->id) }}" class="text-decoration-none text-dark fw-bold">
+                                    {{ $task->title }}
+                                </a>
+                            </div>
                             @if($task->project)
                                 <small class="text-muted">{{ $task->project->title }}</small>
                             @endif
@@ -431,7 +435,11 @@
                                             @endif
                                         </div>
                                         <div class="flex-grow-1">
-                                            <strong class="fs-6 d-block">{{ $task->title }}</strong>
+                                            <strong class="fs-6 d-block">
+                                                <a href="{{ route('tasks.details', $task->id) }}" class="text-decoration-none text-dark fw-bold">
+                                                    {{ $task->title }}
+                                                </a>
+                                            </strong>
                                             @if($task->description)
                                                 <small class="text-muted d-none d-sm-block">{{ Str::limit($task->description, 50) }}</small>
                                             @endif

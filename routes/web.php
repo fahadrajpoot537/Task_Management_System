@@ -59,6 +59,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/tasks/create', TaskCreate::class)->name('tasks.create');
     Route::get('/tasks/{taskId}', TaskDetails::class)->name('tasks.details');
 
+    // Chat
+    Route::get('/chat', \App\Livewire\SlackLikeChatComponent::class)->name('chat');
+    Route::get('/private-messages', \App\Livewire\PrivateChatComponent::class)->name('private-messages');
+    Route::get('/slack-chat', \App\Livewire\SlackLikeChatComponent::class)->name('slack-chat');
+
                 // Admin Routes (Super Admin only)
                 Route::get('/permissions', PermissionManager::class)->name('permissions.index');
                 Route::get('/roles', \App\Livewire\RoleManager::class)->name('roles.index');
