@@ -51,13 +51,15 @@ class Attachment extends Model
     /**
      * Get file size in human readable format.
      */
-    public function getFileSizeAttribute(): string
+    public function getFormattedFileSizeAttribute(): string
     {
-        if (!file_exists(storage_path('app/' . $this->file_path))) {
+        $fullPath = storage_path('app/private/' . $this->file_path);
+        
+        if (!file_exists($fullPath)) {
             return 'Unknown';
         }
         
-        $bytes = filesize(storage_path('app/' . $this->file_path));
+        $bytes = filesize($fullPath);
         $units = ['B', 'KB', 'MB', 'GB'];
         
         for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {

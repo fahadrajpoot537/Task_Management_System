@@ -21,7 +21,7 @@
         </div>
 
         <!-- Filters -->
-        <div class="p-3 border-bottom bg-light">
+        <div class="p-3 border-bottom" style="background-color: var(--bg-tertiary);">
             <div class="row g-2">
                 <div class="col-12 col-md-3">
                     <div class="input-group">
@@ -115,7 +115,7 @@
                     <div class="mobile-task-header">
                         <div>
                             <div class="mobile-task-title">
-                                <a href="{{ route('tasks.details', $task->id) }}" class="text-decoration-none text-dark fw-bold">
+                                <a href="{{ route('tasks.details', $task->id) }}" class="text-decoration-none fw-bold" style="color: var(--text-primary);">
                                     {{ $task->title }}
                                 </a>
                             </div>
@@ -436,7 +436,7 @@
                                         </div>
                                         <div class="flex-grow-1">
                                             <strong class="fs-6 d-block">
-                                                <a href="{{ route('tasks.details', $task->id) }}" class="text-decoration-none text-dark fw-bold">
+                                                <a href="{{ route('tasks.details', $task->id) }}" class="text-decoration-none fw-bold" style="color: var(--text-primary);">
                                                     {{ $task->title }}
                                                 </a>
                                             </strong>
@@ -492,7 +492,7 @@
                                         </div>
                                     @else
                                         <div class="d-flex align-items-center">
-                                            <div class="avatar-sm bg-light border d-flex align-items-center justify-content-center me-2">
+                                            <div class="avatar-sm border d-flex align-items-center justify-content-center me-2" style="background-color: var(--bg-tertiary);">
                                                 <i class="bi bi-person text-muted"></i>
                                             </div>
                                             <span class="text-muted">Unassigned</span>
@@ -1168,7 +1168,7 @@
                     @else
                         <div class="notes-view">
                             @if($notesModalContent)
-                                <div class="notes-content mb-4" style="white-space: pre-wrap; line-height: 1.6; font-size: 0.95rem; padding: 1rem; background-color: #f8f9fa; border-radius: 0.5rem;">
+                                <div class="notes-content mb-4" style="white-space: pre-wrap; line-height: 1.6; font-size: 0.95rem;">
                                     {{ $notesModalContent }}
                                 </div>
                             @else
@@ -1204,6 +1204,25 @@
                                             <div class="comment-content" style="white-space: pre-wrap; line-height: 1.5;">
                                                 {{ $comment->comment }}
                                             </div>
+                                            
+                                            <!-- Comment Attachments -->
+                                            @if($comment->attachments && $comment->attachments->count() > 0)
+                                                <div class="comment-attachments mt-2">
+                                                    <small class="text-muted">Attachments:</small>
+                                                    <div class="d-flex flex-wrap gap-2 mt-1">
+                                                        @foreach($comment->attachments as $attachment)
+                                                            <div class="attachment-item d-flex align-items-center p-2 rounded" style="background-color: var(--bg-tertiary);">
+                                                                <i class="bi bi-paperclip me-2"></i>
+                                                                <a href="{{ route('attachments.download', $attachment->id) }}" 
+                                                                   class="text-decoration-none">
+                                                                    {{ $attachment->file_name }}
+                                                                </a>
+                                                                <small class="text-muted ms-2">({{ $attachment->formatted_file_size }})</small>
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+                                            @endif
                                         </div>
                                     @endforeach
                                     
@@ -1225,6 +1244,33 @@
                                                   rows="3" 
                                                   placeholder="Write your comment here..."></textarea>
                                     </div>
+                                    
+                                    <!-- File Upload for Comments -->
+                                    <div class="mb-3">
+                                        <label class="form-label">Attach Files (Optional)</label>
+                                        <input type="file" class="form-control" wire:model="commentAttachments" multiple>
+                                        <div class="form-text">You can upload multiple files (max 10MB each)</div>
+                                        @error('commentAttachments.*')
+                                            <div class="text-danger small">{{ $message }}</div>
+                                        @enderror
+                                        
+                                        <!-- Debug: Show selected files -->
+                                        @if($commentAttachments)
+                                            <div class="mt-2">
+                                                <small class="text-success">Selected files:</small>
+                                                <ul class="list-unstyled">
+                                                    @foreach($commentAttachments as $file)
+                                                        <li class="text-success">
+                                                            <i class="bi bi-file-earmark me-1"></i>
+                                                            {{ $file->getClientOriginalName() }}
+                                                            <small class="text-muted">({{ number_format($file->getSize() / 1024, 2) }} KB)</small>
+                                                        </li>
+                                                    @endforeach
+                                                </ul>
+                                            </div>
+                                        @endif
+                                    </div>
+                                    
                                     <button type="button" class="btn btn-primary" wire:click="addComment" wire:loading.attr="disabled">
                                         <span wire:loading wire:target="addComment">
                                             <span class="spinner-border spinner-border-sm me-2"></span>

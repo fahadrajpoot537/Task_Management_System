@@ -14,10 +14,11 @@ use App\Services\EmailNotificationService;
 use App\Services\RecurringTaskService;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Livewire\WithFileUploads;
 
 class TaskTable extends Component
 {
-    use WithPagination;
+    use WithPagination, WithFileUploads;
 
     protected $emailService;
 
@@ -65,6 +66,7 @@ class TaskTable extends Component
     
     // Comment properties
     public $newComment = '';
+    public $commentAttachments = [];
     
     // Custom option creation properties
     public $showCustomStatusForm = false;
@@ -405,6 +407,7 @@ class TaskTable extends Component
     {
         $this->validate([
             'newComment' => 'required|string|max:1000',
+            'commentAttachments.*' => 'nullable|file|max:10240'
         ]);
 
         if ($this->notesModalTaskId && $this->notesModalTaskId != 0) {
@@ -413,6 +416,21 @@ class TaskTable extends Component
                 'user_id' => auth()->id(),
                 'comment' => $this->newComment,
             ]);
+
+            // Handle comment attachments
+            if ($this->commentAttachments) {
+                foreach ($this->commentAttachments as $attachment) {
+                    $path = $attachment->store('comment-attachments');
+                    
+                    $comment->attachments()->create([
+                        'task_id' => $this->notesModalTaskId,
+                        'file_path' => $path,
+                        'file_name' => $attachment->getClientOriginalName(),
+                        'file_size' => $attachment->getSize(),
+                        'uploaded_by_user_id' => auth()->id(),
+                    ]);
+                }
+            }
 
             // Log the comment addition
             $task = Task::findOrFail($this->notesModalTaskId);
@@ -428,6 +446,7 @@ class TaskTable extends Component
 
             session()->flash('success', 'Comment added successfully!');
             $this->newComment = '';
+            $this->commentAttachments = [];
         }
     }
 
@@ -693,7 +712,7 @@ class TaskTable extends Component
     public function getTaskComments()
     {
         if ($this->notesModalTaskId && $this->notesModalTaskId != 0) {
-            return TaskNoteComment::with('user')
+            return TaskNoteComment::with(['user', 'attachments.uploadedBy'])
                 ->where('task_id', $this->notesModalTaskId)
                 ->orderBy('created_at', 'desc')
                 ->get();

@@ -8,7 +8,7 @@
 
     <!-- Search and Filters -->
     <div class="card mb-4">
-        <div class="card-body bg-light">
+        <div class="card-body" style="background-color: var(--bg-tertiary);">
             <div class="row g-2">
                 <div class="col-12 col-md-3">
                     <div class="input-group">
