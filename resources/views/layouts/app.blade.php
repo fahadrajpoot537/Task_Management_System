@@ -865,9 +865,7 @@ use Illuminate\Support\Facades\Storage;
                 padding: 1.5rem;
             }
             
-            .sidebar {
-                min-width: 250px;
-            }
+            
         }
 
         @media (max-width: 992px) {
