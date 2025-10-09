@@ -196,7 +196,7 @@
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-12">
-                            <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded">
+                            <div class="d-flex justify-content-between align-items-center p-3 rounded" style="background-color: var(--bg-tertiary);">
                                 <div>
                                     <div class="fw-semibold">Member Since</div>
                                     <small class="text-muted">{{ $user->created_at->format('M d, Y') }}</small>
@@ -206,7 +206,7 @@
                         </div>
                         
                         <div class="col-12">
-                            <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded">
+                            <div class="d-flex justify-content-between align-items-center p-3 rounded" style="background-color: var(--bg-tertiary);">
                                 <div>
                                     <div class="fw-semibold">Last Updated</div>
                                     <small class="text-muted">{{ $user->updated_at->format('M d, Y') }}</small>
@@ -217,7 +217,7 @@
                         
                         @if($user->manager)
                             <div class="col-12">
-                                <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded">
+                                <div class="d-flex justify-content-between align-items-center p-3 rounded" style="background-color: var(--bg-tertiary);">
                                     <div>
                                         <div class="fw-semibold">Manager</div>
                                         <small class="text-muted">{{ $user->manager->name }}</small>
@@ -271,8 +271,8 @@
         }
         
         .bg-light {
-            background-color: rgba(59, 130, 246, 0.05) !important;
-            border: 1px solid rgba(59, 130, 246, 0.1);
+            background-color: var(--bg-tertiary) !important;
+            border: 1px solid var(--border-color);
         }
         
         .upload-area {
