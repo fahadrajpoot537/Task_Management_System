@@ -30,6 +30,7 @@ class Task extends Model
         'assigned_to_user_id',
         'nature_of_task',
         'is_recurring',
+        'is_recurring_active',
         'parent_task_id',
         'next_recurrence_date',
         'assigned_by_user_id',
@@ -47,6 +48,9 @@ class Task extends Model
         'due_date' => 'date',
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
+        'is_recurring' => 'boolean',
+        'is_recurring_active' => 'boolean',
+        'next_recurrence_date' => 'datetime',
     ];
 
     /**
@@ -256,7 +260,7 @@ class Task extends Model
      */
     public function isRecurring(): bool
     {
-        return $this->is_recurring;
+        return $this->nature_of_task === 'recurring' && $this->is_recurring_active;
     }
 
     /**
@@ -266,9 +270,43 @@ class Task extends Model
     {
         return match($this->nature_of_task) {
             'daily' => 'Daily',
-            'weekly' => 'Weekly',
-            'monthly' => 'Monthly',
+            'recurring' => 'Recurring',
             default => 'Daily'
         };
+    }
+
+    /**
+     * Check if task can generate next occurrence.
+     */
+    public function canGenerateNextOccurrence(): bool
+    {
+        return $this->nature_of_task === 'recurring' && 
+               $this->is_recurring_active && 
+               $this->status && 
+               $this->status->name === 'Complete';
+    }
+
+    /**
+     * Stop recurring task generation.
+     */
+    public function stopRecurring(): void
+    {
+        $this->update(['is_recurring_active' => false]);
+    }
+
+    /**
+     * Get status badge class.
+     */
+    public function getStatusBadgeClassAttribute(): string
+    {
+        return $this->status ? "bg-{$this->status->color}" : 'bg-secondary';
+    }
+
+    /**
+     * Get priority badge class.
+     */
+    public function getPriorityBadgeClassAttribute(): string
+    {
+        return $this->priority ? "bg-{$this->priority->color}" : 'bg-secondary';
     }
 }
