@@ -118,6 +118,11 @@
                                 <a href="{{ route('tasks.details', $task->id) }}" class="text-decoration-none fw-bold" style="color: var(--text-primary);">
                                     {{ $task->title }}
                                 </a>
+                                @if($task->nature_of_task === 'recurring')
+                                    <span class="badge bg-info ms-2">
+                                        <i class="bi bi-arrow-repeat me-1"></i>Recurring
+                                    </span>
+                                @endif
                             </div>
                             @if($task->project)
                                 <small class="text-muted">{{ $task->project->title }}</small>
@@ -129,6 +134,9 @@
                             </button>
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item" href="#" wire:click="startEditing({{ $task->id }})"><i class="bi bi-pencil me-2"></i>Edit</a></li>
+                                @if($task->nature_of_task === 'recurring' && $task->is_recurring_active)
+                                    <li><a class="dropdown-item text-warning" href="#" wire:click="stopRecurringTask({{ $task->id }})"><i class="bi bi-stop-circle me-2"></i>Stop Recurring</a></li>
+                                @endif
                                 <li><a class="dropdown-item text-danger" href="#" wire:click="deleteTask({{ $task->id }})"><i class="bi bi-trash me-2"></i>Delete</a></li>
                             </ul>
                         </div>
@@ -218,7 +226,7 @@
         </div>
 
         <!-- Task Table -->
-        <div class="table-responsive" style="overflow-x: auto; max-height: 70vh;">
+        <div class="table-responsive" style="overflow-x: auto; overflow-y: visible; max-height: none; height: auto;">
             <table id="tasksTable" class="table table-hover table-striped mb-0">
                 <thead class="table-dark sticky-top">
                     <tr>
@@ -318,8 +326,7 @@
                             <td class="d-none d-lg-table-cell">
                                 <select class="form-select form-select-sm" wire:model="newTaskNature">
                                     <option value="daily">Daily</option>
-                                    <option value="weekly">Weekly</option>
-                                    <option value="monthly">Monthly</option>
+                                    <option value="recurring">Recurring</option>
                                 </select>
                             </td>
                             <td class="d-none d-lg-table-cell">
@@ -439,6 +446,11 @@
                                                 <a href="{{ route('tasks.details', $task->id) }}" class="text-decoration-none fw-bold" style="color: var(--text-primary);">
                                                     {{ $task->title }}
                                                 </a>
+                                                @if($task->nature_of_task === 'recurring')
+                                                    <span class="badge bg-info ms-2">
+                                                        <i class="bi bi-arrow-repeat me-1"></i>Recurring
+                                                    </span>
+                                                @endif
                                             </strong>
                                             @if($task->description)
                                                 <small class="text-muted d-none d-sm-block">{{ Str::limit($task->description, 50) }}</small>
@@ -692,6 +704,11 @@
                                         <button class="btn btn-sm btn-outline-primary" wire:click="startEditing({{ $task->id }})" title="Edit">
                                             <i class="bi bi-pencil"></i>
                                         </button>
+                                        @if($task->nature_of_task === 'recurring' && $task->is_recurring_active)
+                                            <button class="btn btn-sm btn-outline-warning" wire:click="stopRecurringTask({{ $task->id }})" title="Stop Recurring">
+                                                <i class="bi bi-stop-circle"></i>
+                                            </button>
+                                        @endif
                                         <button class="btn btn-sm btn-outline-danger" 
                                                 onclick="confirmDelete({{ $task->id }})" title="Delete">
                                             <i class="bi bi-trash"></i>
@@ -747,22 +764,134 @@
             }
         });
 
-        // Fix dropdown positioning to appear above all rows
+        // Comprehensive dropdown positioning fix
         document.addEventListener('DOMContentLoaded', function() {
-            // Handle dropdown show event
+            // Initialize all dropdowns with proper positioning
+            function initializeDropdowns() {
+                document.querySelectorAll('.dropdown-toggle').forEach(toggle => {
+                    // Remove any existing event listeners
+                    toggle.removeEventListener('click', handleDropdownClick);
+                    // Add new event listener
+                    toggle.addEventListener('click', handleDropdownClick);
+                });
+            }
+
+            function handleDropdownClick(e) {
+                const dropdownMenu = this.querySelector('.dropdown-menu');
+                if (!dropdownMenu) return;
+
+                // Wait for Bootstrap to show the dropdown
+                setTimeout(() => {
+                    positionDropdown(this, dropdownMenu);
+                }, 50);
+            }
+
+            function positionDropdown(toggle, menu) {
+                const toggleRect = toggle.getBoundingClientRect();
+                const menuRect = menu.getBoundingClientRect();
+                const viewportHeight = window.innerHeight;
+                const viewportWidth = window.innerWidth;
+                
+                // Reset positioning
+                menu.style.top = '';
+                menu.style.bottom = '';
+                menu.style.left = '';
+                menu.style.right = '';
+                menu.style.transform = '';
+                menu.style.position = 'absolute';
+                menu.style.zIndex = '1050';
+
+                // Force dropdown to be visible first
+                menu.style.display = 'block';
+                menu.style.visibility = 'visible';
+                menu.style.opacity = '1';
+
+                // Get updated menu dimensions after showing
+                const updatedMenuRect = menu.getBoundingClientRect();
+
+                // Check if dropdown goes beyond viewport bottom
+                if (toggleRect.bottom + updatedMenuRect.height > viewportHeight - 10) {
+                    // Position above the button
+                    menu.style.top = 'auto';
+                    menu.style.bottom = '100%';
+                    menu.style.marginTop = '0';
+                    menu.style.marginBottom = '2px';
+                    menu.classList.add('dropup');
+                } else {
+                    menu.classList.remove('dropup');
+                }
+
+                // Check if dropdown goes beyond viewport right edge
+                if (toggleRect.left + updatedMenuRect.width > viewportWidth - 10) {
+                    menu.style.left = 'auto';
+                    menu.style.right = '0';
+                }
+
+                // Check if dropdown goes beyond viewport left edge
+                if (toggleRect.left < 10) {
+                    menu.style.left = '0';
+                    menu.style.right = 'auto';
+                }
+
+                // Additional check for table-specific positioning
+                const tableContainer = toggle.closest('.table-responsive');
+                if (tableContainer) {
+                    const tableRect = tableContainer.getBoundingClientRect();
+                    
+                    // If dropdown would be clipped by table container
+                    if (toggleRect.bottom + updatedMenuRect.height > tableRect.bottom) {
+                        menu.style.top = 'auto';
+                        menu.style.bottom = '100%';
+                        menu.style.marginTop = '0';
+                        menu.style.marginBottom = '2px';
+                        menu.classList.add('dropup');
+                    }
+                }
+
+                // Ensure dropdown is always visible
+                menu.style.display = 'block';
+                menu.style.visibility = 'visible';
+                menu.style.opacity = '1';
+                menu.style.position = 'absolute';
+                menu.style.zIndex = '1050';
+            }
+
+            // Handle Bootstrap dropdown events
             document.addEventListener('show.bs.dropdown', function(e) {
                 const dropdownMenu = e.target.querySelector('.dropdown-menu');
-                if (dropdownMenu && e.target.closest('.task-table-container')) {
-                    // Set maximum z-index
-                    dropdownMenu.style.zIndex = '99999';
-                    dropdownMenu.style.position = 'absolute';
-                    
-                    // Ensure it appears above all table rows
+                if (dropdownMenu) {
                     setTimeout(() => {
-                        dropdownMenu.style.zIndex = '99999';
-                        dropdownMenu.style.position = 'absolute';
+                        positionDropdown(e.target, dropdownMenu);
                     }, 10);
                 }
+            });
+
+            document.addEventListener('shown.bs.dropdown', function(e) {
+                const dropdownMenu = e.target.querySelector('.dropdown-menu');
+                if (dropdownMenu) {
+                    positionDropdown(e.target, dropdownMenu);
+                }
+            });
+
+            // Close dropdowns on scroll
+            document.addEventListener('scroll', function() {
+                document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+                    const dropdown = menu.closest('.dropdown');
+                    if (dropdown) {
+                        const toggle = dropdown.querySelector('.dropdown-toggle');
+                        if (toggle) {
+                            toggle.click(); // Close dropdown
+                        }
+                    }
+                });
+            });
+
+            // Initialize dropdowns
+            initializeDropdowns();
+
+            // Re-initialize after Livewire updates
+            document.addEventListener('livewire:updated', function() {
+                setTimeout(initializeDropdowns, 100);
             });
         });
 
@@ -856,7 +985,7 @@
             }
         }
 
-        /* Status Dropdown Styling */
+        /* Status Dropdown Styling - Simplified */
         .dropdown-toggle::after {
             margin-left: 0.5em;
             font-size: 0.7em;
@@ -865,9 +994,9 @@
         .dropdown-menu {
             border: none;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            border-radius: 0.5rem;
+            border-radius: 0.375rem;
             padding: 0.5rem 0;
-            z-index: 9999 !important;
+            z-index: 1050 !important;
             position: absolute !important;
         }
 
@@ -895,13 +1024,95 @@
         /* Fix dropdown z-index issues */
         .dropdown {
             position: relative;
-            z-index: 1000;
+        }
+
+        /* Force dropdowns to be visible - Aggressive approach */
+        .table-responsive {
+            overflow-x: auto !important;
+            overflow-y: visible !important;
+            overflow: visible !important;
+        }
+
+        .table-responsive .table {
+            overflow: visible !important;
+        }
+
+        .table-responsive tbody {
+            overflow: visible !important;
+        }
+
+        .table-responsive td {
+            overflow: visible !important;
+            position: relative !important;
+        }
+
+        .table-responsive tr {
+            overflow: visible !important;
+        }
+
+        /* Force all containers to allow dropdown overflow */
+        .task-table,
+        .task-table *,
+        .table-responsive,
+        .table-responsive * {
+            overflow: visible !important;
+        }
+
+        /* Exception for horizontal scrolling */
+        .table-responsive {
+            overflow-x: auto !important;
+            overflow-y: visible !important;
+        }
+
+        /* Dropdown positioning for table edges - Specific fixes */
+        .dropdown-menu {
+            position: absolute !important;
+            z-index: 1050 !important;
+            display: none;
+            min-width: 160px;
+            padding: 0.5rem 0;
+            margin: 0;
+            background-color: #fff;
+            border: 1px solid rgba(0,0,0,.15);
+            border-radius: 0.375rem;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.175);
+        }
+
+        .dropdown-menu.show {
+            display: block !important;
+            position: absolute !important;
+            z-index: 1050 !important;
+        }
+
+        /* Force dropdown positioning */
+        .dropdown-menu[data-bs-popper] {
+            top: 100% !important;
+            left: 0 !important;
+            margin-top: 0.125rem !important;
+        }
+
+        /* Dropup positioning */
+        .dropdown-menu.dropup {
+            top: auto !important;
+            bottom: 100% !important;
+            margin-top: 0 !important;
+            margin-bottom: 0.125rem !important;
+        }
+
+        /* Ensure dropdowns are not clipped */
+        .table td .dropdown-menu {
+            position: absolute !important;
+            z-index: 1050 !important;
+            top: 100% !important;
+            left: 0 !important;
+            right: auto !important;
+            transform: none !important;
         }
 
 
         .task-table {
             position: relative;
-            overflow: hidden;
+            overflow: visible; /* Allow dropdowns to extend beyond table */
             border-radius: 0.5rem;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             background: white;
@@ -1088,28 +1299,75 @@
                         type: 'column',
                         target: 'tr'
                     }
+                },
+                // Fix dropdown positioning with DataTables
+                drawCallback: function() {
+                    // Re-initialize dropdown positioning after table redraw
+                    setTimeout(() => {
+                        const dropdowns = document.querySelectorAll('.dropdown-menu');
+                        dropdowns.forEach(dropdown => {
+                            dropdown.style.zIndex = '1050';
+                            dropdown.style.position = 'absolute';
+                        });
+                        
+                        // Re-attach dropdown event listeners
+                        document.querySelectorAll('.dropdown-toggle').forEach(toggle => {
+                            toggle.addEventListener('click', function(e) {
+                                const dropdownMenu = this.querySelector('.dropdown-menu');
+                                if (dropdownMenu) {
+                                    // Smart positioning logic
+                                    setTimeout(() => {
+                                        const tableContainer = this.closest('.table-responsive') || this.closest('.task-table');
+                                        const tableRect = tableContainer ? tableContainer.getBoundingClientRect() : null;
+                                        const dropdownRect = dropdownMenu.getBoundingClientRect();
+                                        const toggleRect = this.getBoundingClientRect();
+                                        
+                                        // Reset positioning
+                                        dropdownMenu.style.top = '100%';
+                                        dropdownMenu.style.left = '0';
+                                        dropdownMenu.style.right = 'auto';
+                                        dropdownMenu.style.transform = 'none';
+                                        
+                                        // Check if dropdown goes beyond table bottom
+                                        if (tableRect && (toggleRect.bottom + dropdownRect.height) > tableRect.bottom) {
+                                            dropdownMenu.style.top = 'auto';
+                                            dropdownMenu.style.bottom = '100%';
+                                            dropdownMenu.style.marginTop = '0';
+                                            dropdownMenu.style.marginBottom = '2px';
+                                        }
+                                        
+                                        // Check if dropdown goes beyond table right edge
+                                        if (tableRect && (toggleRect.left + dropdownRect.width) > tableRect.right) {
+                                            dropdownMenu.style.left = 'auto';
+                                            dropdownMenu.style.right = '0';
+                                        }
+                                        
+                                        dropdownMenu.style.zIndex = '1050';
+                                        dropdownMenu.style.position = 'absolute';
+                                    }, 10);
+                                }
+                            });
+                        });
+                    }, 100);
                 }
             });
         });
 
         // Initialize DataTable on page load
         document.addEventListener('DOMContentLoaded', function () {
-            setTimeout(function() {
-                if ($.fn.DataTable.isDataTable('#tasksTable')) {
-                    $('#tasksTable').DataTable().destroy();
-                }
-                
+            // Initialize DataTable if it exists
+            if (document.getElementById('tasksTable')) {
                 $('#tasksTable').DataTable({
                     responsive: true,
                     pageLength: 10,
                     lengthMenu: [[5, 10, 25, 50, -1], [5, 10, 25, 50, "All"]],
                     order: [[0, 'desc']],
                     columnDefs: [
-                        { orderable: false, targets: [10] }, // Actions column
-                        { className: "text-center", targets: [0, 4, 5, 6, 7, 8, 9, 10] }, // Center align certain columns
-                        { responsivePriority: 1, targets: [1] }, // Title column priority
-                        { responsivePriority: 2, targets: [6] }, // Status column priority
-                        { responsivePriority: 3, targets: [10] }, // Actions column priority
+                        { orderable: false, targets: [10] },
+                        { className: "text-center", targets: [0, 4, 5, 6, 7, 8, 9, 10] },
+                        { responsivePriority: 1, targets: [1] },
+                        { responsivePriority: 2, targets: [6] },
+                        { responsivePriority: 3, targets: [10] },
                     ],
                     language: {
                         search: "Search tasks:",
@@ -1130,9 +1388,56 @@
                             type: 'column',
                             target: 'tr'
                         }
+                    },
+                    drawCallback: function() {
+                        setTimeout(() => {
+                            const dropdowns = document.querySelectorAll('.dropdown-menu');
+                            dropdowns.forEach(dropdown => {
+                                dropdown.style.zIndex = '1050';
+                                dropdown.style.position = 'absolute';
+                            });
+                            
+                            // Re-attach dropdown event listeners for edge positioning
+                            document.querySelectorAll('.dropdown-toggle').forEach(toggle => {
+                                toggle.addEventListener('click', function(e) {
+                                    const dropdownMenu = this.querySelector('.dropdown-menu');
+                                    if (dropdownMenu) {
+                                        setTimeout(() => {
+                                            const tableContainer = this.closest('.table-responsive') || this.closest('.task-table');
+                                            const tableRect = tableContainer ? tableContainer.getBoundingClientRect() : null;
+                                            const dropdownRect = dropdownMenu.getBoundingClientRect();
+                                            const toggleRect = this.getBoundingClientRect();
+                                            
+                                            // Reset positioning
+                                            dropdownMenu.style.top = '100%';
+                                            dropdownMenu.style.left = '0';
+                                            dropdownMenu.style.right = 'auto';
+                                            dropdownMenu.style.transform = 'none';
+                                            
+                                            // Check if dropdown goes beyond table bottom
+                                            if (tableRect && (toggleRect.bottom + dropdownRect.height) > tableRect.bottom) {
+                                                dropdownMenu.style.top = 'auto';
+                                                dropdownMenu.style.bottom = '100%';
+                                                dropdownMenu.style.marginTop = '0';
+                                                dropdownMenu.style.marginBottom = '2px';
+                                            }
+                                            
+                                            // Check if dropdown goes beyond table right edge
+                                            if (tableRect && (toggleRect.left + dropdownRect.width) > tableRect.right) {
+                                                dropdownMenu.style.left = 'auto';
+                                                dropdownMenu.style.right = '0';
+                                            }
+                                            
+                                            dropdownMenu.style.zIndex = '1050';
+                                            dropdownMenu.style.position = 'absolute';
+                                        }, 10);
+                                    }
+                                });
+                            });
+                        }, 100);
                     }
                 });
-            }, 100);
+            }
         });
     </script>
 

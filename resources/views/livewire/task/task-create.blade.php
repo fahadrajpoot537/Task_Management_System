@@ -279,6 +279,24 @@
                             </div>
                         </div>
 
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="nature_of_task" class="form-label">Nature of Task <span class="text-danger">*</span></label>
+                                <select class="form-select @error('nature_of_task') is-invalid @enderror" 
+                                        id="nature_of_task" wire:model="nature_of_task" required>
+                                    <option value="daily">Daily</option>
+                                    <option value="recurring">Recurring</option>
+                                </select>
+                                <div class="form-text">
+                                    <strong>Daily:</strong> Task will be created once and completed normally.<br>
+                                    <strong>Recurring:</strong> Task will automatically recreate itself when completed until manually stopped.
+                                </div>
+                                @error('nature_of_task')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+
                         <div class="mb-3">
                             <label for="notes" class="form-label">Notes</label>
                             <textarea class="form-control @error('notes') is-invalid @enderror" 

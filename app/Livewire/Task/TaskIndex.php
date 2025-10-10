@@ -103,6 +103,12 @@ class TaskIndex extends Component
         Log::createLog(auth()->id(), 'update_task_status', 
             "Changed task '{$task->title}' status from {$oldStatus} to {$newStatus}");
 
+        // Process recurring task if status is "Complete"
+        if ($newStatus === 'Complete') {
+            $recurringService = new \App\Services\RecurringTaskService();
+            $recurringService->processRecurringTask($task);
+        }
+
         session()->flash('success', 'Task status updated successfully.');
     }
 

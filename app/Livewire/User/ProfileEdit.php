@@ -18,6 +18,12 @@ class ProfileEdit extends Component
     public $bio = '';
     public $avatar;
     public $currentAvatar;
+    
+    // Password change fields
+    public $currentPassword = '';
+    public $newPassword = '';
+    public $confirmPassword = '';
+    public $showPasswordForm = false;
 
     protected $rules = [
         'name' => 'required|string|max:255',
@@ -25,6 +31,9 @@ class ProfileEdit extends Component
         'phone' => 'nullable|string|max:20',
         'bio' => 'nullable|string|max:500',
         'avatar' => 'nullable|image|max:2048', // 2MB max
+        'currentPassword' => 'required_with:newPassword|current_password',
+        'newPassword' => 'required_with:currentPassword|min:8',
+        'confirmPassword' => 'required_with:newPassword|same:newPassword',
     ];
 
     public function mount()
@@ -80,6 +89,50 @@ class ProfileEdit extends Component
         $this->avatar = null;
 
         session()->flash('success', 'Avatar removed successfully!');
+    }
+
+    public function togglePasswordForm()
+    {
+        $this->showPasswordForm = !$this->showPasswordForm;
+        $this->resetPasswordFields();
+    }
+
+    public function resetPasswordFields()
+    {
+        $this->currentPassword = '';
+        $this->newPassword = '';
+        $this->confirmPassword = '';
+    }
+
+    public function updatedNewPassword()
+    {
+        $this->validateOnly('newPassword');
+        $this->validateOnly('confirmPassword');
+    }
+
+    public function updatedConfirmPassword()
+    {
+        $this->validateOnly('confirmPassword');
+    }
+
+    public function changePassword()
+    {
+        $this->validate([
+            'currentPassword' => 'required|current_password',
+            'newPassword' => 'required|min:8',
+            'confirmPassword' => 'required|same:newPassword',
+        ]);
+
+        // Update the user's password
+        $this->user->update([
+            'password' => bcrypt($this->newPassword),
+        ]);
+
+        // Reset password fields
+        $this->resetPasswordFields();
+        $this->showPasswordForm = false;
+
+        session()->flash('success', 'Password changed successfully!');
     }
 
     public function render()

@@ -13,11 +13,16 @@ class AttachmentController extends Controller
      */
     public function download(Attachment $attachment)
     {
-        // Check if the file exists
-        $fullPath = storage_path('app/private/' . $attachment->file_path);
+        // Check if the file exists in the attachments directory
+        $fullPath = storage_path('app/attachments/' . $attachment->file_path);
         
         if (!file_exists($fullPath)) {
-            abort(404, 'File not found');
+            // Try the private directory as fallback
+            $fullPath = storage_path('app/private/' . $attachment->file_path);
+            
+            if (!file_exists($fullPath)) {
+                abort(404, 'File not found');
+            }
         }
         
         // Return the file download response

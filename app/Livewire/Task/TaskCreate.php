@@ -51,6 +51,7 @@ class TaskCreate extends Component
     public $duration = '';
     public $due_date = '';
     public $assigned_to_user_id = '';
+    public $nature_of_task = 'daily';
     public $notes = '';
     public $attachments = [];
 
@@ -77,6 +78,7 @@ class TaskCreate extends Component
         'duration' => 'nullable|integer|min:1',
         'due_date' => 'nullable|date|after:today',
         'assigned_to_user_id' => 'required|exists:users,id',
+        'nature_of_task' => 'required|in:daily,recurring',
         'notes' => 'nullable|string',
         'attachments.*' => 'nullable|file|max:10240', // 10MB max
     ];
@@ -96,6 +98,9 @@ class TaskCreate extends Component
             'due_date' => $this->due_date,
             'assigned_to_user_id' => $this->assigned_to_user_id,
             'assigned_by_user_id' => auth()->id(),
+            'nature_of_task' => $this->nature_of_task,
+            'is_recurring' => $this->nature_of_task === 'recurring',
+            'is_recurring_active' => $this->nature_of_task === 'recurring',
             'notes' => $this->notes,
         ]);
 
@@ -133,8 +138,8 @@ class TaskCreate extends Component
 
     private function getDefaultStatusId()
     {
-        $defaultStatus = TaskStatus::where('is_default', true)->first();
-        return $defaultStatus ? $defaultStatus->id : null;
+        $pendingStatus = TaskStatus::where('name', 'Pending')->first();
+        return $pendingStatus ? $pendingStatus->id : null;
     }
 
     // Priority management methods
