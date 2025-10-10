@@ -162,11 +162,11 @@ class TaskTable extends Component
             'newTaskDueDate' => 'nullable|date',
             'newTaskEstimatedHours' => 'nullable|numeric|min:0',
             'newTaskNotes' => 'nullable|string',
-            'newTaskNature' => 'required|in:daily,weekly,monthly',
+            'newTaskNature' => 'required|in:daily,recurring',
         ]);
 
-        // Get default status
-        $defaultStatus = TaskStatus::where('is_default', true)->first();
+        // Get Pending status
+        $pendingStatus = TaskStatus::where('name', 'Pending')->first();
 
         $task = Task::create([
             'title' => $this->newTaskTitle,
@@ -175,12 +175,13 @@ class TaskTable extends Component
             'assigned_to_user_id' => $this->newTaskAssigneeId,
             'priority_id' => $this->newTaskPriority,
             'category_id' => $this->newTaskCategory,
-            'status_id' => $defaultStatus ? $defaultStatus->id : null,
+            'status_id' => $pendingStatus ? $pendingStatus->id : null,
             'due_date' => $this->newTaskDueDate,
             'estimated_hours' => $this->newTaskEstimatedHours,
             'notes' => $this->newTaskNotes,
             'nature_of_task' => $this->newTaskNature,
-            'is_recurring' => $this->newTaskNature !== 'daily', // Only daily tasks are not recurring by default
+            'is_recurring' => $this->newTaskNature === 'recurring',
+            'is_recurring_active' => $this->newTaskNature === 'recurring',
             'assigned_by_user_id' => auth()->id(),
         ]);
 
@@ -214,6 +215,7 @@ class TaskTable extends Component
             'newTaskDueDate' => 'nullable|date',
             'newTaskEstimatedHours' => 'nullable|numeric|min:0',
             'newTaskNotes' => 'nullable|string',
+            'newTaskNature' => 'required|in:daily,recurring',
         ]);
 
         $task = Task::findOrFail($this->editingTaskId);
@@ -227,6 +229,9 @@ class TaskTable extends Component
             'due_date' => $this->newTaskDueDate,
             'estimated_hours' => $this->newTaskEstimatedHours,
             'notes' => $this->newTaskNotes,
+            'nature_of_task' => $this->newTaskNature,
+            'is_recurring' => $this->newTaskNature === 'recurring',
+            'is_recurring_active' => $this->newTaskNature === 'recurring',
         ]);
 
         // Log the update
@@ -312,13 +317,30 @@ class TaskTable extends Component
         
         $this->emailService->sendTaskStatusChangedNotification($task, $oldStatus, $newStatus);
 
-        // Process recurring task if status is "Submit for Approval"
-        if ($newStatus->name === 'Submit for Approval') {
+        // Process recurring task if status is "Complete"
+        if ($newStatus->name === 'Complete') {
             $recurringService = new RecurringTaskService();
             $recurringService->processRecurringTask($task);
         }
 
         session()->flash('success', 'Task status updated successfully!');
+    }
+
+    public function stopRecurringTask($taskId)
+    {
+        $task = Task::findOrFail($taskId);
+        
+        if ($task->nature_of_task === 'recurring') {
+            $recurringService = new RecurringTaskService();
+            $recurringService->stopRecurringTask($task);
+            
+            // Log the action
+            Log::createLog(auth()->id(), 'stop_recurring_task', "Stopped recurring task: {$task->title}");
+            
+            session()->flash('success', 'Recurring task generation stopped successfully!');
+        } else {
+            session()->flash('error', 'This task is not a recurring task.');
+        }
     }
 
     public function updateTaskPriority($taskId, $priorityId)
@@ -454,7 +476,7 @@ class TaskTable extends Component
     {
         $this->validate([
             'notesModalContent' => 'nullable|string',
-            'commitMessage' => 'required|string|max:255',
+            'commitMessage' => 'nullable|string|max:255',
         ]);
 
         if ($this->notesModalTaskId == 0) {

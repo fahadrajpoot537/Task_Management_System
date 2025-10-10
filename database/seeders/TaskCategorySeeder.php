@@ -19,6 +19,7 @@ class TaskCategorySeeder extends Seeder
             ['name' => 'Testing', 'icon' => 'bi-bug', 'color' => 'warning', 'is_default' => true],
             ['name' => 'Documentation', 'icon' => 'bi-file-text', 'color' => 'success', 'is_default' => true],
             ['name' => 'Meeting', 'icon' => 'bi-people', 'color' => 'dark', 'is_default' => true],
+            ['name' => 'Maintenance', 'icon' => 'bi-gear', 'color' => 'secondary', 'is_default' => true],
             ['name' => 'General', 'icon' => 'bi-list-task', 'color' => 'secondary', 'is_default' => true],
         ];
 
