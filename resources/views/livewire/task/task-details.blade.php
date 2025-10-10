@@ -11,12 +11,19 @@
         <div class="col-md-8">
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">{{ $task->title }}</h5>
+                    <h5 class="mb-0">
+                        {{ $task->title }}
+                        @if($task->nature_of_task === 'recurring')
+                            <span class="badge bg-info ms-2">
+                                <i class="bi bi-arrow-repeat me-1"></i>Recurring
+                            </span>
+                        @endif
+                    </h5>
                     <div class="dropdown">
                         <button class="btn btn-outline-secondary dropdown-toggle" 
                                 type="button" data-bs-toggle="dropdown">
                             <span class="badge {{ $task->status_badge_class }}">
-                                {{ ucfirst($task->status) }}
+                                {{ $task->status->name }}
                             </span>
                         </button>
                         <ul class="dropdown-menu">
@@ -42,7 +49,7 @@
                         <div class="col-md-6">
                             <strong>Priority:</strong>
                             <span class="badge {{ $task->priority_badge_class }}">
-                                {{ ucfirst($task->priority) }}
+                                {{ $task->priority->name }}
                             </span>
                         </div>
                     </div>
@@ -115,6 +122,12 @@
                             <label class="form-label">Attach Files (Optional)</label>
                             <input type="file" class="form-control" wire:model="commentAttachments" multiple>
                             <div class="form-text">You can upload multiple files (max 10MB each)</div>
+                            @if($commentAttachments)
+                                <div class="text-success small mt-1">
+                                    <i class="bi bi-check-circle me-1"></i>
+                                    {{ count($commentAttachments) }} file(s) selected
+                                </div>
+                            @endif
                             @error('commentAttachments.*')
                                 <div class="text-danger small">{{ $message }}</div>
                             @enderror
@@ -266,6 +279,12 @@
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
+                        @if($task->nature_of_task === 'recurring' && $task->is_recurring_active)
+                            <button class="btn btn-outline-warning" 
+                                    wire:click="stopRecurringTask">
+                                <i class="bi bi-stop-circle me-2"></i>Stop Recurring
+                            </button>
+                        @endif
                         @foreach($this->statuses as $status)
                             @if($status->name === 'In Progress')
                                 <button class="btn btn-outline-primary" 

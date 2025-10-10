@@ -6,6 +6,7 @@ use App\Models\Log;
 use App\Models\Task;
 use App\Models\TaskStatus;
 use App\Models\TaskNoteComment;
+use App\Models\Attachment;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -30,7 +31,7 @@ class TaskDetails extends Component
     {
         $user = auth()->user();
         
-        $this->task = Task::with(['project', 'assignedTo', 'assignedBy', 'attachments.uploadedBy', 'noteComments.user', 'noteComments.attachments'])
+        $this->task = Task::with(['project', 'assignedTo', 'assignedBy', 'status', 'priority', 'category', 'attachments.uploadedBy', 'noteComments.user', 'noteComments.attachments.uploadedBy'])
             ->findOrFail($taskId);
             
         // Check if user can access this task
@@ -211,7 +212,28 @@ class TaskDetails extends Component
         Log::createLog(auth()->id(), 'update_task_status', 
             "Changed task '{$this->task->title}' status from {$oldStatus} to {$newStatus}");
 
+        // Process recurring task if status is "Complete"
+        if ($newStatus === 'Complete') {
+            $recurringService = new \App\Services\RecurringTaskService();
+            $recurringService->processRecurringTask($this->task);
+        }
+
         session()->flash('success', 'Task status updated successfully.');
+    }
+
+    public function stopRecurringTask()
+    {
+        if ($this->task->nature_of_task === 'recurring') {
+            $recurringService = new \App\Services\RecurringTaskService();
+            $recurringService->stopRecurringTask($this->task);
+            
+            // Log the action
+            Log::createLog(auth()->id(), 'stop_recurring_task', "Stopped recurring task: {$this->task->title}");
+            
+            session()->flash('success', 'Recurring task generation stopped successfully!');
+        } else {
+            session()->flash('error', 'This task is not a recurring task.');
+        }
     }
 
     public function getStatusesProperty()
@@ -221,41 +243,47 @@ class TaskDetails extends Component
 
     public function addComment()
     {
-        $this->validate([
-            'newComment' => 'required|string',
-            'commentAttachments.*' => 'nullable|file|max:10240'
-        ]);
+        try {
+            $this->validate([
+                'newComment' => 'required|string',
+                'commentAttachments.*' => 'nullable|file|max:10240'
+            ]);
 
-        // Create the comment
-        $comment = TaskNoteComment::create([
-            'task_id' => $this->task->id,
-            'user_id' => auth()->id(),
-            'comment' => $this->newComment,
-        ]);
+            // Create the comment
+            $comment = TaskNoteComment::create([
+                'task_id' => $this->task->id,
+                'user_id' => auth()->id(),
+                'comment' => $this->newComment,
+            ]);
 
-        // Handle comment attachments
-        if ($this->commentAttachments) {
-            foreach ($this->commentAttachments as $attachment) {
-                $path = $attachment->store('comment-attachments');
-                
-                $comment->attachments()->create([
-                    'file_path' => $path,
-                    'file_name' => $attachment->getClientOriginalName(),
-                    'file_size' => $attachment->getSize(),
-                    'uploaded_by_user_id' => auth()->id(),
-                ]);
+            // Handle comment attachments
+            if ($this->commentAttachments && count($this->commentAttachments) > 0) {
+                foreach ($this->commentAttachments as $attachment) {
+                    $path = $attachment->store('attachments');
+                    
+                    Attachment::create([
+                        'task_id' => $this->task->id,
+                        'comment_id' => $comment->id,
+                        'file_path' => $path,
+                        'file_name' => $attachment->getClientOriginalName(),
+                        'file_size' => $attachment->getSize(),
+                        'uploaded_by_user_id' => auth()->id(),
+                    ]);
+                }
             }
+
+            // Log the comment addition
+            Log::createLog(auth()->id(), 'add_task_comment', 
+                "Added comment to task: {$this->task->title}");
+
+            $this->newComment = '';
+            $this->commentAttachments = [];
+            $this->task->load('noteComments.user', 'noteComments.attachments');
+            
+            session()->flash('success', 'Comment added successfully.');
+        } catch (\Exception $e) {
+            session()->flash('error', 'Error adding comment: ' . $e->getMessage());
         }
-
-        // Log the comment addition
-        Log::createLog(auth()->id(), 'add_task_comment', 
-            "Added comment to task: {$this->task->title}");
-
-        $this->newComment = '';
-        $this->commentAttachments = [];
-        $this->task->load('noteComments.user', 'noteComments.attachments');
-        
-        session()->flash('success', 'Comment added successfully.');
     }
 
     public function deleteComment($commentId)

@@ -232,6 +232,91 @@
         </div>
     </div>
 
+    <!-- Password Change Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-gradient-light">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 text-primary">
+                            <i class="bi bi-shield-lock me-2"></i>Change Password
+                        </h5>
+                        <button type="button" class="btn btn-outline-primary btn-sm" wire:click="togglePasswordForm">
+                            <i class="bi bi-{{ $showPasswordForm ? 'eye-slash' : 'eye' }} me-1"></i>
+                            {{ $showPasswordForm ? 'Hide' : 'Change Password' }}
+                        </button>
+                    </div>
+                </div>
+                @if($showPasswordForm)
+                <div class="card-body">
+                    <form wire:submit="changePassword" class="password-form">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="currentPassword" class="form-label fw-semibold">
+                                    <i class="bi bi-key me-2"></i>Current Password <span class="text-danger">*</span>
+                                </label>
+                                <input type="password" class="form-control @error('currentPassword') is-invalid @enderror" 
+                                       id="currentPassword" wire:model="currentPassword" required>
+                                @error('currentPassword')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="newPassword" class="form-label fw-semibold">
+                                    <i class="bi bi-key-fill me-2"></i>New Password <span class="text-danger">*</span>
+                                </label>
+                                <input type="password" class="form-control @error('newPassword') is-invalid @enderror" 
+                                       id="newPassword" wire:model="newPassword" required>
+                                <div class="form-text">Minimum 8 characters</div>
+                                @if($newPassword)
+                                    <div class="password-strength mt-2">
+                                        <div class="progress" style="height: 5px;">
+                                            <div class="progress-bar" id="passwordStrength" role="progressbar" style="width: 0%"></div>
+                                        </div>
+                                        <small class="text-muted" id="passwordStrengthText">Password strength</small>
+                                    </div>
+                                @endif
+                                @error('newPassword')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="confirmPassword" class="form-label fw-semibold">
+                                    <i class="bi bi-check-circle me-2"></i>Confirm Password <span class="text-danger">*</span>
+                                </label>
+                                <input type="password" class="form-control @error('confirmPassword') is-invalid @enderror" 
+                                       id="confirmPassword" wire:model="confirmPassword" required>
+                                @error('confirmPassword')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-3 mt-4">
+                            <button type="button" class="btn btn-outline-secondary" wire:click="togglePasswordForm">
+                                <i class="bi bi-x-circle me-2"></i>Cancel
+                            </button>
+                            <button type="submit" class="btn btn-warning">
+                                <i class="bi bi-shield-check me-2"></i>Change Password
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                @else
+                <div class="card-body">
+                    <div class="text-center py-4">
+                        <i class="bi bi-shield-lock text-muted" style="font-size: 3rem;"></i>
+                        <h6 class="text-muted mt-3">Password Security</h6>
+                        <p class="text-muted mb-0">Click "Change Password" to update your account password</p>
+                    </div>
+                </div>
+                @endif
+            </div>
+        </div>
+    </div>
+
     <style>
         .bg-gradient-primary {
             background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
@@ -322,6 +407,35 @@
             letter-spacing: 0.5px;
         }
         
+        /* Password form styling */
+        .password-form {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.05) 0%, rgba(245, 158, 11, 0.1) 100%);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            border-radius: 1rem;
+            padding: 1.5rem;
+        }
+        
+        .password-form .form-control {
+            border: 2px solid rgba(245, 158, 11, 0.2);
+        }
+        
+        .password-form .form-control:focus {
+            border-color: #f59e0b;
+            box-shadow: 0 0 0 0.2rem rgba(245, 158, 11, 0.25);
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+            border: none;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .btn-warning:hover {
+            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+            transform: translateY(-1px);
+        }
+        
         /* Loading states */
         .btn:disabled {
             opacity: 0.6;
@@ -360,30 +474,101 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Phone number formatting
-            const phoneInput = document.getElementById('phone');
-            if (phoneInput) {
-                phoneInput.addEventListener('input', function(e) {
-                    let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+            // Password strength indicator
+            const newPasswordInput = document.getElementById('newPassword');
+            const confirmPasswordInput = document.getElementById('confirmPassword');
+            const passwordStrength = document.getElementById('passwordStrength');
+            const passwordStrengthText = document.getElementById('passwordStrengthText');
+            
+            if (newPasswordInput) {
+                newPasswordInput.addEventListener('input', function() {
+                    const password = this.value;
+                    const strength = calculatePasswordStrength(password);
                     
-                    // Format as +1 (XXX) XXX-XXXX
-                    if (value.length > 0) {
-                        if (value.length <= 1) {
-                            value = '+' + value;
-                        } else if (value.length <= 4) {
-                            value = '+' + value.slice(0, 1) + ' (' + value.slice(1);
-                        } else if (value.length <= 7) {
-                            value = '+' + value.slice(0, 1) + ' (' + value.slice(1, 4) + ') ' + value.slice(4);
-                        } else {
-                            value = '+' + value.slice(0, 1) + ' (' + value.slice(1, 4) + ') ' + value.slice(4, 7) + '-' + value.slice(7, 11);
-                        }
+                    if (passwordStrength && passwordStrengthText) {
+                        passwordStrength.style.width = strength.percentage + '%';
+                        passwordStrength.className = 'progress-bar ' + strength.class;
+                        passwordStrengthText.textContent = strength.text;
+                        passwordStrengthText.className = 'text-' + strength.textClass;
                     }
-                    
-                    e.target.value = value;
                 });
+            }
+            
+            // Password confirmation validation
+            if (confirmPasswordInput) {
+                confirmPasswordInput.addEventListener('input', function() {
+                    const newPassword = newPasswordInput ? newPasswordInput.value : '';
+                    const confirmPassword = this.value;
+                    
+                    if (confirmPassword && newPassword) {
+                        if (confirmPassword === newPassword) {
+                            this.classList.remove('is-invalid');
+                            this.classList.add('is-valid');
+                        } else {
+                            this.classList.remove('is-valid');
+                            this.classList.add('is-invalid');
+                        }
+                    } else {
+                        this.classList.remove('is-valid', 'is-invalid');
+                    }
+                });
+            }
+            
+            function calculatePasswordStrength(password) {
+                let score = 0;
+                let feedback = [];
                 
-                // Add phone input styling
-                phoneInput.classList.add('phone-input');
+                // Length check
+                if (password.length >= 8) score += 1;
+                else feedback.push('At least 8 characters');
+                
+                // Lowercase check
+                if (/[a-z]/.test(password)) score += 1;
+                else feedback.push('Lowercase letter');
+                
+                // Uppercase check
+                if (/[A-Z]/.test(password)) score += 1;
+                else feedback.push('Uppercase letter');
+                
+                // Number check
+                if (/[0-9]/.test(password)) score += 1;
+                else feedback.push('Number');
+                
+                // Special character check
+                if (/[^A-Za-z0-9]/.test(password)) score += 1;
+                else feedback.push('Special character');
+                
+                const percentage = (score / 5) * 100;
+                
+                if (score <= 2) {
+                    return {
+                        percentage: percentage,
+                        class: 'bg-danger',
+                        text: 'Weak - ' + feedback.join(', '),
+                        textClass: 'danger'
+                    };
+                } else if (score <= 3) {
+                    return {
+                        percentage: percentage,
+                        class: 'bg-warning',
+                        text: 'Fair - ' + feedback.join(', '),
+                        textClass: 'warning'
+                    };
+                } else if (score <= 4) {
+                    return {
+                        percentage: percentage,
+                        class: 'bg-info',
+                        text: 'Good - ' + feedback.join(', '),
+                        textClass: 'info'
+                    };
+                } else {
+                    return {
+                        percentage: percentage,
+                        class: 'bg-success',
+                        text: 'Strong password!',
+                        textClass: 'success'
+                    };
+                }
             }
 
             // Drag and drop functionality for avatar upload
