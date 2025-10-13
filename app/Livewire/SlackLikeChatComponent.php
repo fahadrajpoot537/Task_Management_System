@@ -7,6 +7,7 @@ use App\Models\DirectMessage;
 use App\Models\User;
 use Livewire\Component;
 use Livewire\Attributes\On;
+use Illuminate\Support\Facades\Session;
 
 class SlackLikeChatComponent extends Component
 {
@@ -16,11 +17,17 @@ class SlackLikeChatComponent extends Component
     public $newMessage = '';
     public $conversations = [];
     public $showUserList = true;
+    public $currentTheme = 'light';
+    public $showDeleteModal = false;
+    public $messageToDelete = null;
     
-    protected $listeners = ['refreshComponent'];
+    protected $listeners = ['refreshComponent', 'theme-changed'];
 
     public function mount()
     {
+        // Load current theme
+        $this->currentTheme = Session::get('theme', 'light');
+        
         // Load all users with online status
         $this->loadUsers();
         
@@ -124,8 +131,8 @@ class SlackLikeChatComponent extends Component
         // Reset the input
         $this->newMessage = '';
 
-        // Reload conversations to update last message
-        $this->loadConversations();
+        // Update conversations without full reload to prevent blinking
+        $this->updateConversationsAfterMessage();
 
         // Dispatch browser event to scroll to bottom
         $this->dispatch('message-sent');
@@ -169,12 +176,102 @@ class SlackLikeChatComponent extends Component
 
     public function refreshComponent()
     {
-        // Reload users and conversations when a new message is received
+        // Only refresh when explicitly called, not on polling
         $this->loadUsers();
         $this->loadConversations();
         if ($this->selectedUser) {
             $this->loadMessages();
         }
+    }
+
+    // Removed WebSocket event listener to fix auth.id placeholder error
+    // Real-time updates will be handled through the existing handleNewMessage method
+
+    #[On('message-sent')]
+    public function handleMessageSent()
+    {
+        // Handle when a message is sent - refresh conversations
+        $this->loadConversations();
+    }
+
+    public function updateConversationsAfterMessage()
+    {
+        // Update conversations efficiently without causing blinking
+        // Find the conversation for the current user and update its last message
+        $lastMessage = $this->messages[count($this->messages) - 1] ?? null;
+        if ($lastMessage) {
+            foreach ($this->conversations as $index => $conversation) {
+                if ($conversation['user']['id'] == $this->selectedUser['id']) {
+                    // Update the last message for this conversation
+                    $this->conversations[$index]['last_message'] = [
+                        'message' => $lastMessage['message'],
+                        'created_at' => $lastMessage['created_at'],
+                    ];
+                    break;
+                }
+            }
+        }
+    }
+
+    public function confirmDeleteMessage($messageId)
+    {
+        $this->messageToDelete = $messageId;
+        $this->showDeleteModal = true;
+    }
+
+    public function deleteMessage()
+    {
+        if (!$this->messageToDelete) {
+            return;
+        }
+
+        $message = DirectMessage::findOrFail($this->messageToDelete);
+        
+        // Check if user can delete this message (only sender can delete their own messages)
+        if ($message->sender_id !== auth()->id()) {
+            session()->flash('error', 'You can only delete your own messages.');
+            $this->closeDeleteModal();
+            return;
+        }
+        
+        // Delete the message
+        $message->delete();
+        
+        // Refresh messages for the current conversation
+        $this->loadMessages();
+        
+        // Refresh conversations to update last message
+        $this->loadConversations();
+        
+        session()->flash('success', 'Message deleted successfully.');
+        $this->closeDeleteModal();
+    }
+
+    public function closeDeleteModal()
+    {
+        $this->showDeleteModal = false;
+        $this->messageToDelete = null;
+    }
+
+    public function manualRefresh()
+    {
+        // Manual refresh method that can be called from the UI
+        $this->refreshComponent();
+    }
+
+    public function updatedCurrentTheme()
+    {
+        // This method will be called when the theme changes
+        // The theme is already updated in the session by the ThemeToggle component
+        $this->currentTheme = Session::get('theme', 'light');
+    }
+
+    #[On('theme-changed')]
+    public function handleThemeChanged($theme)
+    {
+        $this->currentTheme = $theme;
+        // Force a re-render to apply the new theme
+        $this->render();
     }
 
     public function render()

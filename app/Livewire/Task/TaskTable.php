@@ -12,6 +12,7 @@ use App\Models\TaskNoteComment;
 use App\Models\User;
 use App\Services\EmailNotificationService;
 use App\Services\RecurringTaskService;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\WithFileUploads;
@@ -162,11 +163,15 @@ class TaskTable extends Component
             'newTaskDueDate' => 'nullable|date',
             'newTaskEstimatedHours' => 'nullable|numeric|min:0',
             'newTaskNotes' => 'nullable|string',
-            'newTaskNature' => 'required|in:daily,recurring',
+            'newTaskNature' => 'required|in:daily,weekly,monthly,until_stop',
         ]);
 
         // Get Pending status
         $pendingStatus = TaskStatus::where('name', 'Pending')->first();
+
+        // Determine if task is recurring based on nature
+        $isRecurring = in_array($this->newTaskNature, ['weekly', 'monthly', 'until_stop']);
+        $isRecurringActive = $isRecurring ? 1 : 0;
 
         $task = Task::create([
             'title' => $this->newTaskTitle,
@@ -180,8 +185,8 @@ class TaskTable extends Component
             'estimated_hours' => $this->newTaskEstimatedHours,
             'notes' => $this->newTaskNotes,
             'nature_of_task' => $this->newTaskNature,
-            'is_recurring' => $this->newTaskNature === 'recurring',
-            'is_recurring_active' => $this->newTaskNature === 'recurring',
+            'is_recurring' => $isRecurring,
+            'is_recurring_active' => $isRecurringActive,
             'assigned_by_user_id' => auth()->id(),
         ]);
 
@@ -215,8 +220,12 @@ class TaskTable extends Component
             'newTaskDueDate' => 'nullable|date',
             'newTaskEstimatedHours' => 'nullable|numeric|min:0',
             'newTaskNotes' => 'nullable|string',
-            'newTaskNature' => 'required|in:daily,recurring',
+            'newTaskNature' => 'required|in:daily,weekly,monthly,until_stop',
         ]);
+
+        // Determine if task is recurring based on nature
+        $isRecurring = in_array($this->newTaskNature, ['weekly', 'monthly', 'until_stop']);
+        $isRecurringActive = $isRecurring ? 1 : 0;
 
         $task = Task::findOrFail($this->editingTaskId);
         $task->update([
@@ -230,8 +239,8 @@ class TaskTable extends Component
             'estimated_hours' => $this->newTaskEstimatedHours,
             'notes' => $this->newTaskNotes,
             'nature_of_task' => $this->newTaskNature,
-            'is_recurring' => $this->newTaskNature === 'recurring',
-            'is_recurring_active' => $this->newTaskNature === 'recurring',
+            'is_recurring' => $isRecurring,
+            'is_recurring_active' => $isRecurringActive,
         ]);
 
         // Log the update
@@ -330,14 +339,25 @@ class TaskTable extends Component
     {
         $task = Task::findOrFail($taskId);
         
-        if ($task->nature_of_task === 'recurring') {
-            $recurringService = new RecurringTaskService();
-            $recurringService->stopRecurringTask($task);
+        if (in_array($task->nature_of_task, ['daily', 'weekly', 'monthly', 'until_stop'])) {
+            DB::transaction(function () use ($task) {
+                // Stop the current task
+                $task->update(['is_recurring_active' => 0]);
+                
+                // Stop all child tasks (clones) as well
+                $childTasks = Task::where('parent_task_id', $task->id)
+                    ->where('is_recurring_active', 1)
+                    ->get();
+                
+                foreach ($childTasks as $childTask) {
+                    $childTask->update(['is_recurring_active' => 0]);
+                }
+                
+                // Log the action
+                Log::createLog(auth()->id(), 'stop_recurring_task', "Stopped recurring task: {$task->title} and {$childTasks->count()} child tasks");
+            });
             
-            // Log the action
-            Log::createLog(auth()->id(), 'stop_recurring_task', "Stopped recurring task: {$task->title}");
-            
-            session()->flash('success', 'Recurring task generation stopped successfully!');
+            session()->flash('success', 'Recurring task generation stopped successfully! All related tasks have been deactivated.');
         } else {
             session()->flash('error', 'This task is not a recurring task.');
         }

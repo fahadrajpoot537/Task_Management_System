@@ -1,6 +1,6 @@
-<div class="chat-container" wire:poll.5s="refreshComponent">
+<div class="chat-container">
     <!-- Enhanced Contacts Sidebar -->
-    <div class="contacts-sidebar {{ $selectedUser ? 'chat-open' : '' }}">
+    <div class="contacts-sidebar {{ $selectedUser ? 'chat-open' : '' }}" wire:key="contacts-sidebar">
         <!-- Premium Header -->
         <div class="contacts-header">
             <div class="header-content">
@@ -20,6 +20,10 @@
                     <button class="header-btn" id="searchHeaderBtn" data-view="search">
                         <i class="fas fa-search"></i>
                         <span>Search</span>
+                    </button>
+                    <button class="header-btn" wire:click="manualRefresh" title="Refresh">
+                        <i class="fas fa-sync-alt"></i>
+                        <span>Refresh</span>
                     </button>
                 </div>
             </div>
@@ -52,7 +56,7 @@
                     <div class="recent-list">
                         @foreach ($conversations as $conversation)
                         <div class="contact-item recent-item {{ $selectedUser && $selectedUser['id'] == $conversation['user']['id'] ? 'active' : '' }}"
-                            wire:click="selectUser({{ $conversation['user']['id'] }})">
+                            wire:click="selectUser({{ $conversation['user']['id'] }})" wire:key="conversation-{{ $conversation['user']['id'] }}">
                             <div class="contact-avatar-wrapper">
                                 <div class="contact-avatar">
                                     @if (isset($conversation['user']['avatar']) && $conversation['user']['avatar'])
@@ -107,7 +111,7 @@
             <div class="users-list" id="usersList">
                 @forelse($users as $user)
                     <div class="contact-item {{ $selectedUser && $selectedUser['id'] == $user['id'] ? 'active' : '' }}"
-                        wire:click="selectUser({{ $user['id'] }})" data-name="{{ strtolower($user['name']) }}"
+                        wire:click="selectUser({{ $user['id'] }})" wire:key="user-{{ $user['id'] }}" data-name="{{ strtolower($user['name']) }}"
                         data-email="{{ strtolower($user['email']) }}"
                         data-online="{{ isset($user['is_online']) && $user['is_online'] ? 'true' : 'false' }}">
                         <div class="contact-avatar-wrapper">
@@ -164,7 +168,7 @@
 
     <!-- Chat Area -->
     <!-- Enhanced Chat Interface -->
-    <div class="chat-area" style="{{ $selectedUser ? 'display: flex;' : 'display: none;' }}">
+    <div class="chat-area" style="display: flex;">
         @if ($selectedUser)
             <!-- Enhanced Contact Bar -->
             <div class="chat-header">
@@ -239,6 +243,18 @@
                                 @endif
                             </div>
                         </div>
+                        
+                        <!-- Message Actions (Delete Button) -->
+                        @if ((int)$message['sender_id'] === auth()->id())
+                            <div class="message-actions">
+                                <button class="message-action-btn delete-btn" 
+                                        wire:click="confirmDeleteMessage({{ $message['id'] }})"
+                                        title="Delete message">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        @endif
+                        
                     </div>
                 @empty
                     <div class="empty-chat">
@@ -304,6 +320,49 @@
 
             </div>
         </div>
+        @else
+            <!-- Welcome Screen when no contact is selected -->
+            <div class="welcome-screen">
+                <div class="welcome-content">
+                    <div class="welcome-icon">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <h2 class="welcome-title">Welcome to Team Chat</h2>
+                    <p class="welcome-subtitle">Connect with your team members instantly. Select a contact from the sidebar to start a conversation or begin collaborating.</p>
+                    
+                    <div class="welcome-features">
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="fas fa-bolt"></i>
+                            </div>
+                            <div class="feature-text">
+                                <h4>Instant Messaging</h4>
+                                <p>Send and receive messages in real-time with your team members</p>
+                            </div>
+                        </div>
+                        
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <div class="feature-text">
+                                <h4>Secure Communication</h4>
+                                <p>All your conversations are protected with enterprise-grade security</p>
+                            </div>
+                        </div>
+                        
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="feature-text">
+                                <h4>Team Collaboration</h4>
+                                <p>Stay connected with your entire team and collaborate seamlessly</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         @endif
 
     <style>
@@ -325,7 +384,7 @@
         .messages {
             height: calc(100vh - 180px);
             overflow-y: auto;
-            overflow-x: hidden;
+            overflow-x: visible; /* Allow horizontal overflow for action buttons */
         }
 
         /* Auto-scroll anchor */
@@ -346,81 +405,216 @@
             max-height: none !important;
         }
 
-        /* CSS Variables for Theme Switching */
+        /* CSS Variables for Theme Switching - Now using global theme variables */
         :root {
-            /* Light Theme Variables */
-            --chat-bg-primary: #ffffff;
-            --chat-bg-secondary: #f8fafc;
-            --chat-bg-tertiary: #f1f5f9;
-            --chat-text-primary: #111827;
-            --chat-text-secondary: #6b7280;
-            --chat-text-tertiary: #9ca3af;
-            --chat-border: #e5e7eb;
-            --chat-border-light: #f3f4f6;
-            --chat-shadow: rgba(0, 0, 0, 0.08);
-            --chat-shadow-light: rgba(0, 0, 0, 0.05);
-            --chat-input-bg: #ffffff;
-            --chat-input-border: #e5e7eb;
-            --chat-hover-bg: #f3f4f6;
-            --chat-active-bg: var(--chat-gradient);
-            --chat-message-bg: #ffffff;
-            --chat-message-bg-own: var(--chat-gradient);
-            --chat-message-text: #111827;
+            /* Use global theme variables for consistency */
+            --chat-bg-primary: var(--bg-primary);
+            --chat-bg-secondary: var(--bg-secondary);
+            --chat-bg-tertiary: var(--bg-tertiary);
+            --chat-text-primary: var(--text-primary);
+            --chat-text-secondary: var(--text-secondary);
+            --chat-text-tertiary: var(--text-muted);
+            --chat-border: var(--border-color);
+            --chat-border-light: var(--border-color);
+            --chat-shadow: var(--shadow-color);
+            --chat-shadow-light: var(--shadow-color);
+            --chat-input-bg: var(--bg-secondary);
+            --chat-input-border: var(--border-color);
+            --chat-hover-bg: var(--bg-tertiary);
+            --chat-active-bg: var(--primary-color);
+            --chat-message-bg: var(--bg-secondary);
+            --chat-message-bg-own: var(--primary-color);
+            --chat-message-text: var(--text-primary);
             --chat-message-text-own: #ffffff;
 
             /* Theme Gradient Variable */
-            --chat-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --chat-gradient: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
         }
 
-        /* Dark Theme Variables */
-        [data-theme="dark"] {
-            --chat-bg-primary: #1f2937;
-            --chat-bg-secondary: #111827;
-            --chat-bg-tertiary: #374151;
-            --chat-text-primary: #f9fafb;
-            --chat-text-secondary: #d1d5db;
-            --chat-text-tertiary: #9ca3af;
-            --chat-border: #374151;
-            --chat-border-light: #4b5563;
-            --chat-shadow: rgba(0, 0, 0, 0.3);
-            --chat-shadow-light: rgba(0, 0, 0, 0.2);
-            --chat-input-bg: #374151;
-            --chat-input-border: #4b5563;
-            --chat-hover-bg: #374151;
-            --chat-active-bg: var(--chat-gradient);
-            --chat-message-bg: #374151;
-            --chat-message-bg-own: var(--chat-gradient);
-            --chat-message-text: #f9fafb;
-            --chat-message-text-own: #ffffff;
-
-            /* Dark Theme Gradient Variable */
-            --chat-gradient: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        /* Welcome Screen Styles */
+        .welcome-screen {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-primary);
+            padding: 2rem;
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            min-height: 400px;
         }
 
-        /* Auto-detect dark theme from system */
-        @media (prefers-color-scheme: dark) {
-            :root:not([data-theme="light"]) {
-                --chat-bg-primary: #1f2937;
-                --chat-bg-secondary: #111827;
-                --chat-bg-tertiary: #374151;
-                --chat-text-primary: #f9fafb;
-                --chat-text-secondary: #d1d5db;
-                --chat-text-tertiary: #9ca3af;
-                --chat-border: #374151;
-                --chat-border-light: #4b5563;
-                --chat-shadow: rgba(0, 0, 0, 0.3);
-                --chat-shadow-light: rgba(0, 0, 0, 0.2);
-                --chat-input-bg: #374151;
-                --chat-input-border: #4b5563;
-                --chat-hover-bg: #374151;
-                --chat-active-bg: var(--chat-gradient);
-                --chat-message-bg: #374151;
-                --chat-message-bg-own: var(--chat-gradient);
-                --chat-message-text: #f9fafb;
-                --chat-message-text-own: #ffffff;
+        .welcome-content {
+            text-align: center;
+            /* max-width: 600px; */
+            width: 100%;
+            padding: 2rem;
+        }
 
-                /* Auto-detect Dark Theme Gradient Variable */
-                --chat-gradient: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        .welcome-icon {
+            font-size: 4rem;
+            color: var(--primary-color);
+            margin-bottom: 2rem;
+            animation: pulse 2s infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .welcome-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .welcome-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            margin-bottom: 3rem;
+            line-height: 1.6;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .welcome-features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1.5rem;
+            background: var(--bg-secondary);
+            border-radius: 1rem;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+            text-align: left;
+        }
+
+        .feature-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px var(--shadow-color);
+            border-color: var(--primary-color);
+        }
+
+        .feature-icon {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            width: 3rem;
+            height: 3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(2, 132, 199, 0.1);
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .feature-text {
+            flex: 1;
+        }
+
+        .feature-text h4 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-text p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        /* Responsive Welcome Screen */
+        @media (max-width: 768px) {
+            .welcome-screen {
+                padding: 1rem;
+                align-items: flex-start;
+                padding-top: 2rem;
+                min-height: 300px;
+            }
+
+            .welcome-content {
+                padding: 1rem;
+                max-width: 100%;
+            }
+
+            .welcome-title {
+                font-size: 2rem;
+            }
+
+            .welcome-subtitle {
+                font-size: 1rem;
+                margin-bottom: 2rem;
+            }
+
+            .welcome-features {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+                margin-bottom: 2rem;
+            }
+
+            .feature-item {
+                padding: 1rem;
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .feature-icon {
+                margin-bottom: 0.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .welcome-screen {
+                padding: 0.5rem;
+                min-height: 250px;
+            }
+
+            .welcome-content {
+                padding: 0.5rem;
+            }
+
+            .welcome-title {
+                font-size: 1.8rem;
+            }
+
+            .welcome-subtitle {
+                font-size: 0.9rem;
+            }
+
+            .feature-item {
+                padding: 0.75rem;
+            }
+
+            .welcome-features {
+                gap: 0.75rem;
             }
         }
 
@@ -462,12 +656,12 @@
         .contacts-sidebar {
             width: 380px;
             height: calc(100vh - 60px);
-            background: var(--chat-bg-primary, #ffffff);
-            border-right: 1px solid var(--chat-border, #e5e7eb);
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
             transition: all 0.3s ease;
-            box-shadow: 0 0 30px var(--chat-shadow, rgba(0, 0, 0, 0.08));
+            box-shadow: 0 0 30px var(--shadow-color);
             position: relative;
             overflow: hidden;
             flex-shrink: 0;
@@ -477,10 +671,10 @@
         .contact-view-toggle {
             display: flex;
             margin: 12px 16px;
-            background: var(--chat-bg-secondary, #f8fafc);
+            background: var(--bg-secondary);
             border-radius: 8px;
             padding: 4px;
-            border: 1px solid var(--chat-border, #e5e7eb);
+            border: 1px solid var(--border-color);
         }
 
         .toggle-btn {
@@ -492,7 +686,7 @@
             padding: 8px 12px;
             border: none;
             background: transparent;
-            color: var(--chat-text-secondary, #6b7280);
+            color: var(--text-secondary);
             font-size: 13px;
             font-weight: 500;
             border-radius: 6px;
@@ -501,14 +695,14 @@
         }
 
         .toggle-btn:hover {
-            background: var(--chat-bg-hover, #f1f5f9);
-            color: var(--chat-text-primary, #1f2937);
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
         }
 
         .toggle-btn.active {
-            background: var(--chat-primary, #3b82f6);
+            background: var(--primary-color);
             color: white;
-            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+            box-shadow: 0 2px 4px var(--shadow-color);
         }
 
         .toggle-btn i {
@@ -523,9 +717,9 @@
         /* Premium Header */
         .contacts-header {
             padding: 16px 16px 12px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            background: var(--chat-gradient);
-            color: white;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
             position: relative;
         }
 
@@ -578,7 +772,7 @@
             padding: 8px 12px;
             border: none;
             background: transparent;
-            color: rgba(255, 255, 255, 0.8);
+            color: var(--text-secondary);
             font-size: 13px;
             font-weight: 500;
             border-radius: 6px;
@@ -587,14 +781,14 @@
         }
 
         .header-btn:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
         }
 
         .header-btn.active {
-            background: rgba(255, 255, 255, 0.2);
+            background: var(--primary-color);
             color: white;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 4px var(--shadow-color);
         }
 
         .header-btn i {
@@ -1353,6 +1547,7 @@
             align-items: center;
             flex-shrink: 0;
             position: relative;
+            margin-bottom: 20px;
         }
 
 
@@ -1610,7 +1805,7 @@
 
         .welcome-content {
             text-align: center;
-            max-width: 400px;
+            /* max-width: 400px; */
             padding: 40px;
         }
 
@@ -1889,6 +2084,8 @@
         .message-wrapper {
             margin: 0.5rem 0;
             position: relative;
+            padding: 0.5rem;
+            overflow: visible; /* Ensure button is not clipped */
         }
 
         .message-wrapper:hover .message-actions {
@@ -1899,22 +2096,23 @@
             position: absolute;
             top: 50%;
             transform: translateY(-50%);
-            opacity: 0;
-            transition: opacity 0.2s ease;
             display: flex;
             gap: 0.25rem;
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.95);
             padding: 0.25rem;
             border-radius: 20px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.2s ease;
         }
 
         .own-message .message-actions {
-            right: -60px;
+            right: 8px;
         }
 
         .other-message .message-actions {
-            left: -60px;
+            left: 8px;
         }
 
         .message-action-btn {
@@ -1926,11 +2124,74 @@
             padding: 0.5rem;
             border-radius: 50%;
             transition: all 0.2s ease;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .message-action-btn:hover {
             background: #f0f0f0;
             color: #333;
+        }
+
+        .delete-btn:hover {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+
+        /* Dark theme support for message actions */
+        [data-theme="dark"] .message-actions {
+            background: rgba(30, 30, 30, 0.95);
+        }
+
+        [data-theme="dark"] .message-action-btn {
+            color: #ccc;
+        }
+
+        [data-theme="dark"] .message-action-btn:hover {
+            background: #404040;
+            color: #fff;
+        }
+
+        [data-theme="dark"] .delete-btn:hover {
+            background: #4a1a1a;
+            color: #ff6b6b;
+        }
+
+        /* Delete Modal Styles */
+        .modal-content {
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            border-bottom: 1px solid #e9ecef;
+            padding: 1.5rem 1.5rem 1rem;
+        }
+
+        .modal-body {
+            padding: 1rem 1.5rem;
+        }
+
+        .modal-footer {
+            border-top: 1px solid #e9ecef;
+            padding: 1rem 1.5rem 1.5rem;
+        }
+
+        /* Dark theme modal styles */
+        [data-theme="dark"] .modal-content {
+            background-color: #2d3748;
+            color: #e2e8f0;
+        }
+
+        [data-theme="dark"] .modal-header {
+            border-bottom-color: #4a5568;
+        }
+
+        [data-theme="dark"] .modal-footer {
+            border-top-color: #4a5568;
         }
 
         .message-content {
@@ -2746,6 +3007,46 @@
             }
         }
 
+        // Efficient real-time updates without polling
+        document.addEventListener('DOMContentLoaded', function() {
+            // Listen for Livewire events
+            document.addEventListener('livewire:init', () => {
+                // Listen for message events
+                Livewire.on('message-sent', () => {
+                    scrollToBottom();
+                });
+                
+                Livewire.on('message-received', () => {
+                    scrollToBottom();
+                });
+            });
+
+            // Prevent blinking when user is typing
+            const messageInput = document.querySelector('.message-input');
+            if (messageInput) {
+                let isTyping = false;
+                
+                messageInput.addEventListener('focus', () => {
+                    isTyping = true;
+                });
+                
+                messageInput.addEventListener('blur', () => {
+                    isTyping = false;
+                });
+                
+                messageInput.addEventListener('input', () => {
+                    isTyping = true;
+                    // Reset typing flag after 2 seconds of no input
+                    clearTimeout(window.typingTimeout);
+                    window.typingTimeout = setTimeout(() => {
+                        isTyping = false;
+                    }, 2000);
+                });
+            }
+
+            // Removed smart refresh system to prevent blinking issues
+        });
+
         // Polling control system
         let pollingEnabled = true;
         let pollingInterval = null;
@@ -3436,4 +3737,33 @@
             });
         });
     </script>
+
+    <!-- Delete Message Confirmation Modal -->
+    @if($showDeleteModal)
+    <div class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                        Delete Message
+                    </h5>
+                    <button type="button" class="btn-close" wire:click="closeDeleteModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this message? This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" wire:click="closeDeleteModal">
+                        <i class="fas fa-times me-1"></i>Cancel
+                    </button>
+                    <button type="button" class="btn btn-danger" wire:click="deleteMessage">
+                        <i class="fas fa-trash me-1"></i>Delete Message
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+    @endif
 </div>
