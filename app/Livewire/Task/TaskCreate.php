@@ -78,7 +78,7 @@ class TaskCreate extends Component
         'duration' => 'nullable|integer|min:1',
         'due_date' => 'nullable|date|after:today',
         'assigned_to_user_id' => 'required|exists:users,id',
-        'nature_of_task' => 'required|in:daily,recurring',
+        'nature_of_task' => 'required|in:daily,weekly,monthly,until_stop',
         'notes' => 'nullable|string',
         'attachments.*' => 'nullable|file|max:10240', // 10MB max
     ];
@@ -86,6 +86,10 @@ class TaskCreate extends Component
     public function createTask()
     {
         $this->validate();
+
+        // Determine if task is recurring based on nature
+        $isRecurring = in_array($this->nature_of_task, ['weekly', 'monthly', 'until_stop']);
+        $isRecurringActive = $isRecurring ? 1 : 0;
 
         $task = Task::create([
             'project_id' => $this->project_id,
@@ -99,8 +103,8 @@ class TaskCreate extends Component
             'assigned_to_user_id' => $this->assigned_to_user_id,
             'assigned_by_user_id' => auth()->id(),
             'nature_of_task' => $this->nature_of_task,
-            'is_recurring' => $this->nature_of_task === 'recurring',
-            'is_recurring_active' => $this->nature_of_task === 'recurring',
+            'is_recurring' => $isRecurring,
+            'is_recurring_active' => $isRecurringActive,
             'notes' => $this->notes,
         ]);
 
