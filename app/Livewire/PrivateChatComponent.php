@@ -6,6 +6,8 @@ use App\Events\DirectMessageSent;
 use App\Models\DirectMessage;
 use App\Models\User;
 use Livewire\Component;
+use Livewire\Attributes\On;
+use Illuminate\Support\Facades\Session;
 
 class PrivateChatComponent extends Component
 {
@@ -14,9 +16,13 @@ class PrivateChatComponent extends Component
     public $messages = [];
     public $newMessage = '';
     public $users = [];
+    public $currentTheme = 'light';
 
     public function mount()
     {
+        // Load current theme
+        $this->currentTheme = Session::get('theme', 'light');
+        
         // Load conversations for the authenticated user
         $this->loadConversations();
         
@@ -147,6 +153,14 @@ class PrivateChatComponent extends Component
         if ($this->selectedUser) {
             $this->loadMessages();
         }
+    }
+
+    #[On('theme-changed')]
+    public function handleThemeChanged($theme)
+    {
+        $this->currentTheme = $theme;
+        // Force a re-render to apply the new theme
+        $this->render();
     }
 
     public function render()
