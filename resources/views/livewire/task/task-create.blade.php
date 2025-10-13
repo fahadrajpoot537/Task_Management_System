@@ -285,11 +285,13 @@
                                 <select class="form-select @error('nature_of_task') is-invalid @enderror" 
                                         id="nature_of_task" wire:model="nature_of_task" required>
                                     <option value="daily">Daily</option>
-                                    <option value="recurring">Recurring</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="monthly">Monthly</option>
+                                    <option value="until_stop">Until Stopped</option>
                                 </select>
                                 <div class="form-text">
                                     <strong>Daily:</strong> Task will be created once and completed normally.<br>
-                                    <strong>Recurring:</strong> Task will automatically recreate itself when completed until manually stopped.
+                                    <strong>Weekly/Monthly/Until Stopped:</strong> Task will automatically recreate itself when completed until manually stopped.
                                 </div>
                                 @error('nature_of_task')
                                     <div class="invalid-feedback">{{ $message }}</div>

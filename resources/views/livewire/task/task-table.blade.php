@@ -118,9 +118,9 @@
                                 <a href="{{ route('tasks.details', $task->id) }}" class="text-decoration-none fw-bold" style="color: var(--text-primary);">
                                     {{ $task->title }}
                                 </a>
-                                @if($task->nature_of_task === 'recurring')
+                                @if(in_array($task->nature_of_task, ['daily', 'weekly', 'monthly', 'until_stop']))
                                     <span class="badge bg-info ms-2">
-                                        <i class="bi bi-arrow-repeat me-1"></i>Recurring
+                                        <i class="bi bi-arrow-repeat me-1"></i>{{ ucfirst(str_replace('_', ' ', $task->nature_of_task)) }}
                                     </span>
                                 @endif
                             </div>
@@ -134,8 +134,8 @@
                             </button>
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item" href="#" wire:click="startEditing({{ $task->id }})"><i class="bi bi-pencil me-2"></i>Edit</a></li>
-                                @if($task->nature_of_task === 'recurring' && $task->is_recurring_active)
-                                    <li><a class="dropdown-item text-warning" href="#" wire:click="stopRecurringTask({{ $task->id }})"><i class="bi bi-stop-circle me-2"></i>Stop Recurring</a></li>
+                                @if(in_array($task->nature_of_task, ['daily', 'weekly', 'monthly', 'until_stop']) && $task->is_recurring_active)
+                                    <li><a class="dropdown-item text-warning" href="#" wire:click="stopRecurringTask({{ $task->id }})"><i class="bi bi-stop-circle me-2"></i>Stop Recurrence</a></li>
                                 @endif
                                 <li><a class="dropdown-item text-danger" href="#" wire:click="deleteTask({{ $task->id }})"><i class="bi bi-trash me-2"></i>Delete</a></li>
                             </ul>
@@ -326,7 +326,9 @@
                             <td class="d-none d-lg-table-cell">
                                 <select class="form-select form-select-sm" wire:model="newTaskNature">
                                     <option value="daily">Daily</option>
-                                    <option value="recurring">Recurring</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="monthly">Monthly</option>
+                                    <option value="until_stop">Until Stopped</option>
                                 </select>
                             </td>
                             <td class="d-none d-lg-table-cell">
@@ -446,9 +448,9 @@
                                                 <a href="{{ route('tasks.details', $task->id) }}" class="text-decoration-none fw-bold" style="color: var(--text-primary);">
                                                     {{ $task->title }}
                                                 </a>
-                                                @if($task->nature_of_task === 'recurring')
+                                                @if(in_array($task->nature_of_task, ['daily', 'weekly', 'monthly', 'until_stop']))
                                                     <span class="badge bg-info ms-2">
-                                                        <i class="bi bi-arrow-repeat me-1"></i>Recurring
+                                                        <i class="bi bi-arrow-repeat me-1"></i>{{ ucfirst(str_replace('_', ' ', $task->nature_of_task)) }}
                                                     </span>
                                                 @endif
                                             </strong>
@@ -704,8 +706,8 @@
                                         <button class="btn btn-sm btn-outline-primary" wire:click="startEditing({{ $task->id }})" title="Edit">
                                             <i class="bi bi-pencil"></i>
                                         </button>
-                                        @if($task->nature_of_task === 'recurring' && $task->is_recurring_active)
-                                            <button class="btn btn-sm btn-outline-warning" wire:click="stopRecurringTask({{ $task->id }})" title="Stop Recurring">
+                                        @if(in_array($task->nature_of_task, ['daily', 'weekly', 'monthly', 'until_stop']) && $task->is_recurring_active)
+                                            <button class="btn btn-sm btn-outline-warning" wire:click="stopRecurringTask({{ $task->id }})" title="Stop Recurrence">
                                                 <i class="bi bi-stop-circle"></i>
                                             </button>
                                         @endif
@@ -1462,14 +1464,14 @@
                                       rows="8" 
                                       placeholder="Enter your notes here..."></textarea>
                         </div>
-                        <div class="mb-3">
+                        {{-- <div class="mb-3">
                             <label for="commitMessage" class="form-label">Commit Message</label>
                             <input type="text" class="form-control" 
                                    id="commitMessage"
                                    wire:model="commitMessage" 
                                    placeholder="Enter commit message (e.g., 'Updated task requirements')">
                             <div class="form-text">Describe what changes you're making to the notes.</div>
-                        </div>
+                        </div> --}}
                     @else
                         <div class="notes-view">
                             @if($notesModalContent)
@@ -1593,7 +1595,7 @@
                             <i class="bi bi-x-circle me-1"></i>Cancel
                         </button>
                         <button type="button" class="btn btn-success" wire:click="commitNotes">
-                            <i class="bi bi-git me-1"></i>Commit Notes
+                            <i class="bi bi-git me-1"></i>Save Notes
                         </button>
                     @else
                         <button type="button" class="btn btn-secondary" wire:click="closeNotesModal">
@@ -1669,7 +1671,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">
-                        <i class="bi bi-plus-circle me-2"></i>Add Custom Priority
+                        <i class="bi bi-plus-circle me-2" title="Add Custom Priority"></i>
                     </h5>
                     <button type="button" class="btn-close" wire:click="resetCustomPriorityForm"></button>
                 </div>
