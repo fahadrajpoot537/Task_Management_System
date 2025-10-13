@@ -260,7 +260,7 @@ class Task extends Model
      */
     public function isRecurring(): bool
     {
-        return $this->nature_of_task === 'recurring' && $this->is_recurring_active;
+        return in_array($this->nature_of_task, ['weekly', 'monthly', 'until_stop']) && $this->is_recurring_active;
     }
 
     /**
@@ -270,7 +270,9 @@ class Task extends Model
     {
         return match($this->nature_of_task) {
             'daily' => 'Daily',
-            'recurring' => 'Recurring',
+            'weekly' => 'Weekly',
+            'monthly' => 'Monthly',
+            'until_stop' => 'Until Stopped',
             default => 'Daily'
         };
     }
@@ -280,7 +282,7 @@ class Task extends Model
      */
     public function canGenerateNextOccurrence(): bool
     {
-        return $this->nature_of_task === 'recurring' && 
+        return in_array($this->nature_of_task, ['weekly', 'monthly', 'until_stop']) && 
                $this->is_recurring_active && 
                $this->status && 
                $this->status->name === 'Complete';

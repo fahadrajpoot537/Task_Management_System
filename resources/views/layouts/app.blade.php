@@ -1008,6 +1008,251 @@ use Illuminate\Support\Facades\Storage;
             border: 1px solid var(--border-color) !important;
         }
 
+        /* Chat System Theme-Aware Styles */
+        .chat-container {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: 0 4px 12px var(--shadow-color);
+        }
+
+        .contacts-sidebar {
+            background-color: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .contacts-sidebar.chat-open {
+            border-right: 1px solid var(--border-color);
+        }
+
+        .contact-item {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .contact-item:hover {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .contact-item.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .contact-item.active:hover {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .contact-name {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .contact-item.active .contact-name {
+            color: white;
+        }
+
+        .last-message-preview {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .contact-item.active .last-message-preview {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .message-time {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+        }
+
+        .contact-item.active .message-time {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .unread-count-badge {
+            background-color: var(--danger-color);
+            color: white;
+            border-radius: 50%;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .unread-indicator {
+            background-color: var(--primary-color);
+            border-radius: 50%;
+        }
+
+        .message-area {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .message-input-container {
+            background-color: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            padding: 1rem;
+        }
+
+        .message-input {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .message-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(2, 132, 199, 0.25);
+            background-color: var(--bg-secondary);
+        }
+
+        .message-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .send-button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 0.75rem;
+            padding: 0.75rem 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .send-button:hover {
+            background-color: var(--secondary-color);
+            transform: translateY(-1px);
+        }
+
+        .message-bubble {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem;
+            max-width: 70%;
+        }
+
+        .message-bubble.own-message {
+            background-color: var(--primary-color);
+            color: white;
+            margin-left: auto;
+        }
+
+        .message-bubble.own-message .message-time {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .message-sender {
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .message-bubble.own-message .message-sender {
+            color: white;
+        }
+
+        .message-content {
+            color: var(--text-primary);
+            margin: 0.25rem 0;
+        }
+
+        .message-bubble.own-message .message-content {
+            color: white;
+        }
+
+        .search-container {
+            background-color: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem;
+        }
+
+        .search-input {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(2, 132, 199, 0.25);
+        }
+
+        .search-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .header-action-buttons .header-btn {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .header-action-buttons .header-btn:hover {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .header-action-buttons .header-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .section-header {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.75rem 1rem;
+        }
+
+        .section-title {
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .avatar-placeholder {
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        .contact-avatar img {
+            border: 2px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .contact-item:hover .contact-avatar img {
+            border-color: var(--primary-color);
+        }
+
+        .contact-item.active .contact-avatar img {
+            border-color: white;
+        }
+
         .table-header {
             background-color: var(--bg-tertiary) !important;
             color: var(--text-primary) !important;
