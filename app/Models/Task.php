@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Task extends Model
 {
@@ -62,11 +63,21 @@ class Task extends Model
     }
 
     /**
-     * Get the user that the task is assigned to.
+     * Get the user that the task is assigned to (legacy single assignee).
      */
     public function assignedTo(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to_user_id');
+    }
+
+    /**
+     * Get all users assigned to this task.
+     */
+    public function assignees(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'task_assignments', 'task_id', 'user_id')
+                    ->withPivot(['assigned_by_user_id', 'assigned_at'])
+                    ->withTimestamps();
     }
 
     /**
@@ -310,5 +321,45 @@ class Task extends Model
     public function getPriorityBadgeClassAttribute(): string
     {
         return $this->priority ? "bg-{$this->priority->color}" : 'bg-secondary';
+    }
+
+    /**
+     * Check if a user is assigned to this task.
+     */
+    public function isAssignedTo(User $user): bool
+    {
+        return $this->assignees()->where('user_id', $user->id)->exists();
+    }
+
+    /**
+     * Get assignee names as a comma-separated string.
+     */
+    public function getAssigneeNamesAttribute(): string
+    {
+        return $this->assignees->pluck('name')->join(', ');
+    }
+
+    /**
+     * Get assignee count.
+     */
+    public function getAssigneeCountAttribute(): int
+    {
+        return $this->assignees()->count();
+    }
+
+    /**
+     * Sync task assignees.
+     */
+    public function syncAssignees(array $userIds, int $assignedByUserId): void
+    {
+        $assignments = [];
+        foreach ($userIds as $userId) {
+            $assignments[$userId] = [
+                'assigned_by_user_id' => $assignedByUserId,
+                'assigned_at' => now(),
+            ];
+        }
+        
+        $this->assignees()->sync($assignments);
     }
 }
