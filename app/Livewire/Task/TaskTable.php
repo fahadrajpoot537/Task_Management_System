@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Task;
 
+use App\Models\Attachment;
 use App\Models\Log;
 use App\Models\Project;
 use App\Models\Task;
@@ -50,6 +51,7 @@ class TaskTable extends Component
     public $newTaskDescription = '';
     public $newTaskProjectId = '';
     public $newTaskAssigneeId = '';
+    public $newTaskAssigneeIds = [];
     public $newTaskPriority = '';
     public $newTaskCategory = '';
     public $newTaskDueDate = '';
@@ -68,6 +70,14 @@ class TaskTable extends Component
     // Comment properties
     public $newComment = '';
     public $commentAttachments = [];
+    
+    // Notes file upload properties
+    public $notesAttachments = [];
+    public $notesAttachmentsToDelete = [];
+    
+    // File preview properties
+    public $showFilePreviewModal = false;
+    public $previewFile = null;
     
     // Custom option creation properties
     public $showCustomStatusForm = false;
@@ -128,6 +138,7 @@ class TaskTable extends Component
             $this->newTaskDescription = $task->description;
             $this->newTaskProjectId = $task->project_id;
             $this->newTaskAssigneeId = $task->assigned_to_user_id;
+            $this->newTaskAssigneeIds = $task->assignees->pluck('id')->toArray();
             $this->newTaskPriority = $task->priority_id;
             $this->newTaskCategory = $task->category_id;
             $this->newTaskDueDate = $task->due_date ? $task->due_date->format('Y-m-d') : '';
@@ -158,12 +169,17 @@ class TaskTable extends Component
             'newTaskDescription' => 'nullable|string',
             'newTaskProjectId' => 'required|exists:projects,id',
             'newTaskAssigneeId' => 'nullable|exists:users,id',
+            'newTaskAssigneeIds' => 'nullable|array',
+            'newTaskAssigneeIds.*' => 'exists:users,id',
             'newTaskPriority' => 'required|exists:task_priorities,id',
             'newTaskCategory' => 'required|exists:task_categories,id',
             'newTaskDueDate' => 'nullable|date',
             'newTaskEstimatedHours' => 'nullable|numeric|min:0',
             'newTaskNotes' => 'nullable|string',
             'newTaskNature' => 'required|in:daily,weekly,monthly,until_stop',
+        ], [
+            'newTaskAssigneeIds.*.exists' => 'One or more selected users do not exist.',
+            'newTaskAssigneeId.exists' => 'The selected assignee does not exist.',
         ]);
 
         // Get Pending status
@@ -173,11 +189,21 @@ class TaskTable extends Component
         $isRecurring = in_array($this->newTaskNature, ['weekly', 'monthly', 'until_stop']);
         $isRecurringActive = $isRecurring ? 1 : 0;
 
+        // Determine primary assignee (for backward compatibility)
+        $primaryAssigneeId = null;
+        if (!empty($this->newTaskAssigneeIds)) {
+            // Use the first selected assignee as the primary assignee
+            $primaryAssigneeId = $this->newTaskAssigneeIds[0];
+        } elseif (!empty($this->newTaskAssigneeId)) {
+            // Fallback to single assignee selection
+            $primaryAssigneeId = $this->newTaskAssigneeId;
+        }
+
         $task = Task::create([
             'title' => $this->newTaskTitle,
             'description' => $this->newTaskDescription,
             'project_id' => $this->newTaskProjectId,
-            'assigned_to_user_id' => $this->newTaskAssigneeId,
+            'assigned_to_user_id' => $primaryAssigneeId,
             'priority_id' => $this->newTaskPriority,
             'category_id' => $this->newTaskCategory,
             'status_id' => $pendingStatus ? $pendingStatus->id : null,
@@ -189,6 +215,11 @@ class TaskTable extends Component
             'is_recurring_active' => $isRecurringActive,
             'assigned_by_user_id' => auth()->id(),
         ]);
+
+        // Assign multiple users if provided
+        if (!empty($this->newTaskAssigneeIds)) {
+            $task->syncAssignees($this->newTaskAssigneeIds, auth()->id());
+        }
 
         // Log the creation
         Log::createLog(auth()->id(), 'create_task', "Created task: {$task->title}");
@@ -206,6 +237,9 @@ class TaskTable extends Component
 
         session()->flash('success', 'Task created successfully!');
         $this->resetNewTaskFields();
+        
+        // Emit event for Select2 re-initialization
+        $this->dispatch('task-created');
     }
 
     public function updateTask()
@@ -215,24 +249,39 @@ class TaskTable extends Component
             'newTaskDescription' => 'nullable|string',
             'newTaskProjectId' => 'required|exists:projects,id',
             'newTaskAssigneeId' => 'nullable|exists:users,id',
+            'newTaskAssigneeIds' => 'nullable|array',
+            'newTaskAssigneeIds.*' => 'exists:users,id',
             'newTaskPriority' => 'required|exists:task_priorities,id',
             'newTaskCategory' => 'required|exists:task_categories,id',
             'newTaskDueDate' => 'nullable|date',
             'newTaskEstimatedHours' => 'nullable|numeric|min:0',
             'newTaskNotes' => 'nullable|string',
             'newTaskNature' => 'required|in:daily,weekly,monthly,until_stop',
+        ], [
+            'newTaskAssigneeIds.*.exists' => 'One or more selected users do not exist.',
+            'newTaskAssigneeId.exists' => 'The selected assignee does not exist.',
         ]);
 
         // Determine if task is recurring based on nature
         $isRecurring = in_array($this->newTaskNature, ['weekly', 'monthly', 'until_stop']);
         $isRecurringActive = $isRecurring ? 1 : 0;
 
+        // Determine primary assignee (for backward compatibility)
+        $primaryAssigneeId = null;
+        if (!empty($this->newTaskAssigneeIds)) {
+            // Use the first selected assignee as the primary assignee
+            $primaryAssigneeId = $this->newTaskAssigneeIds[0];
+        } elseif (!empty($this->newTaskAssigneeId)) {
+            // Fallback to single assignee selection
+            $primaryAssigneeId = $this->newTaskAssigneeId;
+        }
+
         $task = Task::findOrFail($this->editingTaskId);
         $task->update([
             'title' => $this->newTaskTitle,
             'description' => $this->newTaskDescription,
             'project_id' => $this->newTaskProjectId,
-            'assigned_to_user_id' => $this->newTaskAssigneeId,
+            'assigned_to_user_id' => $primaryAssigneeId,
             'priority_id' => $this->newTaskPriority,
             'category_id' => $this->newTaskCategory,
             'due_date' => $this->newTaskDueDate,
@@ -242,6 +291,14 @@ class TaskTable extends Component
             'is_recurring' => $isRecurring,
             'is_recurring_active' => $isRecurringActive,
         ]);
+
+        // Update multiple assignees if provided
+        if (!empty($this->newTaskAssigneeIds)) {
+            $task->syncAssignees($this->newTaskAssigneeIds, auth()->id());
+        } else {
+            // Clear all assignees if none selected
+            $task->assignees()->detach();
+        }
 
         // Log the update
         Log::createLog(auth()->id(), 'update_task', "Updated task: {$task->title}");
@@ -256,6 +313,9 @@ class TaskTable extends Component
 
         session()->flash('success', 'Task updated successfully!');
         $this->cancelEditing();
+        
+        // Emit event for Select2 re-initialization
+        $this->dispatch('task-updated');
     }
 
     public function deleteTask($taskId)
@@ -292,7 +352,7 @@ class TaskTable extends Component
                 }
             } else {
                 // Employees can only update tasks assigned to them
-                if ($task->assigned_to_user_id !== $user->id && 
+                if (!$task->isAssignedTo($user) && 
                     $task->assigned_by_user_id !== $user->id) {
                     session()->flash('error', 'You do not have permission to update this task.');
                     return;
@@ -411,7 +471,12 @@ class TaskTable extends Component
             $this->notesModalContent = $this->newTaskNotes;
             $this->commitMessage = '';
             $this->newComment = '';
+            $this->notesAttachments = [];
+            $this->notesAttachmentsToDelete = [];
             $this->showNotesModal = true;
+            
+            // Dispatch event to initialize tooltips in the modal
+            $this->dispatch('notes-modal-opened');
         } else {
             // For existing task
             $task = Task::findOrFail($taskId);
@@ -431,7 +496,12 @@ class TaskTable extends Component
             $this->notesModalContent = $task->notes ?? '';
             $this->commitMessage = '';
             $this->newComment = '';
+            $this->notesAttachments = [];
+            $this->notesAttachmentsToDelete = [];
             $this->showNotesModal = true;
+            
+            // Dispatch event to initialize tooltips in the modal
+            $this->dispatch('notes-modal-opened');
         }
     }
 
@@ -443,6 +513,10 @@ class TaskTable extends Component
         $this->notesModalMode = 'view';
         $this->commitMessage = '';
         $this->newComment = '';
+        $this->notesAttachments = [];
+        $this->notesAttachmentsToDelete = [];
+        $this->showFilePreviewModal = false;
+        $this->previewFile = null;
     }
 
     public function addComment()
@@ -497,6 +571,7 @@ class TaskTable extends Component
         $this->validate([
             'notesModalContent' => 'nullable|string',
             'commitMessage' => 'nullable|string|max:255',
+            'notesAttachments.*' => 'nullable|file|max:10240|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,jpg,jpeg,png,gif,zip,rar,mp4,webm,ogg,avi,mov,wmv,flv,mkv'
         ]);
 
         if ($this->notesModalTaskId == 0) {
@@ -507,6 +582,36 @@ class TaskTable extends Component
             // For existing task
             $task = Task::findOrFail($this->notesModalTaskId);
             $task->update(['notes' => $this->notesModalContent]);
+            
+            // Handle file uploads for notes
+            if ($this->notesAttachments) {
+                foreach ($this->notesAttachments as $attachment) {
+                    $path = $attachment->store('task-notes-attachments');
+                    
+                    Attachment::create([
+                        'task_id' => $this->notesModalTaskId,
+                        'file_path' => $path,
+                        'file_name' => $attachment->getClientOriginalName(),
+                        'file_size' => $attachment->getSize(),
+                        'uploaded_by_user_id' => auth()->id(),
+                    ]);
+                }
+            }
+            
+            // Handle file deletions
+            if ($this->notesAttachmentsToDelete) {
+                foreach ($this->notesAttachmentsToDelete as $attachmentId) {
+                    $attachment = Attachment::find($attachmentId);
+                    if ($attachment) {
+                        // Delete file from storage
+                        $fullPath = storage_path('app/private/' . $attachment->file_path);
+                        if (file_exists($fullPath)) {
+                            unlink($fullPath);
+                        }
+                        $attachment->delete();
+                    }
+                }
+            }
             
             // Log the notes commit with commit message
             Log::createLog(auth()->id(), 'commit_task_notes', "Committed notes for task '{$task->title}': {$this->commitMessage}");
@@ -522,6 +627,7 @@ class TaskTable extends Component
         $this->newTaskDescription = '';
         $this->newTaskProjectId = '';
         $this->newTaskAssigneeId = '';
+        $this->newTaskAssigneeIds = [];
         $this->newTaskPriority = '';
         $this->newTaskCategory = '';
         $this->newTaskDueDate = '';
@@ -675,7 +781,7 @@ class TaskTable extends Component
     {
         $user = auth()->user();
         
-        $query = Task::with(['project', 'assignedTo', 'assignedBy', 'status', 'priority', 'category', 'noteComments.user'])
+        $query = Task::with(['project', 'assignedTo', 'assignedBy', 'assignees', 'status', 'priority', 'category', 'noteComments.user'])
             ->when($this->search, function ($query) {
                 $query->where('title', 'like', '%' . $this->search . '%')
                       ->orWhere('description', 'like', '%' . $this->search . '%');
@@ -708,7 +814,10 @@ class TaskTable extends Component
             // Employees can only see tasks assigned to them
             $query->where(function ($q) use ($user) {
                 $q->where('assigned_to_user_id', $user->id)
-                  ->orWhere('assigned_by_user_id', $user->id);
+                  ->orWhere('assigned_by_user_id', $user->id)
+                  ->orWhereHas('assignees', function ($subQ) use ($user) {
+                      $subQ->where('user_id', $user->id);
+                  });
             });
         }
 
@@ -729,8 +838,8 @@ class TaskTable extends Component
         } elseif ($user->isAdmin()) {
             return User::orderBy('name')->get();
         } elseif ($user->isManager()) {
-            $teamMemberIds = $user->teamMembers->pluck('id')->push($user->id);
-            return User::whereIn('id', $teamMemberIds)->orderBy('name')->get();
+            // Managers can see ALL users (employees, other managers, admins)
+            return User::orderBy('name')->get();
         } else {
             return collect([$user]);
         }
@@ -802,7 +911,109 @@ class TaskTable extends Component
 
     public function render()
     {
-        return view('livewire.task.task-table')
-            ->layout('layouts.app');
+        return view('livewire.task.task-table');
+    }
+
+    public function refreshSelect2()
+    {
+        $this->dispatch('refresh-select2');
+    }
+
+    public function removeNotesAttachment($index)
+    {
+        unset($this->notesAttachments[$index]);
+        $this->notesAttachments = array_values($this->notesAttachments);
+    }
+
+    public function deleteNotesAttachment($attachmentId)
+    {
+        $this->notesAttachmentsToDelete[] = $attachmentId;
+    }
+
+    public function getTaskNotesAttachments()
+    {
+        if ($this->notesModalTaskId && $this->notesModalTaskId != 0) {
+            return Attachment::where('task_id', $this->notesModalTaskId)
+                ->whereNull('comment_id')
+                ->with('uploadedBy')
+                ->orderBy('created_at', 'desc')
+                ->get();
+        }
+        return collect();
+    }
+
+    public function openFilePreview($attachmentId)
+    {
+        $this->previewFile = Attachment::find($attachmentId);
+        $this->showFilePreviewModal = true;
+    }
+
+    public function closeFilePreview()
+    {
+        $this->showFilePreviewModal = false;
+        $this->previewFile = null;
+    }
+
+    public function isPreviewableFile($fileExtension)
+    {
+        $previewableExtensions = ['pdf', 'txt', 'jpg', 'jpeg', 'png', 'gif', 'mp4', 'webm', 'ogg', 'avi', 'mov', 'wmv', 'flv', 'mkv'];
+        return in_array(strtolower($fileExtension), $previewableExtensions);
+    }
+
+    public function getFilePreviewUrl($attachment)
+    {
+        if ($this->isPreviewableFile(pathinfo($attachment->file_name, PATHINFO_EXTENSION))) {
+            return route('attachments.preview', $attachment->id);
+        }
+        return null;
+    }
+
+    public function initializeModalTooltips()
+    {
+        // This method is called when the modal content is initialized
+        // The actual tooltip initialization happens in JavaScript
+        $this->dispatch('initialize-modal-tooltips');
+    }
+
+    // File Attachment Modal Properties
+    public $attachFiles = [];
+
+    public function updatedAttachFiles()
+    {
+        // Process the uploaded files
+        if ($this->attachFiles && count($this->attachFiles) > 0) {
+            foreach ($this->attachFiles as $file) {
+                $this->attachFileToTask($file);
+            }
+            
+            // Clear the files array after processing
+            $this->attachFiles = [];
+            
+            // Show success message
+            session()->flash('message', 'Files attached successfully!');
+        }
+    }
+
+    public function removeAttachFile($index)
+    {
+        if (isset($this->attachFiles[$index])) {
+            unset($this->attachFiles[$index]);
+            $this->attachFiles = array_values($this->attachFiles); // Re-index array
+        }
+    }
+
+    private function attachFileToTask($file)
+    {
+        $originalName = $file->getClientOriginalName();
+        $fileName = time() . '_' . $originalName;
+        $filePath = $file->storeAs('attachments', $fileName, 'public');
+
+        Attachment::create([
+            'task_id' => $this->notesModalTaskId,
+            'file_name' => $originalName,
+            'file_path' => $filePath,
+            'file_size' => $file->getSize(),
+            'uploaded_by_user_id' => auth()->id(),
+        ]);
     }
 }

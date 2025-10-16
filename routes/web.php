@@ -61,6 +61,9 @@ Route::middleware('auth')->group(function () {
     
     // Attachments
     Route::get('/attachments/{attachment}/download', [App\Http\Controllers\AttachmentController::class, 'download'])->name('attachments.download');
+    Route::get('/attachments/{attachment}/preview', [App\Http\Controllers\AttachmentController::class, 'preview'])->name('attachments.preview');
+    Route::get('/attachments/{attachment}/data', [App\Http\Controllers\AttachmentController::class, 'data'])->name('attachments.data');
+    Route::get('/attachments/{attachment}/test', [App\Http\Controllers\AttachmentController::class, 'testData'])->name('attachments.test');
 
     // Chat
     Route::get('/chat', \App\Livewire\SlackLikeChatComponent::class)->name('chat');
