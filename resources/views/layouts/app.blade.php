@@ -2837,7 +2837,7 @@ use Illuminate\Support\Facades\Storage;
                      
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('slack-chat') ? 'active' : '' }}" href="{{ route('slack-chat') }}" title="Slack-like Chat">
-                                <i class="bi bi-people"></i>
+                                <i class="bi bi-chat"></i>
                             </a>
                         </li>
                         
