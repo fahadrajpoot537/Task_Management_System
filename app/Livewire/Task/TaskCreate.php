@@ -283,6 +283,22 @@ class TaskCreate extends Component
         return TaskStatus::orderBy('name')->get();
     }
 
+    public function getAvailableUsersProperty()
+    {
+        $user = auth()->user();
+        
+        if ($user->isSuperAdmin()) {
+            return User::orderBy('name')->get();
+        } elseif ($user->isAdmin()) {
+            return User::orderBy('name')->get();
+        } elseif ($user->isManager()) {
+            // Managers can see ALL users (employees, other managers, admins)
+            return User::orderBy('name')->get();
+        } else {
+            return collect([$user]);
+        }
+    }
+
     public function render()
     {
         return view('livewire.task.task-create')

@@ -176,8 +176,8 @@ class TaskIndex extends Component
         } elseif ($user->isAdmin()) {
             return \App\Models\User::all();
         } elseif ($user->isManager()) {
-            $teamMemberIds = $user->teamMembers->pluck('id')->push($user->id);
-            return \App\Models\User::whereIn('id', $teamMemberIds)->get();
+            // Managers can see ALL users (employees, other managers, admins)
+            return \App\Models\User::orderBy('name')->get();
         } else {
             return collect([$user]);
         }
