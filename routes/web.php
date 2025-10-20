@@ -36,7 +36,8 @@ Route::post('/logout', function () {
     request()->session()->regenerateToken();
     return redirect('/login');
 })->name('logout');
-
+//zkteco route
+Route::middleware('auth')->get('/zkteco', \App\Livewire\Zkteco\AttendanceManager::class)->name('zkteco');
 // Protected Routes
 Route::middleware('auth')->group(function () {
     // Dashboard
