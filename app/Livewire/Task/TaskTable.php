@@ -1016,4 +1016,188 @@ class TaskTable extends Component
             'uploaded_by_user_id' => auth()->id(),
         ]);
     }
+
+    // Bulk Actions
+    public function bulkUpdateStatus($taskIds, $statusId)
+    {
+        try {
+            $tasks = Task::whereIn('id', $taskIds)->get();
+            $updatedCount = 0;
+            
+            foreach ($tasks as $task) {
+                $task->status_id = $statusId;
+                $task->save();
+                $updatedCount++;
+                
+                // Log the status change
+                Log::create([
+                    'task_id' => $task->id,
+                    'user_id' => auth()->id(),
+                    'action' => 'status_changed',
+                    'details' => "Status changed to {$statusId} via bulk update",
+                    'old_value' => $task->getOriginal('status_id'),
+                    'new_value' => $statusId,
+                ]);
+            }
+            
+            session()->flash('success', "Successfully updated {$updatedCount} task(s) status.");
+            $this->dispatch('tasksUpdated');
+            
+        } catch (\Exception $e) {
+            session()->flash('error', 'Error updating task status: ' . $e->getMessage());
+        }
+    }
+
+    public function bulkUpdatePriority($taskIds, $priorityId)
+    {
+        try {
+            $tasks = Task::whereIn('id', $taskIds)->get();
+            $updatedCount = 0;
+            
+            foreach ($tasks as $task) {
+                $task->priority_id = $priorityId;
+                $task->save();
+                $updatedCount++;
+                
+                // Log the priority change
+                Log::create([
+                    'task_id' => $task->id,
+                    'user_id' => auth()->id(),
+                    'action' => 'priority_changed',
+                    'details' => "Priority changed to {$priorityId} via bulk update",
+                    'old_value' => $task->getOriginal('priority_id'),
+                    'new_value' => $priorityId,
+                ]);
+            }
+            
+            session()->flash('success', "Successfully updated {$updatedCount} task(s) priority.");
+            $this->dispatch('tasksUpdated');
+            
+        } catch (\Exception $e) {
+            session()->flash('error', 'Error updating task priority: ' . $e->getMessage());
+        }
+    }
+
+    public function bulkUpdateAssignee($taskIds, $userId)
+    {
+        try {
+            \Illuminate\Support\Facades\Log::info('Bulk update assignee called', [
+                'task_ids' => $taskIds,
+                'user_id' => $userId,
+                'user' => auth()->user()->name ?? 'Unknown'
+            ]);
+            
+            $tasks = Task::whereIn('id', $taskIds)->get();
+            $updatedCount = 0;
+            
+            \Illuminate\Support\Facades\Log::info('Found tasks for bulk assignee update', [
+                'task_count' => $tasks->count(),
+                'task_ids' => $tasks->pluck('id')->toArray()
+            ]);
+            
+            foreach ($tasks as $task) {
+                $oldAssigneeId = $task->assigned_to_user_id;
+                $task->assigned_to_user_id = $userId;
+                $task->save();
+                
+                // Sync the assignees relationship to update the assignees table
+                $task->syncAssignees([$userId], auth()->id());
+                
+                // Reload the task with relationships to ensure fresh data
+                $task->load(['assignedTo', 'assignedBy', 'assignees']);
+                $updatedCount++;
+                
+                \Illuminate\Support\Facades\Log::info('Updated task assignee', [
+                    'task_id' => $task->id,
+                    'task_title' => $task->title,
+                    'old_assignee' => $oldAssigneeId,
+                    'new_assignee' => $userId
+                ]);
+                
+                // Log the assignee change
+                Log::create([
+                    'task_id' => $task->id,
+                    'user_id' => auth()->id(),
+                    'action' => 'assignee_changed',
+                    'details' => "Assignee changed to {$userId} via bulk update",
+                    'old_value' => $oldAssigneeId,
+                    'new_value' => $userId,
+                ]);
+            }
+            
+            \Illuminate\Support\Facades\Log::info('Bulk assignee update completed', [
+                'updated_count' => $updatedCount
+            ]);
+            
+            session()->flash('success', "Successfully assigned {$updatedCount} task(s) to user.");
+            $this->dispatch('tasksUpdated');
+            
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error in bulk assignee update', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            session()->flash('error', 'Error updating task assignee: ' . $e->getMessage());
+        }
+    }
+
+    public function bulkUpdateNature($taskIds, $nature)
+    {
+        try {
+            $tasks = Task::whereIn('id', $taskIds)->get();
+            $updatedCount = 0;
+            
+            foreach ($tasks as $task) {
+                $oldNature = $task->nature;
+                $task->nature = $nature;
+                $task->save();
+                $updatedCount++;
+                
+                // Log the nature change
+                Log::create([
+                    'task_id' => $task->id,
+                    'user_id' => auth()->id(),
+                    'action' => 'nature_changed',
+                    'details' => "Nature changed to {$nature} via bulk update",
+                    'old_value' => $oldNature,
+                    'new_value' => $nature,
+                ]);
+            }
+            
+            session()->flash('success', "Successfully updated {$updatedCount} task(s) nature.");
+            $this->dispatch('tasksUpdated');
+            
+        } catch (\Exception $e) {
+            session()->flash('error', 'Error updating task nature: ' . $e->getMessage());
+        }
+    }
+
+    public function bulkDeleteTasks($taskIds)
+    {
+        try {
+            $tasks = Task::whereIn('id', $taskIds)->get();
+            $deletedCount = 0;
+            
+            foreach ($tasks as $task) {
+                // Log the deletion
+                Log::create([
+                    'task_id' => $task->id,
+                    'user_id' => auth()->id(),
+                    'action' => 'task_deleted',
+                    'details' => "Task deleted via bulk delete",
+                    'old_value' => $task->toJson(),
+                    'new_value' => null,
+                ]);
+                
+                $task->delete();
+                $deletedCount++;
+            }
+            
+            session()->flash('success', "Successfully deleted {$deletedCount} task(s).");
+            $this->dispatch('tasksUpdated');
+            
+        } catch (\Exception $e) {
+            session()->flash('error', 'Error deleting tasks: ' . $e->getMessage());
+        }
+    }
 }
