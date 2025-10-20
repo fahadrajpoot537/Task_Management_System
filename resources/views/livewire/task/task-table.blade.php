@@ -250,11 +250,71 @@
             @endif
         </div>
 
+        <!-- Bulk Actions -->
+        <div id="bulkActions" class="p-3 border-bottom bg-light" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <span id="selectedCount" class="badge bg-primary me-2">0 tasks selected</span>
+                    <span class="text-muted">Bulk actions available</span>
+                </div>
+                <div class="d-flex gap-2">
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-check-circle me-1"></i>Update Status
+                        </button>
+                        <ul class="dropdown-menu">
+                            @foreach ($this->statuses as $status)
+                                <li><a class="dropdown-item" href="#" onclick="bulkUpdateStatus({{ $status->id }}, '{{ $status->name }}')">{{ $status->name }}</a></li>
+                            @endforeach
+                        </ul>
+                    </div>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-arrow-up-circle me-1"></i>Update Priority
+                        </button>
+                        <ul class="dropdown-menu">
+                            @foreach ($this->priorities as $priority)
+                                <li><a class="dropdown-item" href="#" onclick="bulkUpdatePriority({{ $priority->id }}, '{{ $priority->name }}')">{{ $priority->name }}</a></li>
+                            @endforeach
+                        </ul>
+                    </div>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-warning dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-plus me-1"></i>Assign To
+                        </button>
+                        <ul class="dropdown-menu">
+                            @foreach ($this->users as $user)
+                                <li><a class="dropdown-item" href="#" onclick="bulkUpdateAssignee({{ $user->id }}, '{{ $user->name }}')">{{ $user->name }}</a></li>
+                            @endforeach
+                        </ul>
+                    </div>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-info dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-gear me-1"></i>Update Nature
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" onclick="bulkUpdateNature('one_time', 'One Time')">One Time</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="bulkUpdateNature('recurring', 'Recurring')">Recurring</a></li>
+                        </ul>
+                    </div>
+                    <button class="btn btn-sm btn-outline-danger" onclick="bulkDeleteTasks()">
+                        <i class="bi bi-trash me-1"></i>Delete Selected
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="clearSelection()">
+                        <i class="bi bi-x-circle me-1"></i>Clear Selection
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Task Table -->
         <div class="table-responsive" style="overflow-x: auto; overflow-y: visible; max-height: none; height: auto;">
             <table id="tasksTable" class="table table-hover table-striped mb-0">
                 <thead class="table-dark sticky-top">
                     <tr>
+                        <th style="min-width: 50px;">
+                            <input type="checkbox" id="selectAllTasks" class="form-check-input" onchange="toggleAllTasks(this)">
+                        </th>
                         <th class="d-none d-md-table-cell" style="min-width: 50px;">#</th>
                         <th style="min-width: 250px;">Title</th>
                         <th class="d-none d-lg-table-cell" style="min-width: 120px;">Project</th>
@@ -272,7 +332,7 @@
                 <tbody>
                     @if ($this->tasks->count() == 0)
                         <tr>
-                            <td colspan="11" class="text-center py-4">
+                            <td colspan="12" class="text-center py-4">
                                 <div class="text-muted">
                                     <i class="bi bi-inbox fs-1 d-block mb-3"></i>
                                     <h5>No tasks found</h5>
@@ -285,6 +345,9 @@
                     <!-- New Task Row -->
                     @if ($editingTaskId === 0)
                         <tr class="task-row editing">
+                            <td>
+                                <input type="checkbox" class="form-check-input task-checkbox" disabled>
+                            </td>
                             <td class="d-none d-md-table-cell">
                                 <i class="bi bi-plus-circle text-success"></i>
                             </td>
@@ -385,6 +448,9 @@
                         @if ($editingTaskId === $task->id)
                             <!-- Editing Row -->
                             <tr class="task-row editing">
+                                <td>
+                                    <input type="checkbox" class="form-check-input task-checkbox" value="{{ $task->id }}" onchange="toggleTaskSelection(this)">
+                                </td>
                                 <td class="d-none d-md-table-cell">{{ $task->id }}</td>
                                 <td>
                                     <input type="text" class="form-control form-control-sm"
@@ -459,6 +525,9 @@
                         @else
                             <!-- Normal Row -->
                             <tr class="task-row">
+                                <td>
+                                    <input type="checkbox" class="form-check-input task-checkbox" value="{{ $task->id }}" onchange="toggleTaskSelection(this)">
+                                </td>
                                 <td class="d-none d-md-table-cell">{{ $task->id }}</td>
                                 <td>
                                     <div class="d-flex align-items-center">
@@ -1823,26 +1892,19 @@
                                                 
                                                         <div class="attachment-actions-container">
                                                             @if ($isPreviewable)
-                                                        <button type="button" 
-                                                                        class="btn-action btn-view"
-                                                                        onclick="openFilePreviewModal({{ $attachment->id }}, '{{ $attachment->file_name }}')"
-                                                                        title="View File">
-                                                                    <i class="bi bi-eye me-1"></i>View
-                                                        </button>
+                                                       
+                                                                    <i class="bi bi-eye me-1" style="cursor: pointer;" data-bs-toggle="tooltip" data-bs-placement="top" title="View File" onclick="openFilePreviewModal({{ $attachment->id }}, '{{ $attachment->file_name }}')"></i>
+                                                        
                                                     @endif
                                                     <a href="{{ route('attachments.download', $attachment->id) }}" 
-                                                                class="btn-download-link" title="Download File"
+                                                              
                                                                 download="{{ $attachment->file_name }}">
-                                                                <i class="bi bi-download me-1"></i>Download
+                                                                <i class="bi bi-download me-1" data-bs-toggle="tooltip" data-bs-placement="top" title="Download File" style="cursor: pointer;"></i>
                                                             </a>
                                                             @if ($this->canEditNotes())
-                                                        <button type="button" 
-                                                                        class="btn-action btn-delete"
-                                                                wire:click="deleteNotesAttachment({{ $attachment->id }})"
-                                                                        title="Delete File"
-                                                                        onclick="return confirm('Are you sure you want to delete this file?')">
-                                                                    <i class="bi bi-trash me-1"></i>Delete
-                                                        </button>
+                                                     
+                                                                    <i class="bi bi-trash me-1 text-danger" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete File" wire:click="deleteNotesAttachment({{ $attachment->id }})" onclick="return confirm('Are you sure you want to delete this file?')" style="cursor: pointer;"></i>
+                                                
                                                     @endif
                                                 </div>
                                             </div>
@@ -2571,11 +2633,349 @@ document.addEventListener('livewire:init', () => {
     });
 });
 
+// Global task selection variable
+window.selectedTasks = new Set();
+
 // Fallback initialization
 $(document).ready(function() {
     console.log('Document ready, initializing Select2 fallback');
     setTimeout(window.initializeSelect2, 1000);
 });
+
+    // Task Selection Functions
+
+    // Initialize task selection functionality
+    function initializeTaskSelection() {
+        console.log('Initializing task selection functionality...');
+        
+        // Ensure the select all checkbox exists
+        const selectAllCheckbox = document.getElementById('selectAllTasks');
+        if (!selectAllCheckbox) {
+            console.error('Select all checkbox not found!');
+            return;
+        }
+        
+        // Ensure task checkboxes exist
+        const taskCheckboxes = document.querySelectorAll('.task-checkbox');
+        console.log('Found', taskCheckboxes.length, 'task checkboxes');
+        
+        // Initialize bulk actions
+        updateBulkActions();
+        
+        console.log('Task selection functionality initialized successfully');
+    }
+
+    // Initialize when DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeTaskSelection();
+    });
+
+    // Also initialize after Livewire updates
+    document.addEventListener('livewire:navigated', function() {
+        initializeTaskSelection();
+    });
+
+    function toggleAllTasks(selectAllCheckbox) {
+        console.log('Toggle all tasks called, checked:', selectAllCheckbox.checked);
+        
+        if (!selectAllCheckbox) {
+            console.error('Select all checkbox is null or undefined');
+            return;
+        }
+        
+        const taskCheckboxes = document.querySelectorAll('.task-checkbox:not([disabled])');
+        console.log('Found task checkboxes:', taskCheckboxes.length);
+        
+        if (taskCheckboxes.length === 0) {
+            console.warn('No task checkboxes found');
+            return;
+        }
+        
+        const isChecked = selectAllCheckbox.checked;
+        
+        // Clear current selection
+        window.selectedTasks.clear();
+        
+        taskCheckboxes.forEach(checkbox => {
+            checkbox.checked = isChecked;
+            if (isChecked) {
+                window.selectedTasks.add(checkbox.value);
+            }
+        });
+        
+        console.log('Selected tasks after toggle all:', Array.from(window.selectedTasks));
+        updateBulkActions();
+    }
+
+    function toggleTaskSelection(checkbox) {
+        console.log('Toggle task selection:', checkbox.value, 'checked:', checkbox.checked);
+        
+        if (checkbox.checked) {
+            window.selectedTasks.add(checkbox.value);
+        } else {
+            window.selectedTasks.delete(checkbox.value);
+        }
+        
+        console.log('Selected tasks after individual toggle:', Array.from(window.selectedTasks));
+        updateSelectAllCheckbox();
+        updateBulkActions();
+    }
+
+    function updateSelectAllCheckbox() {
+        const selectAllCheckbox = document.getElementById('selectAllTasks');
+        const taskCheckboxes = document.querySelectorAll('.task-checkbox:not([disabled])');
+        const checkedCount = document.querySelectorAll('.task-checkbox:not([disabled]):checked').length;
+        
+        console.log('Update select all - total:', taskCheckboxes.length, 'checked:', checkedCount);
+        
+        if (checkedCount === 0) {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = false;
+        } else if (checkedCount === taskCheckboxes.length) {
+            selectAllCheckbox.checked = true;
+            selectAllCheckbox.indeterminate = false;
+        } else {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = true;
+        }
+    }
+
+    function updateBulkActions() {
+        const bulkActions = document.getElementById('bulkActions');
+        const selectedCount = document.getElementById('selectedCount');
+        
+        console.log('Update bulk actions - selected count:', window.selectedTasks.size);
+        
+        if (!bulkActions) {
+            console.error('Bulk actions element not found!');
+            return;
+        }
+        
+        if (!selectedCount) {
+            console.error('Selected count element not found!');
+            return;
+        }
+        
+        if (window.selectedTasks.size > 0) {
+            bulkActions.style.display = 'block';
+            selectedCount.textContent = `${window.selectedTasks.size} task${window.selectedTasks.size > 1 ? 's' : ''} selected`;
+        } else {
+            bulkActions.style.display = 'none';
+        }
+    }
+
+    function clearSelection() {
+        console.log('Clearing selection');
+        window.selectedTasks.clear();
+        document.querySelectorAll('.task-checkbox').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        const selectAllCheckbox = document.getElementById('selectAllTasks');
+        if (selectAllCheckbox) {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = false;
+        }
+        updateBulkActions();
+    }
+
+    function bulkUpdateStatus(statusId, statusName) {
+        if (window.selectedTasks.size === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'No Tasks Selected',
+                text: 'Please select tasks first before updating their status.',
+                confirmButtonColor: '#3085d6'
+            });
+            return;
+        }
+        
+        console.log('Bulk updating status for tasks:', Array.from(window.selectedTasks), 'to status:', statusId, statusName);
+        
+        // Show SweetAlert confirmation dialog
+        Swal.fire({
+            title: 'Update Status',
+            html: `Are you sure you want to update <strong>${window.selectedTasks.size}</strong> task${window.selectedTasks.size > 1 ? 's' : ''} to status <strong>${statusName}</strong>?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, update them!',
+            cancelButtonText: 'Cancel',
+            showLoaderOnConfirm: true,
+            preConfirm: () => {
+                return new Promise((resolve) => {
+                    // Call Livewire method to update status
+                    @this.call('bulkUpdateStatus', Array.from(window.selectedTasks), statusId)
+                        .then(() => {
+                            resolve();
+                        })
+                        .catch((error) => {
+                            Swal.showValidationMessage('Error: ' + error.message);
+                        });
+                });
+            },
+            allowOutsideClick: () => !Swal.isLoading()
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Clear selection after successful update
+                clearSelection();
+                
+                // Show success message
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Status Updated!',
+                    text: `Successfully updated ${window.selectedTasks.size} task${window.selectedTasks.size > 1 ? 's' : ''} to status: ${statusName}`,
+                    confirmButtonColor: '#10b981',
+                    timer: 3000,
+                    timerProgressBar: true
+                });
+            }
+        });
+    }
+
+    function bulkUpdatePriority(priorityId, priorityName) {
+        if (window.selectedTasks.size === 0) {
+            alert('Please select tasks first');
+            return;
+        }
+        
+        console.log('Bulk updating priority for tasks:', Array.from(window.selectedTasks), 'to priority:', priorityId, priorityName);
+        
+        // Call Livewire method to update priority
+        @this.call('bulkUpdatePriority', Array.from(window.selectedTasks), priorityId);
+        
+        // Show success message
+        alert(`Updated ${window.selectedTasks.size} task${window.selectedTasks.size > 1 ? 's' : ''} to priority: ${priorityName}`);
+        
+        // Clear selection after successful update
+        clearSelection();
+    }
+
+    function bulkUpdateAssignee(userId, userName) {
+        if (window.selectedTasks.size === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'No Tasks Selected',
+                text: 'Please select tasks first before assigning them.',
+                confirmButtonColor: '#3085d6'
+            });
+            return;
+        }
+        
+        console.log('Bulk updating assignee for tasks:', Array.from(window.selectedTasks), 'to user:', userId, userName);
+        
+        // Show SweetAlert confirmation dialog
+        Swal.fire({
+            title: 'Assign Tasks',
+            html: `Are you sure you want to assign <strong>${window.selectedTasks.size}</strong> task${window.selectedTasks.size > 1 ? 's' : ''} to <strong>${userName}</strong>?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, assign them!',
+            cancelButtonText: 'Cancel',
+            showLoaderOnConfirm: true,
+            preConfirm: () => {
+                return new Promise((resolve) => {
+                    // Call Livewire method to update assignee
+                    @this.call('bulkUpdateAssignee', Array.from(window.selectedTasks), userId)
+                        .then(() => {
+                            resolve();
+                        })
+                        .catch((error) => {
+                            Swal.showValidationMessage('Error: ' + error.message);
+                        });
+                });
+            },
+            allowOutsideClick: () => !Swal.isLoading()
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Clear selection after successful update
+                clearSelection();
+                
+                // Show success message
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Tasks Assigned!',
+                    text: `Successfully assigned ${window.selectedTasks.size} task${window.selectedTasks.size > 1 ? 's' : ''} to ${userName}`,
+                    confirmButtonColor: '#10b981',
+                    timer: 3000,
+                    timerProgressBar: true
+                });
+            }
+        });
+    }
+
+    function bulkUpdateNature(nature, natureName) {
+        if (window.selectedTasks.size === 0) {
+            alert('Please select tasks first');
+            return;
+        }
+        
+        console.log('Bulk updating nature for tasks:', Array.from(window.selectedTasks), 'to nature:', nature, natureName);
+        
+        // Call Livewire method to update nature
+        @this.call('bulkUpdateNature', Array.from(window.selectedTasks), nature);
+        
+        // Show success message
+        alert(`Updated ${window.selectedTasks.size} task${window.selectedTasks.size > 1 ? 's' : ''} to nature: ${natureName}`);
+        
+        // Clear selection after successful update
+        clearSelection();
+    }
+
+    function bulkDeleteTasks() {
+        if (window.selectedTasks.size === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'No Tasks Selected',
+                text: 'Please select tasks first before deleting them.',
+                confirmButtonColor: '#3085d6'
+            });
+            return;
+        }
+        
+        // Show SweetAlert confirmation dialog
+        Swal.fire({
+            title: 'Delete Tasks',
+            html: `Are you sure you want to delete <strong>${window.selectedTasks.size}</strong> selected task${window.selectedTasks.size > 1 ? 's' : ''}?<br><br><span class="text-danger"><strong>This action cannot be undone!</strong></span>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete them!',
+            cancelButtonText: 'Cancel',
+            showLoaderOnConfirm: true,
+            preConfirm: () => {
+                return new Promise((resolve) => {
+                    // Call Livewire method to delete tasks
+                    @this.call('bulkDeleteTasks', Array.from(window.selectedTasks))
+                        .then(() => {
+                            resolve();
+                        })
+                        .catch((error) => {
+                            Swal.showValidationMessage('Error: ' + error.message);
+                        });
+                });
+            },
+            allowOutsideClick: () => !Swal.isLoading()
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Clear selection after successful deletion
+                clearSelection();
+                
+                // Show success message
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Tasks Deleted!',
+                    text: `Successfully deleted ${window.selectedTasks.size} task${window.selectedTasks.size > 1 ? 's' : ''}`,
+                    confirmButtonColor: '#10b981',
+                    timer: 3000,
+                    timerProgressBar: true
+                });
+            }
+        });
+    }
 
     // Modal control functions
     function openAttachFileModal() {
@@ -2757,4 +3157,6 @@ $(document).ready(function() {
             });
     }
 </script>
+
+</div>
 
