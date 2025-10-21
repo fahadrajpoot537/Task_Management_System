@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "5e4d24770641ae887d13c61915567718",
+    "content-hash": "3eae2c6ce0b3ee939b840bb0b72ffd02",
     "packages": [
         {
             "name": "brick/math",
@@ -134,6 +134,66 @@
                 }
             ],
             "time": "2023-12-11T17:09:12+00:00"
+        },
+        {
+            "name": "coding-libs/zkteco-php",
+            "version": "v0.0.34",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/coding-libs/zkteco-php.git",
+                "reference": "253dbb93f2585b9f5d50c3ea0ee0167ac2eeadb3"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/coding-libs/zkteco-php/zipball/253dbb93f2585b9f5d50c3ea0ee0167ac2eeadb3",
+                "reference": "253dbb93f2585b9f5d50c3ea0ee0167ac2eeadb3",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^8.0|^9.3|^10.4"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "CodingLibs\\ZktecoPhp\\ZktecoPhpServiceProvider"
+                    ]
+                },
+                "branch-alias": {
+                    "dev-master": "1.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "CodingLibs\\ZktecoPhp\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Coding Libs",
+                    "email": "codinglibs4u@gmail.com"
+                }
+            ],
+            "description": "A package for managing ZKTeco device.",
+            "homepage": "https://github.com/coding-libs",
+            "keywords": [
+                "Fingerprint",
+                "attendances",
+                "laravel",
+                "zkteco"
+            ],
+            "support": {
+                "issues": "https://github.com/coding-libs/zkteco-php/issues",
+                "source": "https://github.com/coding-libs/zkteco-php"
+            },
+            "time": "2025-08-11T13:29:13+00:00"
         },
         {
             "name": "dflydev/dot-access-data",
@@ -1054,6 +1114,50 @@
             "time": "2025-08-22T14:27:06+00:00"
         },
         {
+            "name": "laradevsbd/zkteco-sdk",
+            "version": "v1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/laradevsbd/zkteco-sdk-laravel.git",
+                "reference": "0f03093e726d483dd7febba6268ca64e3dd3fac8"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/laradevsbd/zkteco-sdk-laravel/zipball/0f03093e726d483dd7febba6268ca64e3dd3fac8",
+                "reference": "0f03093e726d483dd7febba6268ca64e3dd3fac8",
+                "shasum": ""
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Laradevsbd\\Zkteco\\ZktecoServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Laradevsbd\\Zkteco\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Nur Karim",
+                    "email": "nurkarim772@gmail.com"
+                }
+            ],
+            "description": "ZKLibrary is PHP Library for ZK Time & Attendance Devices",
+            "support": {
+                "issues": "https://github.com/laradevsbd/zkteco-sdk-laravel/issues",
+                "source": "https://github.com/laradevsbd/zkteco-sdk-laravel/tree/v1.0.0"
+            },
+            "time": "2021-08-25T07:28:36+00:00"
+        },
+        {
             "name": "laravel/framework",
             "version": "v10.49.1",
             "source": {
@@ -1964,6 +2068,86 @@
                 }
             ],
             "time": "2025-07-17T05:12:15+00:00"
+        },
+        {
+            "name": "mehedijaman/laravel-zkteco",
+            "version": "v1.0.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/mehedijaman/laravel-zkteco.git",
+                "reference": "ccce8dd08f671c5b8ccda4c0ee5586d14891beaf"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/mehedijaman/laravel-zkteco/zipball/ccce8dd08f671c5b8ccda4c0ee5586d14891beaf",
+                "reference": "ccce8dd08f671c5b8ccda4c0ee5586d14891beaf",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/contracts": "^10.0||^11.0",
+                "php": "^8.2",
+                "spatie/laravel-package-tools": "^1.16"
+            },
+            "require-dev": {
+                "larastan/larastan": "^2.9",
+                "laravel/pint": "^1.14",
+                "nunomaduro/collision": "^8.1.1||^7.10.0",
+                "orchestra/testbench": "^9.0.0||^8.22.0",
+                "pestphp/pest": "^2.34",
+                "pestphp/pest-plugin-arch": "^2.7",
+                "pestphp/pest-plugin-laravel": "^2.3",
+                "phpstan/extension-installer": "^1.3",
+                "phpstan/phpstan-deprecation-rules": "^1.1",
+                "phpstan/phpstan-phpunit": "^1.3",
+                "spatie/laravel-ray": "^1.35"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "aliases": {
+                        "LaravelZkteco": "MehediJaman\\LaravelZkteco\\Facades\\LaravelZkteco"
+                    },
+                    "providers": [
+                        "MehediJaman\\LaravelZkteco\\LaravelZktecoServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "MehediJaman\\LaravelZkteco\\": "src/",
+                    "MehediJaman\\LaravelZkteco\\Database\\Factories\\": "database/factories/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Mehedi Jaman",
+                    "email": "mail4mjaman@gmail.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Connect any zkteco fingerprint attendance machine to laravel application with no effort.",
+            "homepage": "https://github.com/mehedijaman/laravel-zkteco",
+            "keywords": [
+                "Fingerprint",
+                "TimeAttendance",
+                "laravel",
+                "zkteco"
+            ],
+            "support": {
+                "issues": "https://github.com/mehedijaman/laravel-zkteco/issues",
+                "source": "https://github.com/mehedijaman/laravel-zkteco/tree/v1.0.1"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/MehediJaman",
+                    "type": "github"
+                }
+            ],
+            "time": "2024-06-13T06:12:10+00:00"
         },
         {
             "name": "monolog/monolog",
@@ -3231,6 +3415,67 @@
                 "source": "https://github.com/ramsey/uuid/tree/4.9.1"
             },
             "time": "2025-09-04T20:59:21+00:00"
+        },
+        {
+            "name": "spatie/laravel-package-tools",
+            "version": "1.92.7",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/spatie/laravel-package-tools.git",
+                "reference": "f09a799850b1ed765103a4f0b4355006360c49a5"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/spatie/laravel-package-tools/zipball/f09a799850b1ed765103a4f0b4355006360c49a5",
+                "reference": "f09a799850b1ed765103a4f0b4355006360c49a5",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/contracts": "^9.28|^10.0|^11.0|^12.0",
+                "php": "^8.0"
+            },
+            "require-dev": {
+                "mockery/mockery": "^1.5",
+                "orchestra/testbench": "^7.7|^8.0|^9.0|^10.0",
+                "pestphp/pest": "^1.23|^2.1|^3.1",
+                "phpunit/php-code-coverage": "^9.0|^10.0|^11.0",
+                "phpunit/phpunit": "^9.5.24|^10.5|^11.5",
+                "spatie/pest-plugin-test-time": "^1.1|^2.2"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Spatie\\LaravelPackageTools\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Freek Van der Herten",
+                    "email": "freek@spatie.be",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Tools for creating Laravel packages",
+            "homepage": "https://github.com/spatie/laravel-package-tools",
+            "keywords": [
+                "laravel-package-tools",
+                "spatie"
+            ],
+            "support": {
+                "issues": "https://github.com/spatie/laravel-package-tools/issues",
+                "source": "https://github.com/spatie/laravel-package-tools/tree/1.92.7"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/spatie",
+                    "type": "github"
+                }
+            ],
+            "time": "2025-07-17T15:46:43+00:00"
         },
         {
             "name": "symfony/console",
