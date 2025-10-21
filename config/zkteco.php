@@ -1,7 +1,6 @@
 <?php
 
-// config for MehediJaman/LaravelZkteco
 return [
-    'route' => '/zkteco',
-    'middleware' => ['web', 'auth'],
+    'ip' => '192.168.1.201',
+    'port' => 4370
 ];

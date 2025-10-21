@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "3eae2c6ce0b3ee939b840bb0b72ffd02",
+    "content-hash": "0035b3ed706ff32639ed3b9864755b68",
     "packages": [
         {
             "name": "brick/math",
@@ -1114,30 +1114,30 @@
             "time": "2025-08-22T14:27:06+00:00"
         },
         {
-            "name": "laradevsbd/zkteco-sdk",
-            "version": "v1.0.0",
+            "name": "jmrashed/zkteco",
+            "version": "1.2.0",
             "source": {
                 "type": "git",
-                "url": "https://github.com/laradevsbd/zkteco-sdk-laravel.git",
-                "reference": "0f03093e726d483dd7febba6268ca64e3dd3fac8"
+                "url": "https://github.com/jmrashed/zkteco.git",
+                "reference": "4672f6769a760e28cd10c4721bf418af28bed970"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/laradevsbd/zkteco-sdk-laravel/zipball/0f03093e726d483dd7febba6268ca64e3dd3fac8",
-                "reference": "0f03093e726d483dd7febba6268ca64e3dd3fac8",
+                "url": "https://api.github.com/repos/jmrashed/zkteco/zipball/4672f6769a760e28cd10c4721bf418af28bed970",
+                "reference": "4672f6769a760e28cd10c4721bf418af28bed970",
                 "shasum": ""
             },
-            "type": "library",
-            "extra": {
-                "laravel": {
-                    "providers": [
-                        "Laradevsbd\\Zkteco\\ZktecoServiceProvider"
-                    ]
-                }
+            "require": {
+                "php": "^8.0"
             },
+            "require-dev": {
+                "orchestra/testbench": "^6.0",
+                "phpunit/phpunit": "^10.0"
+            },
+            "type": "library",
             "autoload": {
                 "psr-4": {
-                    "Laradevsbd\\Zkteco\\": "src/"
+                    "Jmrashed\\Zkteco\\": "src"
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
@@ -1146,16 +1146,16 @@
             ],
             "authors": [
                 {
-                    "name": "Nur Karim",
-                    "email": "nurkarim772@gmail.com"
+                    "name": "Md Rasheduzzaman",
+                    "email": "jmrashed@gmail.com"
                 }
             ],
-            "description": "ZKLibrary is PHP Library for ZK Time & Attendance Devices",
+            "description": "ZKTeco Package For Laravel. This package provides seamless integration with ZKTeco devices within Laravel applications, enabling communication with attendance devices such as fingerprint, face recognition, or RFID using UDP protocol.",
             "support": {
-                "issues": "https://github.com/laradevsbd/zkteco-sdk-laravel/issues",
-                "source": "https://github.com/laradevsbd/zkteco-sdk-laravel/tree/v1.0.0"
+                "issues": "https://github.com/jmrashed/zkteco/issues",
+                "source": "https://github.com/jmrashed/zkteco/tree/v1.2.0"
             },
-            "time": "2021-08-25T07:28:36+00:00"
+            "time": "2025-10-01T12:47:08+00:00"
         },
         {
             "name": "laravel/framework",
@@ -8559,7 +8559,7 @@
         }
     ],
     "aliases": [],
-    "minimum-stability": "stable",
+    "minimum-stability": "dev",
     "stability-flags": {},
     "prefer-stable": true,
     "prefer-lowest": false,
