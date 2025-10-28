@@ -2840,6 +2840,21 @@ use Illuminate\Support\Facades\Storage;
                                 <i class="bi bi-list-task"></i>
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('attendance.*') ? 'active' : '' }}" href="{{ route('attendance.viewer') }}" title="Attendance Viewer">
+                                <i class="bi bi-clock-history"></i>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('salary.*') ? 'active' : '' }}" href="{{ route('salary.management') }}" title="Salary Management">
+                                <i class="bi bi-currency-dollar"></i>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('probation.*') ? 'active' : '' }}" href="{{ route('probation.management') }}" title="Probation Management">
+                                <i class="bi bi-hourglass-split"></i>
+                            </a>
+                        </li>
                         
                      
                         <li class="nav-item">
