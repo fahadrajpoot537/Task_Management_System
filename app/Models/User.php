@@ -30,6 +30,21 @@ class User extends Authenticatable
         'avatar',
         'is_online',
         'last_seen',
+        'check_in_time',
+        'check_out_time',
+        'zkteco_uid',
+        'device_user_id',
+        'joining_date',
+        'bonus',
+        'incentive',
+        'k50_device_uid',
+        'monthly_salary',
+        'employment_status',
+        'shift_start',
+        'shift_end',
+        'hired_at',
+        'probation_end_at',
+        'designation_id',
     ];
 
     /**
@@ -52,8 +67,6 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            'is_online' => 'boolean',
-            'last_seen' => 'datetime',
         ];
     }
 
@@ -119,142 +132,6 @@ class User extends Authenticatable
     public function logs(): HasMany
     {
         return $this->hasMany(Log::class);
-    }
-
-    /**
-     * Get the messages sent by the user.
-     */
-    public function messages(): HasMany
-    {
-        return $this->hasMany(Message::class);
-    }
-
-    /**
-     * Get the channels the user belongs to.
-     */
-    public function channels(): BelongsToMany
-    {
-        return $this->belongsToMany(Channel::class, 'channel_members')
-                    ->withPivot('joined_at')
-                    ->withTimestamps();
-    }
-
-    /**
-     * Get messages sent by the user.
-     */
-    public function sentMessages(): HasMany
-    {
-        return $this->hasMany(DirectMessage::class, 'sender_id');
-    }
-
-    /**
-     * Get messages received by the user.
-     */
-    public function receivedMessages(): HasMany
-    {
-        return $this->hasMany(DirectMessage::class, 'receiver_id');
-    }
-
-    /**
-     * Get unread messages count for the user.
-     */
-    public function unreadMessagesCount(): int
-    {
-        return $this->receivedMessages()->where('is_read', false)->count();
-    }
-
-    /**
-     * Get conversations for the user.
-     */
-    public function conversations()
-    {
-        $sentMessages = $this->sentMessages()->with('receiver')->get();
-        $receivedMessages = $this->receivedMessages()->with('sender')->get();
-        
-        $conversations = collect();
-        
-        // Add conversations from sent messages
-        foreach ($sentMessages as $message) {
-            $conversations->put($message->receiver_id, [
-                'user' => $message->receiver,
-                'last_message' => $message,
-                'unread_count' => 0
-            ]);
-        }
-        
-        // Add conversations from received messages
-        foreach ($receivedMessages as $message) {
-            if ($conversations->has($message->sender_id)) {
-                // Update existing conversation
-                $conversation = $conversations->get($message->sender_id);
-                if ($message->created_at > $conversation['last_message']->created_at) {
-                    $conversation['last_message'] = $message;
-                }
-                if (!$message->is_read) {
-                    $conversation['unread_count']++;
-                }
-                $conversations->put($message->sender_id, $conversation);
-            } else {
-                // Create new conversation
-                $conversations->put($message->sender_id, [
-                    'user' => $message->sender,
-                    'last_message' => $message,
-                    'unread_count' => $message->is_read ? 0 : 1
-                ]);
-            }
-        }
-        
-        return $conversations->sortByDesc(function ($conversation) {
-            return $conversation['last_message']->created_at;
-        });
-    }
-
-    /**
-     * Mark user as online.
-     */
-    public function markAsOnline(): void
-    {
-        $this->update([
-            'is_online' => true,
-            'last_seen' => now(),
-        ]);
-    }
-
-    /**
-     * Mark user as offline.
-     */
-    public function markAsOffline(): void
-    {
-        $this->update([
-            'is_online' => false,
-            'last_seen' => now(),
-        ]);
-    }
-
-    /**
-     * Get online status with last seen time.
-     */
-    public function getOnlineStatusAttribute(): string
-    {
-        if ($this->is_online) {
-            return 'online';
-        }
-
-        if ($this->last_seen) {
-            $diff = now()->diffInMinutes($this->last_seen);
-            
-            if ($diff < 1) {
-                return 'just now';
-            } elseif ($diff < 60) {
-                return $diff . 'm ago';
-            } elseif ($diff < 1440) { // 24 hours
-                return floor($diff / 60) . 'h ago';
-            } else {
-                return floor($diff / 1440) . 'd ago';
-            }
-        }
-
-        return 'offline';
     }
 
     /**

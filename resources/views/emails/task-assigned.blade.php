@@ -74,37 +74,24 @@
                 <p><strong>Description:</strong><br>{{ $task->description }}</p>
             @endif
             
-            @if($task->project)
-                <p><strong>Project:</strong> {{ $task->project->title }}</p>
-            @endif
-            @if($task->priority)
-                <p><strong>Priority:</strong> 
-                    @if(is_object($task->priority))
-                        <span class="badge badge-{{ $task->priority->color ?? 'medium' }}">
-                            {{ $task->priority->name }}
-                        </span>
-                    @else
-                        <span class="badge badge-medium">
-                            {{ ucfirst($task->priority) }}
-                        </span>
-                    @endif
-                </p>
-            @endif
-            
-            @if($task->status)
-                <p><strong>Status:</strong> 
-                    <span class="badge badge-{{ $task->status->color ?? 'pending' }}">
-                        {{ $task->status->name }}
-                    </span>
-                </p>
-            @endif
+            <p><strong>Project:</strong> {{ $task->project->title }}</p>
+            <p><strong>Priority:</strong> 
+                <span class="badge badge-{{ $task->priority }}">
+                    {{ ucfirst($task->priority) }}
+                </span>
+            </p>
+            <p><strong>Status:</strong> 
+                <span class="badge badge-{{ str_replace('_', '-', $task->status) }}">
+                    {{ ucfirst(str_replace('_', ' ', $task->status)) }}
+                </span>
+            </p>
             
             @if($task->due_date)
                 <p><strong>Due Date:</strong> {{ $task->due_date->format('M d, Y') }}</p>
             @endif
             
-            @if($task->estimated_hours)
-                <p><strong>Estimated Hours:</strong> {{ $task->estimated_hours }} hours</p>
+            @if($task->duration)
+                <p><strong>Estimated Duration:</strong> {{ $task->duration }} hours</p>
             @endif
             
             <p><strong>Assigned By:</strong> {{ $task->assignedBy->name }}</p>
