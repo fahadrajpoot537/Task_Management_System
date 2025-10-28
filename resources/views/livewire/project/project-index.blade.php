@@ -73,7 +73,11 @@
                                                 <i class="bi bi-eye me-2"></i>View Details
                                             </a>
                                         </li>
-                                        
+                                        <li>
+                                            <a class="dropdown-item" href="{{ route('tasks.create') }}?project={{ $project->id }}">
+                                                <i class="bi bi-plus-circle me-2"></i>Add Task
+                                            </a>
+                                        </li>
                                         @if(auth()->user()->isSuperAdmin() || auth()->user()->isAdmin() || $project->created_by_user_id === auth()->id())
                                             <li><hr class="dropdown-divider"></li>
                                             <li>
