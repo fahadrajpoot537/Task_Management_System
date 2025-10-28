@@ -4,6 +4,9 @@ namespace App\Livewire\Zkteco;
 
 use Livewire\Component;
 use Jmrashed\Zkteco\Lib\ZKTeco;
+use App\Models\User;
+use App\Models\AttendanceRecord;
+use Carbon\Carbon;
 
 class AttendanceManager extends Component
 {
@@ -15,6 +18,11 @@ class AttendanceManager extends Component
     public $isConnected = false;
     public $loading = false;
     public $error = '';
+    public $workingHours = [];
+    public $editingUser = null;
+    public $editCheckIn = '';
+    public $editCheckOut = '';
+    public $attendanceCalculations = [];
 
     public function mount()
     {
@@ -49,6 +57,9 @@ class AttendanceManager extends Component
                 $zk->disableDevice();
                 $this->users = $zk->getUser();
                 $zk->enableDevice();
+
+                // Load working hours for all users
+                $this->loadWorkingHours();
 
                 session()->flash('success', 'Connected successfully! Found ' . count($this->users) . ' users.');
             } else {
@@ -88,9 +99,9 @@ class AttendanceManager extends Component
                 }
 
                 if (!empty($attendance)) {
+                    // Fetch all attendance records (not just today's)
                     $this->attendance = $attendance;
-                    // dd($this->attendance);
-                    session()->flash('success', 'Fetched ' . count($attendance) . ' attendance records.');
+                    session()->flash('success', 'Fetched ' . count($attendance) . ' attendance records from device.');
                 } else {
                     $this->error = 'No attendance records found. Make sure there are punch records on the device.';
                 }
@@ -99,6 +110,146 @@ class AttendanceManager extends Component
             }
         } catch (\Exception $e) {
             $this->error = 'Error fetching attendance: ' . $e->getMessage();
+        }
+
+        $this->loading = false;
+    }
+
+    public function saveAttendanceToDatabase()
+    {
+        if (empty($this->attendance)) {
+            $this->error = 'No attendance data available. Please fetch attendance first.';
+            return;
+        }
+
+        $this->loading = true;
+        $this->error = '';
+        $savedCount = 0;
+
+        try {
+            foreach ($this->attendance as $record) {
+                $deviceUserId = $record['id'];
+                
+                // Find user by device_user_id
+                $user = User::where('device_user_id', $deviceUserId)->first();
+                
+                if (!$user) {
+                    // Try to find by zkteco_uid as fallback
+                    $user = User::where('zkteco_uid', $deviceUserId)->first();
+                }
+                
+                if (!$user) {
+                    // Log unmatched records for debugging
+                    \Log::info("No user found for device_user_id: {$deviceUserId}");
+                    continue; // Skip if user not found
+                }
+
+                // Parse the timestamp
+                $timestamp = Carbon::parse($record['timestamp']);
+                $recordDate = $timestamp->format('Y-m-d');
+                $actualCheckInTime = $timestamp->format('H:i:s');
+                $expectedCheckInTime = $user->check_in_time;
+                
+                // Calculate late minutes - check_in_time in users table is COMPANY SET TIME
+                $lateMinutes = 0;
+                $earlyMinutes = 0;
+                $status = 'present';
+                $isCheckOut = false;
+                
+                if ($expectedCheckInTime) {
+                    $companySetCheckInTime = Carbon::parse($recordDate . ' ' . $expectedCheckInTime);
+                    $actualTime = Carbon::parse($recordDate . ' ' . $actualCheckInTime);
+                    
+                    // Determine if this is likely a check-out based on time
+                    $expectedCheckOut = $user->check_out_time ? Carbon::parse($recordDate . ' ' . $user->check_out_time) : null;
+                    
+                    if ($expectedCheckOut && $actualTime->greaterThan($expectedCheckOut->subHours(2))) {
+                        // This is likely a check-out
+                        $isCheckOut = true;
+                        if ($actualTime->lessThan($expectedCheckOut)) {
+                            $earlyMinutes = $expectedCheckOut->diffInMinutes($actualTime);
+                            $status = $earlyMinutes > 15 ? 'early_departure' : 'present';
+                        }
+                    } else {
+                        // This is likely a check-in - compare with COMPANY SET TIME
+                        if ($actualTime->greaterThan($companySetCheckInTime)) {
+                            // User checked in AFTER company set time = LATE (ZERO TOLERANCE)
+                            $lateMinutes = $actualTime->diffInMinutes($companySetCheckInTime);
+                            $status = 'late'; // Any late arrival is marked as late
+                        } else {
+                            // User checked in ON TIME or EARLY = PRESENT
+                            $status = 'present';
+                        }
+                    }
+                }
+                
+                // Check if attendance record already exists for this date
+                $existingRecord = AttendanceRecord::where('user_id', $user->id)
+                    ->where('attendance_date', $recordDate)
+                    ->first();
+                
+                if ($existingRecord) {
+                    // Update existing record
+                    $updateData = [
+                        'device_uid' => $deviceUserId,
+                    ];
+                    
+                    if ($isCheckOut) {
+                        // Update check-out time
+                        $updateData['check_out_time'] = $actualCheckInTime;
+                        $updateData['early_minutes'] = $earlyMinutes;
+                        $updateData['status'] = $status;
+                        
+                        // Calculate hours worked if both times exist
+                        if ($existingRecord->check_in_time) {
+                            $checkIn = Carbon::parse($recordDate . ' ' . $existingRecord->check_in_time);
+                            $checkOut = Carbon::parse($recordDate . ' ' . $actualCheckInTime);
+                            $hoursWorked = $checkOut->diffInMinutes($checkIn) / 60;
+                            $updateData['hours_worked'] = round($hoursWorked, 2);
+                        }
+                    } else {
+                        // Update check-in time if it's earlier or doesn't exist
+                        if ($existingRecord->check_in_time === null || $actualCheckInTime < $existingRecord->check_in_time) {
+                            $updateData['check_in_time'] = $actualCheckInTime;
+                            $updateData['late_minutes'] = $lateMinutes;
+                            $updateData['status'] = $status;
+                        }
+                    }
+                    
+                    $existingRecord->update($updateData);
+                    $savedCount++;
+                    \Log::info("Updated attendance record for user: {$user->name} (ID: {$deviceUserId}) - " . 
+                              ($isCheckOut ? "Check-out: {$actualCheckInTime}, Early: {$earlyMinutes} min" : "Check-in: {$actualCheckInTime}, Company Set Time: {$expectedCheckInTime}, Late: {$lateMinutes} min") . 
+                              ", Status: {$status}");
+                } else {
+                    // Create new attendance record
+                    $recordData = [
+                        'user_id' => $user->id,
+                        'attendance_date' => $recordDate,
+                        'device_uid' => $deviceUserId,
+                        'status' => $status,
+                    ];
+                    
+                    if ($isCheckOut) {
+                        $recordData['check_out_time'] = $actualCheckInTime;
+                        $recordData['early_minutes'] = $earlyMinutes;
+                    } else {
+                        $recordData['check_in_time'] = $actualCheckInTime;
+                        $recordData['late_minutes'] = $lateMinutes;
+                    }
+                    
+                    AttendanceRecord::create($recordData);
+                    $savedCount++;
+                    \Log::info("Created attendance record for user: {$user->name} (ID: {$deviceUserId}) - " . 
+                              ($isCheckOut ? "Check-out: {$actualCheckInTime}, Early: {$earlyMinutes} min" : "Check-in: {$actualCheckInTime}, Company Set Time: {$expectedCheckInTime}, Late: {$lateMinutes} min") . 
+                              ", Status: {$status}");
+                }
+            }
+            
+            session()->flash('success', "Saved {$savedCount} attendance records to database from all dates.");
+            
+        } catch (\Exception $e) {
+            $this->error = 'Error saving attendance to database: ' . $e->getMessage();
         }
 
         $this->loading = false;
@@ -174,6 +325,171 @@ class AttendanceManager extends Component
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    public function loadWorkingHours()
+    {
+        $this->workingHours = [];
+        foreach ($this->users as $user) {
+            // Try to find user by device_user_id first, then zkteco_uid, then by name
+            $dbUser = User::where('device_user_id', $user['uid'])->first();
+            if (!$dbUser) {
+                $dbUser = User::where('zkteco_uid', $user['uid'])->first();
+            }
+            if (!$dbUser) {
+                $dbUser = User::where('name', 'LIKE', '%' . $user['name'] . '%')->first();
+            }
+            
+            $this->workingHours[$user['uid']] = [
+                'check_in_time' => $dbUser ? $dbUser->check_in_time : '',
+                'check_out_time' => $dbUser ? $dbUser->check_out_time : '',
+                'is_active' => $dbUser ? true : false,
+                'user_id' => $dbUser ? $dbUser->id : null,
+                'device_user_id' => $dbUser ? $dbUser->device_user_id : null,
+            ];
+        }
+    }
+
+    public function editWorkingHours($uid)
+    {
+        $this->editingUser = $uid;
+        $workingHourData = $this->workingHours[$uid] ?? null;
+        $this->editCheckIn = $workingHourData['check_in_time'] ?? '';
+        $this->editCheckOut = $workingHourData['check_out_time'] ?? '';
+    }
+
+    public function saveWorkingHours()
+    {
+        if (!$this->editingUser) {
+            return;
+        }
+
+        $user = collect($this->users)->firstWhere('uid', $this->editingUser);
+        if (!$user) {
+            return;
+        }
+
+        // Find or create user in database
+        $dbUser = User::where('device_user_id', $this->editingUser)->first();
+        if (!$dbUser) {
+            $dbUser = User::where('zkteco_uid', $this->editingUser)->first();
+        }
+        if (!$dbUser) {
+            $dbUser = User::where('name', 'LIKE', '%' . $user['name'] . '%')->first();
+        }
+
+        if ($dbUser) {
+            // Update existing user
+            $dbUser->update([
+                'check_in_time' => $this->editCheckIn,
+                'check_out_time' => $this->editCheckOut,
+                'device_user_id' => $this->editingUser,
+                'zkteco_uid' => $this->editingUser, // Keep both for compatibility
+            ]);
+        } else {
+            // Create new user record
+            $dbUser = User::create([
+                'name' => $user['name'],
+                'email' => strtolower(str_replace(' ', '', $user['name'])) . '@company.com', // Generate email
+                'password' => bcrypt('password123'), // Default password
+                'role_id' => 4, // Default to employee role
+                'check_in_time' => $this->editCheckIn,
+                'check_out_time' => $this->editCheckOut,
+                'device_user_id' => $this->editingUser,
+                'zkteco_uid' => $this->editingUser, // Keep both for compatibility
+            ]);
+        }
+
+        $this->loadWorkingHours();
+        $this->editingUser = null;
+        $this->editCheckIn = '';
+        $this->editCheckOut = '';
+        
+        session()->flash('success', 'Working hours saved successfully for ' . $user['name']);
+    }
+
+    public function cancelEdit()
+    {
+        $this->editingUser = null;
+        $this->editCheckIn = '';
+        $this->editCheckOut = '';
+    }
+
+    public function calculateAttendance()
+    {
+        if (empty($this->attendance)) {
+            $this->error = 'No attendance data available. Please fetch attendance first.';
+            return;
+        }
+
+        $calculations = [];
+        
+        foreach ($this->users as $user) {
+            $uid = $user['uid'];
+            $dbUser = User::where('zkteco_uid', $uid)->first();
+            if (!$dbUser) {
+                $dbUser = User::where('name', 'LIKE', '%' . $user['name'] . '%')->first();
+            }
+            
+            if (!$dbUser || !$dbUser->check_in_time || !$dbUser->check_out_time) {
+                continue;
+            }
+
+            // Get attendance records for this user
+            $userAttendance = collect($this->attendance)->where('uid', $uid)->sortBy('timestamp');
+            
+            if ($userAttendance->isEmpty()) {
+                continue;
+            }
+
+            $totalHours = 0;
+            $totalDays = 0;
+            $expectedCheckIn = $dbUser->check_in_time;
+            $expectedCheckOut = $dbUser->check_out_time;
+
+            // Group by date
+            $attendanceByDate = $userAttendance->groupBy(function ($record) {
+                return date('Y-m-d', strtotime($record['timestamp']));
+            });
+
+            foreach ($attendanceByDate as $date => $records) {
+                $totalDays++;
+                
+                // Find first check-in and last check-out for the day
+                $firstRecord = $records->first();
+                $lastRecord = $records->last();
+                
+                $actualCheckIn = date('H:i:s', strtotime($firstRecord['timestamp']));
+                $actualCheckOut = date('H:i:s', strtotime($lastRecord['timestamp']));
+                
+                // Calculate working hours
+                $checkInTime = strtotime($actualCheckIn);
+                $checkOutTime = strtotime($actualCheckOut);
+                $dayHours = ($checkOutTime - $checkInTime) / 3600;
+                
+                $totalHours += $dayHours;
+                
+                $calculations[$uid][] = [
+                    'date' => $date,
+                    'expected_check_in' => $expectedCheckIn,
+                    'expected_check_out' => $expectedCheckOut,
+                    'actual_check_in' => $actualCheckIn,
+                    'actual_check_out' => $actualCheckOut,
+                    'hours_worked' => round($dayHours, 2),
+                    'late_arrival' => $actualCheckIn > $expectedCheckIn,
+                    'early_departure' => $actualCheckOut < $expectedCheckOut,
+                ];
+            }
+
+            $calculations[$uid]['summary'] = [
+                'total_days' => $totalDays,
+                'total_hours' => round($totalHours, 2),
+                'average_hours_per_day' => $totalDays > 0 ? round($totalHours / $totalDays, 2) : 0,
+            ];
+        }
+
+        $this->attendanceCalculations = $calculations;
+        session()->flash('success', 'Attendance calculations completed for ' . count($calculations) . ' users.');
     }
 
     public function render()

@@ -30,6 +30,21 @@ class User extends Authenticatable
         'avatar',
         'is_online',
         'last_seen',
+        'check_in_time',
+        'check_out_time',
+        'zkteco_uid',
+        'device_user_id',
+        'joining_date',
+        'bonus',
+        'incentive',
+        'k50_device_uid',
+        'monthly_salary',
+        'employment_status',
+        'shift_start',
+        'shift_end',
+        'hired_at',
+        'probation_end_at',
+        'designation_id',
     ];
 
     /**
@@ -54,6 +69,14 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_online' => 'boolean',
             'last_seen' => 'datetime',
+            'check_in_time' => 'datetime:H:i',
+            'check_out_time' => 'datetime:H:i',
+            'joining_date' => 'date',
+            'hired_at' => 'date',
+            'probation_end_at' => 'date',
+            'bonus' => 'decimal:2',
+            'incentive' => 'decimal:2',
+            'monthly_salary' => 'decimal:2',
         ];
     }
 

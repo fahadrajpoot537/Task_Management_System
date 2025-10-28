@@ -17,6 +17,12 @@ class Kernel extends ConsoleKernel
                  ->dailyAt('02:00')
                  ->withoutOverlapping()
                  ->runInBackground();
+                 
+        // Run probation to permanent conversion daily at 3:00 AM
+        $schedule->command('users:convert-probation')
+                 ->dailyAt('03:00')
+                 ->withoutOverlapping()
+                 ->runInBackground();
     }
 
     /**

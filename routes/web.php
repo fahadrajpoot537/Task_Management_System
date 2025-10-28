@@ -10,6 +10,10 @@ use App\Livewire\Task\TaskCreate;
 use App\Livewire\Task\TaskDetails;
 use App\Livewire\Task\TaskIndex;
 use App\Livewire\Team\TeamManager;
+use App\Livewire\Attendance\AttendanceManager;
+use App\Livewire\Attendance\UserAttendanceDetails;
+use App\Livewire\User\SalaryManager;
+use App\Livewire\User\ProbationManager;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -70,6 +74,17 @@ Route::middleware('auth')->group(function () {
     Route::get('/chat', \App\Livewire\SlackLikeChatComponent::class)->name('chat');
     Route::get('/private-messages', \App\Livewire\PrivateChatComponent::class)->name('private-messages');
     Route::get('/slack-chat', \App\Livewire\SlackLikeChatComponent::class)->name('slack-chat');
+
+    // Attendance Routes
+    Route::get('/attendance', AttendanceManager::class)->name('attendance');
+    Route::get('/attendance/user/{userId}', UserAttendanceDetails::class)->name('attendance.user');
+    Route::get('/attendance-viewer', \App\Livewire\Attendance\AttendanceViewer::class)->name('attendance.viewer');
+    
+    // Salary Management Routes
+    Route::get('/salary-management', SalaryManager::class)->name('salary.management');
+    
+    // Probation Management Routes
+    Route::get('/probation-management', ProbationManager::class)->name('probation.management');
 
                 // Admin Routes (Super Admin only)
                 Route::get('/permissions', PermissionManager::class)->name('permissions.index');
