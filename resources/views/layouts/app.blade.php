@@ -340,7 +340,7 @@ use Illuminate\Support\Facades\Storage;
             left: 0;
             right: 0;
             height: 4px;
-            background: linear-gradient(90deg, var(--primary-color) 0%, var(--secondary-color) 50%, var(--accent-color) 100%);
+           
             opacity: 0.8;
         }
 
@@ -374,6 +374,7 @@ use Illuminate\Support\Facades\Storage;
             background: var(--bg-secondary);
             color: var(--text-primary);
             padding: 1.5rem;
+            border-radius: 20px;
         }
 
         .card-footer {
@@ -2031,6 +2032,12 @@ use Illuminate\Support\Facades\Storage;
                                 <i class="bi bi-list-task"></i>
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('slack-chat') ? 'active' : '' }}" href="{{ route('slack-chat') }}" title="Slack-like Chat">
+                                <i class="bi bi-chat"></i>
+                            </a>
+                        </li>
+                        
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('attendance.*') ? 'active' : '' }}" href="{{ route('attendance.viewer') }}" title="Attendance Viewer">
                                 <i class="bi bi-clock-history"></i>

@@ -117,14 +117,12 @@
                                             </button>
                                             <ul class="dropdown-menu">
                                                 @foreach($this->statuses as $status)
-                                                    @if(!auth()->user()->isEmployee() || $status->name !== 'Complete')
-                                                        <li>
-                                                            <button class="dropdown-item" 
-                                                                    wire:click="updateTaskStatus({{ $task->id }}, {{ $status->id }})">
-                                                                <span class="badge bg-{{ $status->color }} me-2">{{ $status->name }}</span>
-                                                            </button>
-                                                        </li>
-                                                    @endif
+                                                    <li>
+                                                        <button class="dropdown-item" 
+                                                                wire:click="updateTaskStatus({{ $task->id }}, {{ $status->id }})">
+                                                            <span class="badge bg-{{ $status->color }} me-2">{{ $status->name }}</span>
+                                                        </button>
+                                                    </li>
                                                 @endforeach
                                             </ul>
                                         </div>

@@ -14,7 +14,6 @@ class RecurringTaskService
     public function __construct()
     {
         $this->emailService = new EmailNotificationService();
-        $this->emailService->configureMailSettings();
     }
 
     /**

@@ -14,6 +14,8 @@ use App\Models\User;
 use App\Services\EmailNotificationService;
 use App\Services\RecurringTaskService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log as LogFacade;
+use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\WithFileUploads;
@@ -27,7 +29,6 @@ class TaskTable extends Component
     public function mount()
     {
         $this->emailService = new EmailNotificationService();
-        $this->emailService->configureMailSettings();
     }
 
     public function boot()
@@ -35,7 +36,6 @@ class TaskTable extends Component
         // Ensure email service is initialized even if mount() wasn't called
         if (!$this->emailService) {
             $this->emailService = new EmailNotificationService();
-            $this->emailService->configureMailSettings();
         }
     }
 
@@ -53,11 +53,60 @@ class TaskTable extends Component
     public $newTaskAssigneeId = '';
     public $newTaskAssigneeIds = [];
     public $newTaskPriority = '';
+    
+    // Employee selection modal properties
+    public $showEmployeeModal = false;
+    public $selectedEmployeeNames = [];
+    public $employeeSearch = '';
     public $newTaskCategory = '';
+    
+    // Task creation modal properties
+    public $showTaskModal = false;
+    public $modalTaskTitle = '';
+    public $modalTaskDescription = '';
+    public $modalTaskProjectId = '';
+    public $modalTaskAssigneeId = '';
+    public $modalTaskAssigneeIds = []; // For multiple assignees
+    public $modalTaskPriority = '';
+    public $modalTaskCategory = '';
+    public $modalTaskDueDate = '';
+    public $modalTaskEstimatedHours = '';
+    public $modalTaskNotes = '';
+    public $modalTaskNature = 'one_time';
+    public $modalTaskRecurrenceFrequency = 'daily';
+    public $modalTaskReminderTime = '';
+    public $modalTaskAttachments = [];
+    
+    // Task edit modal properties
+    public $showEditModal = false;
+    public $editModalTaskId = null;
+    public $editModalTaskTitle = '';
+    public $editModalTaskDescription = '';
+    public $editModalTaskProjectId = '';
+    public $editModalTaskAssigneeIds = [];
+    public $editModalTaskPriority = '';
+    public $editModalTaskCategory = '';
+    public $editModalTaskDueDate = '';
+    public $editModalTaskEstimatedHours = '';
+    public $editModalTaskNature = 'one_time';
+    public $editModalTaskRecurrenceFrequency = 'daily';
+    public $editModalTaskReminderTime = '';
+    public $editModalTaskAttachments = [];
+    
+    // Task clone modal properties
+    public $showCloneModal = false;
+    public $cloneModalTaskId = null;
+    public $cloneModalDueDate = '';
+    
+    // Project creation modal properties
+    public $showProjectCreateModal = false;
+    public $newProjectTitle = '';
+    public $newProjectDescription = '';
+    
     public $newTaskDueDate = '';
     public $newTaskEstimatedHours = '';
     public $newTaskNotes = '';
-    public $newTaskNature = 'daily';
+    public $newTaskNature = 'one_time';
     
     // Modal properties
     public $showNotesModal = false;
@@ -90,6 +139,12 @@ class TaskTable extends Component
     public $customCategoryName = '';
     public $customCategoryIcon = 'bi-list-task';
     public $customCategoryColor = 'secondary';
+    
+    // Admin review properties
+    public $showAdminReviewModal = false;
+    public $adminReviewTaskId = null;
+    public $adminReviewComments = '';
+    public $adminReviewAction = ''; // 'approve' or 'revisit'
 
     protected $queryString = [
         'search' => ['except' => ''],
@@ -126,25 +181,40 @@ class TaskTable extends Component
 
     public function startEditing($taskId)
     {
-        if ($taskId == 0) {
-            // Starting to create a new task
-            $this->editingTaskId = 0;
-            $this->resetNewTaskFields();
+        // Editing existing task in modal
+        $task = Task::with('assignees')->findOrFail($taskId);
+        
+        $this->editModalTaskId = $taskId;
+        $this->editModalTaskTitle = $task->title;
+        $this->editModalTaskDescription = $task->description;
+        $this->editModalTaskProjectId = $task->project_id;
+        $this->editModalTaskAssigneeIds = $task->assignees->pluck('id')->toArray();
+        $this->editModalTaskPriority = $task->priority_id;
+        $this->editModalTaskCategory = $task->category_id;
+        $this->editModalTaskDueDate = $task->due_date ? $task->due_date->format('Y-m-d') : '';
+        $this->editModalTaskEstimatedHours = $task->estimated_hours;
+        
+        // Set nature and frequency based on task
+        if ($task->is_recurring) {
+            $this->editModalTaskNature = 'recurring';
+            $this->editModalTaskRecurrenceFrequency = $task->nature_of_task; // 'daily', 'weekly', 'monthly'
         } else {
-            // Editing existing task
-            $task = Task::findOrFail($taskId);
-            $this->editingTaskId = $taskId;
-            $this->newTaskTitle = $task->title;
-            $this->newTaskDescription = $task->description;
-            $this->newTaskProjectId = $task->project_id;
-            $this->newTaskAssigneeId = $task->assigned_to_user_id;
-            $this->newTaskAssigneeIds = $task->assignees->pluck('id')->toArray();
-            $this->newTaskPriority = $task->priority_id;
-            $this->newTaskCategory = $task->category_id;
-            $this->newTaskDueDate = $task->due_date ? $task->due_date->format('Y-m-d') : '';
-            $this->newTaskEstimatedHours = $task->estimated_hours;
-            $this->newTaskNotes = $task->notes;
+            $this->editModalTaskNature = 'one_time';
+            $this->editModalTaskRecurrenceFrequency = 'daily';
         }
+        
+        // Set reminder time if exists
+        $this->editModalTaskReminderTime = $task->reminder_time ? $task->reminder_time->format('Y-m-d\TH:i') : '';
+        
+        $this->showEditModal = true;
+        $this->updateSelectedEmployeeNames();
+    }
+    
+    public function closeEditModal()
+    {
+        $this->showEditModal = false;
+        $this->editModalTaskId = null;
+        $this->resetEditModalFields();
     }
 
     public function cancelEditing()
@@ -227,7 +297,6 @@ class TaskTable extends Component
         // Send email notifications
         if (!$this->emailService) {
             $this->emailService = new EmailNotificationService();
-            $this->emailService->configureMailSettings();
         }
         
         $this->emailService->sendTaskCreatedNotification($task);
@@ -306,7 +375,6 @@ class TaskTable extends Component
         // Send email notification for task update
         if (!$this->emailService) {
             $this->emailService = new EmailNotificationService();
-            $this->emailService->configureMailSettings();
         }
         
         $this->emailService->sendTaskUpdatedNotification($task, 'Task Details Updated');
@@ -340,6 +408,12 @@ class TaskTable extends Component
         $user = auth()->user();
         $task = Task::findOrFail($taskId);
         
+        // Check if task is already approved - prevent status changes
+        if ($task->is_approved) {
+            session()->flash('error', 'Cannot change status of an approved task.');
+            return;
+        }
+        
         // Check if user can update this task
         if (!$user->isSuperAdmin() && !$user->isAdmin()) {
             if ($user->isManager()) {
@@ -360,15 +434,6 @@ class TaskTable extends Component
             }
         }
 
-        // Check if employee is trying to set Complete status
-        if ($user->isEmployee()) {
-            $status = TaskStatus::findOrFail($statusId);
-            if ($status->name === 'Complete') {
-                session()->flash('error', 'Only managers, admins, and super admins can mark tasks as complete.');
-                return;
-            }
-        }
-
         $oldStatus = $task->status;
         $task->update(['status_id' => $statusId]);
         $task->load('status');
@@ -381,7 +446,6 @@ class TaskTable extends Component
         // Send email notification for status change
         if (!$this->emailService) {
             $this->emailService = new EmailNotificationService();
-            $this->emailService->configureMailSettings();
         }
         
         $this->emailService->sendTaskStatusChangedNotification($task, $oldStatus, $newStatus);
@@ -434,7 +498,6 @@ class TaskTable extends Component
         // Send email notification for priority change
         if (!$this->emailService) {
             $this->emailService = new EmailNotificationService();
-            $this->emailService->configureMailSettings();
         }
         
         $this->emailService->sendTaskUpdatedNotification($task, 'Task Priority Updated');
@@ -453,7 +516,6 @@ class TaskTable extends Component
         // Send email notification for category change
         if (!$this->emailService) {
             $this->emailService = new EmailNotificationService();
-            $this->emailService->configureMailSettings();
         }
         
         $this->emailService->sendTaskUpdatedNotification($task, 'Task Category Updated');
@@ -555,7 +617,6 @@ class TaskTable extends Component
             // Send email notification for the comment
             if (!$this->emailService) {
                 $this->emailService = new EmailNotificationService();
-                $this->emailService->configureMailSettings();
             }
             
             $this->emailService->sendTaskNoteCommentNotification($task, $comment);
@@ -628,6 +689,7 @@ class TaskTable extends Component
         $this->newTaskProjectId = '';
         $this->newTaskAssigneeId = '';
         $this->newTaskAssigneeIds = [];
+        $this->selectedEmployeeNames = [];
         $this->newTaskPriority = '';
         $this->newTaskCategory = '';
         $this->newTaskDueDate = '';
@@ -909,6 +971,512 @@ class TaskTable extends Component
         return $user->isSuperAdmin() || $user->isAdmin();
     }
 
+    // Employee modal methods
+    public function showEmployeeSelectionModal()
+    {
+        $this->showEmployeeModal = true;
+        $this->employeeSearch = '';
+        $this->updateSelectedEmployeeNames();
+    }
+    
+    public function showEmployeeSelectionModalForEdit()
+    {
+        $this->showEmployeeModal = true;
+        $this->employeeSearch = '';
+        $this->updateSelectedEmployeeNames();
+    }
+    
+    public function closeEmployeeModal()
+    {
+        $this->showEmployeeModal = false;
+        $this->employeeSearch = '';
+    }
+    
+    public function selectEmployee($userId)
+    {
+        // Check if we're in task creation modal, edit modal, or inline editing
+        if ($this->showTaskModal) {
+            // For task creation modal
+            if (!in_array($userId, $this->modalTaskAssigneeIds)) {
+                $this->modalTaskAssigneeIds[] = $userId;
+            }
+        } elseif ($this->showEditModal) {
+            // For edit modal
+            if (!in_array($userId, $this->editModalTaskAssigneeIds)) {
+                $this->editModalTaskAssigneeIds[] = $userId;
+            }
+        } else {
+            // For inline editing
+            if (!in_array($userId, $this->newTaskAssigneeIds)) {
+                $this->newTaskAssigneeIds[] = $userId;
+            }
+        }
+        $this->updateSelectedEmployeeNames();
+    }
+
+    public function removeEmployee($userId)
+    {
+        // Check if we're in task creation modal, edit modal, or inline editing
+        if ($this->showTaskModal) {
+            // For task creation modal
+            $this->modalTaskAssigneeIds = array_filter($this->modalTaskAssigneeIds, function($id) use ($userId) {
+                return $id != $userId;
+            });
+        } elseif ($this->showEditModal) {
+            // For edit modal
+            $this->editModalTaskAssigneeIds = array_filter($this->editModalTaskAssigneeIds, function($id) use ($userId) {
+                return $id != $userId;
+            });
+        } else {
+            // For inline editing
+            $this->newTaskAssigneeIds = array_filter($this->newTaskAssigneeIds, function($id) use ($userId) {
+                return $id != $userId;
+            });
+        }
+        $this->updateSelectedEmployeeNames();
+    }
+
+    public function updateSelectedEmployeeNames()
+    {
+        $this->selectedEmployeeNames = [];
+        
+        // Determine which array to use based on context
+        if ($this->showTaskModal) {
+            $assigneeIds = $this->modalTaskAssigneeIds;
+        } elseif ($this->showEditModal) {
+            $assigneeIds = $this->editModalTaskAssigneeIds;
+        } else {
+            $assigneeIds = $this->newTaskAssigneeIds;
+        }
+        
+        foreach ($assigneeIds as $userId) {
+            $user = User::find($userId);
+            if ($user) {
+                $this->selectedEmployeeNames[] = $user->name;
+            }
+        }
+    }
+    
+    public function getFilteredEmployeesProperty()
+    {
+        $employees = $this->users;
+        
+        if ($this->employeeSearch) {
+            $employees = $employees->filter(function ($user) {
+                return stripos($user->name, $this->employeeSearch) !== false;
+            });
+        }
+        
+        return $employees;
+    }
+
+    // Task modal methods
+    public function showTaskCreationModal()
+    {
+        $this->showTaskModal = true;
+        $this->resetModalTaskFields();
+    }
+
+    public function closeTaskModal()
+    {
+        $this->showTaskModal = false;
+        $this->resetModalTaskFields();
+    }
+
+    public function resetModalTaskFields()
+    {
+        $this->modalTaskTitle = '';
+        $this->modalTaskDescription = '';
+        $this->modalTaskProjectId = '';
+        $this->modalTaskAssigneeId = '';
+        $this->modalTaskAssigneeIds = [];
+        $this->modalTaskPriority = '';
+        $this->modalTaskCategory = '';
+        $this->modalTaskDueDate = '';
+        $this->modalTaskEstimatedHours = '';
+        $this->modalTaskReminderTime = '';
+        $this->modalTaskNotes = '';
+        $this->modalTaskNature = 'one_time';
+        $this->modalTaskRecurrenceFrequency = 'daily';
+        $this->modalTaskAttachments = [];
+    }
+    
+    public function resetEditModalFields()
+    {
+        $this->editModalTaskId = null;
+        $this->editModalTaskTitle = '';
+        $this->editModalTaskDescription = '';
+        $this->editModalTaskProjectId = '';
+        $this->editModalTaskAssigneeIds = [];
+        $this->editModalTaskPriority = '';
+        $this->editModalTaskCategory = '';
+        $this->editModalTaskDueDate = '';
+        $this->editModalTaskEstimatedHours = '';
+        $this->editModalTaskNature = 'one_time';
+        $this->editModalTaskRecurrenceFrequency = 'daily';
+        $this->editModalTaskReminderTime = '';
+        $this->editModalTaskAttachments = [];
+    }
+
+    public function createTaskFromModal()
+    {
+        // Debug: Log the assignee IDs before validation
+        LogFacade::info('Creating task from modal:', [
+            'modalTaskAssigneeIds' => $this->modalTaskAssigneeIds,
+            'count' => count($this->modalTaskAssigneeIds)
+        ]);
+        
+        $this->validate([
+            'modalTaskTitle' => 'required|string|max:255',
+            'modalTaskDescription' => 'nullable|string',
+            'modalTaskProjectId' => 'required|exists:projects,id',
+            'modalTaskAssigneeIds' => 'required|array|min:1',
+            'modalTaskAssigneeIds.*' => 'exists:users,id',
+            'modalTaskPriority' => 'required|exists:task_priorities,id',
+            'modalTaskCategory' => 'required|exists:task_categories,id',
+            'modalTaskDueDate' => 'nullable|date|after_or_equal:today',
+            'modalTaskEstimatedHours' => 'nullable|integer|min:0',
+            'modalTaskReminderTime' => 'nullable',
+            'modalTaskNotes' => 'nullable|string',
+            'modalTaskNature' => 'required|in:one_time,recurring',
+            'modalTaskRecurrenceFrequency' => 'required_if:modalTaskNature,recurring|in:daily,weekly,monthly',
+            'modalTaskAttachments.*' => 'nullable|file|max:10240',
+        ]);
+
+        try {
+            // Determine if task is recurring
+            $isRecurring = $this->modalTaskNature === 'recurring';
+            $isRecurringActive = $isRecurring ? 1 : 0;
+            
+            // Set nature_of_task based on type
+            $natureOfTask = $this->modalTaskNature === 'recurring' ? $this->modalTaskRecurrenceFrequency : 'one_time';
+
+            // Create the main task with the first assignee
+            $primaryAssigneeId = !empty($this->modalTaskAssigneeIds) ? $this->modalTaskAssigneeIds[0] : null;
+            
+            if (!$primaryAssigneeId) {
+                throw new \Exception('No assignee selected');
+            }
+            
+            // Convert reminder time from datetime-local format to proper datetime
+            $reminderTime = null;
+            if ($this->modalTaskReminderTime && $this->modalTaskReminderTime != '') {
+                try {
+                    // Parse datetime-local format (2025-10-29T22:15)
+                    $reminderTime = date('Y-m-d H:i:s', strtotime($this->modalTaskReminderTime));
+                } catch (\Exception $e) {
+                    LogFacade::error('Failed to parse reminder time: ' . $e->getMessage());
+                    $reminderTime = null;
+                }
+            }
+            
+            $task = Task::create([
+                'project_id' => $this->modalTaskProjectId,
+                'title' => $this->modalTaskTitle,
+                'description' => $this->modalTaskDescription,
+                'assigned_to_user_id' => $primaryAssigneeId, // First assignee as primary
+                'assigned_by_user_id' => auth()->id(),
+                'priority_id' => $this->modalTaskPriority,
+                'category_id' => $this->modalTaskCategory,
+                'status_id' => TaskStatus::where('name', 'Pending')->first()->id,
+                'due_date' => $this->modalTaskDueDate,
+                'estimated_hours' => $this->modalTaskEstimatedHours,
+                'reminder_time' => $reminderTime,
+                'notes' => $this->modalTaskNotes,
+                'nature_of_task' => $natureOfTask,
+                'is_recurring' => $isRecurring,
+                'is_recurring_active' => $isRecurringActive,
+            ]);
+
+            // Attach all assignees to the assignees relationship
+            if (!empty($this->modalTaskAssigneeIds)) {
+                // Debug: Log the assignee IDs
+                LogFacade::info('Attaching assignees:', [
+                    'task_id' => $task->id,
+                    'assignees' => $this->modalTaskAssigneeIds
+                ]);
+                
+                // Attach all assignees with pivot data
+                $assignments = [];
+                foreach ($this->modalTaskAssigneeIds as $userId) {
+                    $assignments[$userId] = [
+                        'assigned_by_user_id' => auth()->id(),
+                        'assigned_at' => now(),
+                    ];
+                }
+                
+                $task->assignees()->attach($assignments);
+                
+                // Debug: Verify attachment
+                $attachedCount = $task->assignees()->count();
+                LogFacade::info('Assignees attached successfully. Total count: ' . $attachedCount);
+            }
+
+            // Handle attachments
+            if ($this->modalTaskAttachments) {
+                foreach ($this->modalTaskAttachments as $attachment) {
+                    $path = $attachment->store('attachments');
+                    
+                    \App\Models\Attachment::create([
+                        'task_id' => $task->id,
+                        'file_path' => $path,
+                        'file_name' => $attachment->getClientOriginalName(),
+                        'file_size' => $attachment->getSize(),
+                        'uploaded_by_user_id' => auth()->id(),
+                    ]);
+                }
+            }
+
+            // Send email notification to all assignees
+            $this->emailService->sendTaskAssignedNotification($task);
+            
+            // Send notifications to additional assignees
+            if (count($this->modalTaskAssigneeIds) > 1) {
+                foreach ($this->modalTaskAssigneeIds as $assigneeId) {
+                    if ($assigneeId != $task->assigned_to_user_id) {
+                        $assignee = User::find($assigneeId);
+                        if ($assignee) {
+                            $this->emailService->sendTaskAssignedNotification($task, $assignee);
+                        }
+                    }
+                }
+            }
+
+            session()->flash('success', 'Task created successfully!');
+            $this->closeTaskModal();
+            $this->dispatch('tasksUpdated');
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Validation errors are automatically displayed by Livewire
+            throw $e;
+        } catch (\Exception $e) {
+            LogFacade::error('Task creation failed: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            session()->flash('error', 'Failed to create task: ' . $e->getMessage());
+        }
+    }
+    
+    public function updateTaskFromModal()
+    {
+        $this->validate([
+            'editModalTaskTitle' => 'required|string|max:255',
+            'editModalTaskDescription' => 'nullable|string',
+            'editModalTaskProjectId' => 'required|exists:projects,id',
+            'editModalTaskAssigneeIds' => 'required|array|min:1',
+            'editModalTaskAssigneeIds.*' => 'exists:users,id',
+            'editModalTaskPriority' => 'required|exists:task_priorities,id',
+            'editModalTaskCategory' => 'required|exists:task_categories,id',
+            'editModalTaskDueDate' => 'nullable|date|after_or_equal:today',
+            'editModalTaskEstimatedHours' => 'nullable|integer|min:0',
+            'editModalTaskNature' => 'required|in:one_time,recurring',
+            'editModalTaskRecurrenceFrequency' => 'required_if:editModalTaskNature,recurring|in:daily,weekly,monthly',
+            'editModalTaskReminderTime' => 'nullable',
+            'editModalTaskAttachments.*' => 'nullable|file|max:10240',
+        ]);
+
+        try {
+            // Determine if task is recurring
+            $isRecurring = $this->editModalTaskNature === 'recurring';
+            $isRecurringActive = $isRecurring ? 1 : 0;
+            
+            // Set nature_of_task based on type
+            $natureOfTask = $this->editModalTaskNature === 'recurring' ? $this->editModalTaskRecurrenceFrequency : 'one_time';
+
+            // Create the main task with the first assignee
+            $primaryAssigneeId = !empty($this->editModalTaskAssigneeIds) ? $this->editModalTaskAssigneeIds[0] : null;
+            
+            if (!$primaryAssigneeId) {
+                throw new \Exception('No assignee selected');
+            }
+            
+            // Convert reminder time from datetime-local format to proper datetime
+            $reminderTime = null;
+            if ($this->editModalTaskReminderTime && $this->editModalTaskReminderTime != '') {
+                try {
+                    // Parse datetime-local format (2025-10-29T22:15)
+                    $reminderTime = date('Y-m-d H:i:s', strtotime($this->editModalTaskReminderTime));
+                } catch (\Exception $e) {
+                    LogFacade::error('Failed to parse reminder time: ' . $e->getMessage());
+                    $reminderTime = null;
+                }
+            }
+            
+            $task = Task::findOrFail($this->editModalTaskId);
+            $task->update([
+                'project_id' => $this->editModalTaskProjectId,
+                'title' => $this->editModalTaskTitle,
+                'description' => $this->editModalTaskDescription,
+                'assigned_to_user_id' => $primaryAssigneeId,
+                'assigned_by_user_id' => auth()->id(),
+                'priority_id' => $this->editModalTaskPriority,
+                'category_id' => $this->editModalTaskCategory,
+                'due_date' => $this->editModalTaskDueDate,
+                'estimated_hours' => $this->editModalTaskEstimatedHours,
+                'reminder_time' => $reminderTime,
+                'nature_of_task' => $natureOfTask,
+                'is_recurring' => $isRecurring,
+                'is_recurring_active' => $isRecurringActive,
+            ]);
+
+            // Update multiple assignees
+            $task->syncAssignees($this->editModalTaskAssigneeIds, auth()->id());
+
+            // Handle new attachments
+            if ($this->editModalTaskAttachments) {
+                foreach ($this->editModalTaskAttachments as $attachment) {
+                    $path = $attachment->store('attachments');
+                    
+                    \App\Models\Attachment::create([
+                        'task_id' => $task->id,
+                        'file_path' => $path,
+                        'file_name' => $attachment->getClientOriginalName(),
+                        'file_size' => $attachment->getSize(),
+                        'uploaded_by_user_id' => auth()->id(),
+                    ]);
+                }
+            }
+
+            // Send email notification for task update
+            $this->emailService->sendTaskUpdatedNotification($task, 'Task Details Updated');
+
+            session()->flash('success', 'Task updated successfully!');
+            $this->closeEditModal();
+            $this->dispatch('tasksUpdated');
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            LogFacade::error('Task update failed: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            session()->flash('error', 'Failed to update task: ' . $e->getMessage());
+        }
+    }
+    
+    public function openCloneModal($taskId)
+    {
+        $this->cloneModalTaskId = $taskId;
+        $this->cloneModalDueDate = '';
+        $this->showCloneModal = true;
+    }
+    
+    public function closeCloneModal()
+    {
+        $this->showCloneModal = false;
+        $this->cloneModalTaskId = null;
+        $this->cloneModalDueDate = '';
+    }
+    
+    public function cloneTask()
+    {
+        $this->validate([
+            'cloneModalDueDate' => 'required|date|after:today',
+        ]);
+
+        try {
+            $originalTask = Task::with('assignees')->findOrFail($this->cloneModalTaskId);
+            
+            // Create the cloned task
+            $clonedTask = Task::create([
+                'project_id' => $originalTask->project_id,
+                'title' => $originalTask->title . ' (Copy)',
+                'description' => $originalTask->description,
+                'assigned_to_user_id' => $originalTask->assigned_to_user_id,
+                'assigned_by_user_id' => auth()->id(),
+                'priority_id' => $originalTask->priority_id,
+                'category_id' => $originalTask->category_id,
+                'status_id' => TaskStatus::where('name', 'Pending')->first()->id,
+                'due_date' => $this->cloneModalDueDate,
+                'estimated_hours' => $originalTask->estimated_hours,
+                'reminder_time' => $originalTask->reminder_time,
+                'notes' => $originalTask->notes,
+                'nature_of_task' => $originalTask->nature_of_task,
+                'is_recurring' => $originalTask->is_recurring,
+                'is_recurring_active' => $originalTask->is_recurring_active,
+            ]);
+
+            // Clone assignees
+            if ($originalTask->assignees && $originalTask->assignees->count() > 0) {
+                $assigneeIds = $originalTask->assignees->pluck('id')->toArray();
+                $clonedTask->syncAssignees($assigneeIds, auth()->id());
+            }
+
+            // Clone attachments
+            if ($originalTask->attachments && $originalTask->attachments->count() > 0) {
+                foreach ($originalTask->attachments as $attachment) {
+                    \App\Models\Attachment::create([
+                        'task_id' => $clonedTask->id,
+                        'file_path' => $attachment->file_path,
+                        'file_name' => $attachment->file_name,
+                        'file_size' => $attachment->file_size,
+                        'uploaded_by_user_id' => auth()->id(),
+                    ]);
+                }
+            }
+
+            LogFacade::info('Task cloned successfully:', [
+                'original_task_id' => $originalTask->id,
+                'cloned_task_id' => $clonedTask->id
+            ]);
+
+            session()->flash('success', 'Task cloned successfully!');
+            $this->closeCloneModal();
+            $this->dispatch('tasksUpdated');
+
+        } catch (\Exception $e) {
+            LogFacade::error('Task clone failed: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            session()->flash('error', 'Failed to clone task: ' . $e->getMessage());
+        }
+    }
+    
+    public function openProjectCreateModal()
+    {
+        $this->showProjectCreateModal = true;
+        $this->newProjectTitle = '';
+        $this->newProjectDescription = '';
+    }
+    
+    public function closeProjectCreateModal()
+    {
+        $this->showProjectCreateModal = false;
+        $this->newProjectTitle = '';
+        $this->newProjectDescription = '';
+    }
+    
+    public function createProjectFromModal()
+    {
+        $this->validate([
+            'newProjectTitle' => 'required|string|max:255',
+            'newProjectDescription' => 'required|string|min:10',
+        ]);
+
+        try {
+            $project = Project::create([
+                'title' => $this->newProjectTitle,
+                'description' => $this->newProjectDescription,
+                'created_by_user_id' => auth()->id(),
+            ]);
+
+            // Log the creation
+            Log::createLog(auth()->id(), 'create_project', "Created project: {$project->title}");
+
+            // Close the modal and set the newly created project in the task form
+            $this->modalTaskProjectId = $project->id;
+            $this->closeProjectCreateModal();
+            
+            session()->flash('success', 'Project created successfully! You can now create your task.');
+
+        } catch (\Exception $e) {
+            LogFacade::error('Project creation failed: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            session()->flash('error', 'Failed to create project: ' . $e->getMessage());
+        }
+    }
+
     public function render()
     {
         return view('livewire.task.task-table');
@@ -1023,8 +1591,15 @@ class TaskTable extends Component
         try {
             $tasks = Task::whereIn('id', $taskIds)->get();
             $updatedCount = 0;
+            $skippedCount = 0;
             
             foreach ($tasks as $task) {
+                // Skip approved tasks
+                if ($task->is_approved) {
+                    $skippedCount++;
+                    continue;
+                }
+                
                 $task->status_id = $statusId;
                 $task->save();
                 $updatedCount++;
@@ -1040,7 +1615,12 @@ class TaskTable extends Component
                 ]);
             }
             
-            session()->flash('success', "Successfully updated {$updatedCount} task(s) status.");
+            $message = "Successfully updated {$updatedCount} task(s) status.";
+            if ($skippedCount > 0) {
+                $message .= " {$skippedCount} task(s) were skipped (already approved).";
+            }
+            
+            session()->flash('success', $message);
             $this->dispatch('tasksUpdated');
             
         } catch (\Exception $e) {
@@ -1199,5 +1779,163 @@ class TaskTable extends Component
         } catch (\Exception $e) {
             session()->flash('error', 'Error deleting tasks: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Show admin review modal for completed tasks
+     */
+    public function showAdminReview($taskId)
+    {
+        $task = Task::findOrFail($taskId);
+        
+        // Check if user is admin or super admin
+        $user = auth()->user();
+        if (!$user->isSuperAdmin() && !$user->isAdmin()) {
+            session()->flash('error', 'Only administrators can review completed tasks.');
+            return;
+        }
+        
+        // Check if task is completed
+        if (!$task->status || $task->status->name !== 'Complete') {
+            session()->flash('error', 'Only completed tasks can be reviewed.');
+            return;
+        }
+        
+        $this->adminReviewTaskId = $taskId;
+        $this->adminReviewComments = '';
+        $this->adminReviewAction = '';
+        $this->showAdminReviewModal = true;
+        
+        // Debug: Log the action
+        \Illuminate\Support\Facades\Log::info('Admin review modal opened', [
+            'task_id' => $taskId,
+            'user_id' => $user->id,
+            'user_role' => $user->role ? $user->role->name : 'no_role',
+            'modal_state' => $this->showAdminReviewModal
+        ]);
+    }
+
+    /**
+     * Approve completed task (mark as final completed)
+     */
+    public function approveTask()
+    {
+        $this->validate([
+            'adminReviewComments' => 'nullable|string|max:1000',
+        ]);
+        
+        $task = Task::findOrFail($this->adminReviewTaskId);
+        
+        // Update task to mark as approved
+        $task->update(['is_approved' => true]);
+        
+        // Log the approval
+        Log::createLog(auth()->id(), 'task_approved', 
+            "Approved completed task '{$task->title}'" . 
+            ($this->adminReviewComments ? " with comments: {$this->adminReviewComments}" : ''));
+        
+        $this->closeAdminReviewModal();
+        session()->flash('success', 'Task has been approved and marked as completed.');
+    }
+
+    /**
+     * Mark task for revisit
+     */
+    public function revisitTask()
+    {
+        $this->validate([
+            'adminReviewComments' => 'nullable|string|max:1000',
+        ]);
+        
+        $task = Task::findOrFail($this->adminReviewTaskId);
+        $oldStatus = $task->status ? $task->status->name : 'No Status';
+        
+        // Get "Needs Revisit" status
+        $needsRevisitStatus = TaskStatus::where('name', 'Needs Revisit')->first();
+        
+        if (!$needsRevisitStatus) {
+            session()->flash('error', 'Needs Revisit status not found. Please contact system administrator.');
+            return;
+        }
+        
+        // Update task status
+        $task->update(['status_id' => $needsRevisitStatus->id]);
+        
+        // Log the revisit action
+        Log::createLog(auth()->id(), 'task_revisit', 
+            "Marked task '{$task->title}' for revisit" . 
+            ($this->adminReviewComments ? " with comments: {$this->adminReviewComments}" : ''));
+        
+        // Send email notification to assignees
+        $adminName = auth()->user()->name;
+        $this->emailService->sendTaskRevisitNotification($task, $this->adminReviewComments, $adminName);
+        
+        $this->closeAdminReviewModal();
+        session()->flash('success', 'Task has been marked for revisit. Email notification sent to assignees.');
+    }
+
+    /**
+     * Close admin review modal
+     */
+    public function closeAdminReviewModal()
+    {
+        $this->showAdminReviewModal = false;
+        $this->adminReviewTaskId = null;
+        $this->adminReviewComments = '';
+        $this->adminReviewAction = '';
+    }
+
+    /**
+     * Direct approve task with comments modal
+     */
+    public function showApproveModal($taskId)
+    {
+        $task = Task::findOrFail($taskId);
+        
+        // Check permissions
+        $user = auth()->user();
+        if (!$user->isSuperAdmin() && !$user->isAdmin() && $task->assigned_by_user_id !== $user->id) {
+            session()->flash('error', 'You are not authorized to approve this task.');
+            return;
+        }
+        
+        // Check if task is completed
+        if (!$task->status || $task->status->name !== 'Complete') {
+            session()->flash('error', 'Only completed tasks can be approved.');
+            return;
+        }
+        
+        // Show comments modal for approval
+        $this->adminReviewTaskId = $taskId;
+        $this->adminReviewComments = '';
+        $this->adminReviewAction = 'approve';
+        $this->showAdminReviewModal = true;
+    }
+
+    /**
+     * Direct revisit task with comments modal
+     */
+    public function showRevisitModal($taskId)
+    {
+        $task = Task::findOrFail($taskId);
+        
+        // Check permissions
+        $user = auth()->user();
+        if (!$user->isSuperAdmin() && !$user->isAdmin() && $task->assigned_by_user_id !== $user->id) {
+            session()->flash('error', 'You are not authorized to mark this task for revisit.');
+            return;
+        }
+        
+        // Check if task is completed
+        if (!$task->status || $task->status->name !== 'Complete') {
+            session()->flash('error', 'Only completed tasks can be marked for revisit.');
+            return;
+        }
+        
+        // Show comments modal for revisit
+        $this->adminReviewTaskId = $taskId;
+        $this->adminReviewComments = '';
+        $this->adminReviewAction = 'revisit';
+        $this->showAdminReviewModal = true;
     }
 }

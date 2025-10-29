@@ -23,7 +23,6 @@ class TaskCreate extends Component
     public function mount()
     {
         $this->emailService = new EmailNotificationService();
-        $this->emailService->configureMailSettings();
         
         $user = auth()->user();
         
@@ -38,7 +37,6 @@ class TaskCreate extends Component
         // Ensure email service is initialized even if mount() wasn't called
         if (!$this->emailService) {
             $this->emailService = new EmailNotificationService();
-            $this->emailService->configureMailSettings();
         }
     }
 
@@ -85,6 +83,11 @@ class TaskCreate extends Component
 
     public function createTask()
     {
+        // Get the assigned user ID from the hidden field if it exists
+        if (request()->has('assigned_to_user_id_hidden') && request()->assigned_to_user_id_hidden) {
+            $this->assigned_to_user_id = request()->assigned_to_user_id_hidden;
+        }
+        
         $this->validate();
 
         // Determine if task is recurring based on nature
@@ -127,7 +130,6 @@ class TaskCreate extends Component
         // Send email notifications
         if (!$this->emailService) {
             $this->emailService = new EmailNotificationService();
-            $this->emailService->configureMailSettings();
         }
         
         $this->emailService->sendTaskCreatedNotification($task);
@@ -301,7 +303,6 @@ class TaskCreate extends Component
 
     public function render()
     {
-        return view('livewire.task.task-create')
-            ->layout('layouts.app');
+        return view('livewire.task.task-create');
     }
 }

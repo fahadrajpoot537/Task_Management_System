@@ -17,3 +17,12 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
+
+// API route to get users for employee selection
+Route::get('/users', function () {
+    $users = \App\Models\User::select('id', 'name')
+        ->orderBy('name')
+        ->get();
+    
+    return response()->json($users);
+});

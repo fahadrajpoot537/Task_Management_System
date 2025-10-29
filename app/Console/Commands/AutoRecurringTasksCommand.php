@@ -39,7 +39,6 @@ class AutoRecurringTasksCommand extends Command
     {
         // Initialize email service
         $this->emailService = new EmailNotificationService();
-        $this->emailService->configureMailSettings();
         
         $this->info('Starting Auto Recurring Tasks Command... '.now());
         

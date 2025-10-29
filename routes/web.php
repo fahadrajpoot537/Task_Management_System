@@ -68,6 +68,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/attendance/user/{userId}', UserAttendanceDetails::class)->name('attendance.user');
     Route::get('/attendance-viewer', \App\Livewire\Attendance\AttendanceViewer::class)->name('attendance.viewer');
     
+    Route::get('/attachments/{attachment}/download', [App\Http\Controllers\AttachmentController::class, 'download'])->name('attachments.download');
+    Route::get('/attachments/{attachment}/preview', [App\Http\Controllers\AttachmentController::class, 'preview'])->name('attachments.preview');
+    Route::get('/attachments/{attachment}/data', [App\Http\Controllers\AttachmentController::class, 'data'])->name('attachments.data');
+    Route::get('/attachments/{attachment}/test', [App\Http\Controllers\AttachmentController::class, 'testData'])->name('attachments.test');
+
+    // Chat
+    Route::get('/chat', \App\Livewire\SlackLikeChatComponent::class)->name('chat');
+    Route::get('/private-messages', \App\Livewire\PrivateChatComponent::class)->name('private-messages');
+    Route::get('/slack-chat', \App\Livewire\SlackLikeChatComponent::class)->name('slack-chat');
     // Salary Management Routes
     Route::get('/salary-management', SalaryManager::class)->name('salary.management');
     
