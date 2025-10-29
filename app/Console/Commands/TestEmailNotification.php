@@ -31,7 +31,6 @@ class TestEmailNotification extends Command
         
         try {
             $emailService = new EmailNotificationService();
-            $emailService->configureMailSettings();
             
             // Test basic mail configuration
             $this->info('✓ Email service configured successfully');

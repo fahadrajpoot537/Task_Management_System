@@ -28,6 +28,7 @@ class Task extends Model
         'estimated_hours',
         'actual_hours',
         'due_date',
+        'reminder_time',
         'assigned_to_user_id',
         'nature_of_task',
         'is_recurring',
@@ -38,6 +39,7 @@ class Task extends Model
         'notes',
         'started_at',
         'completed_at',
+        'is_approved',
     ];
 
     /**
@@ -47,11 +49,13 @@ class Task extends Model
      */
     protected $casts = [
         'due_date' => 'date',
+        'reminder_time' => 'datetime',
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
         'is_recurring' => 'boolean',
         'is_recurring_active' => 'boolean',
         'next_recurrence_date' => 'datetime',
+        'is_approved' => 'boolean',
     ];
 
     /**

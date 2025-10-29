@@ -9,6 +9,7 @@ use App\Mail\TaskAssignedToSuperAdmin;
 use App\Mail\TaskCreated;
 use App\Mail\TaskStatusChanged;
 use App\Mail\TaskNoteCommentAdded;
+use App\Mail\TaskRevisitNotification;
 use App\Mail\TaskUpdated;
 use App\Models\Task;
 use App\Models\User;
@@ -321,20 +322,47 @@ class EmailNotificationService
     }
 
     /**
-     * Configure mail settings dynamically
+     * Send email notification when a task is marked for revisit
      */
-    public function configureMailSettings()
+    public function sendTaskRevisitNotification(Task $task, $adminComments = null, $adminName = null)
     {
-        // Laravel automatically reads from .env file, so we don't need to configure manually
-        // The mail settings are already configured in .env file:
-        // MAIL_MAILER=smtp
-        // MAIL_HOST=smtp.ionos.co.uk
-        // MAIL_PORT=587
-        // MAIL_USERNAME=task@tms.adamsonstrading.co.uk
-        // MAIL_PASSWORD=Adamsons@321
-        // MAIL_FROM_ADDRESS=task@tms.adamsonstrading.co.uk
-        // MAIL_FROM_NAME=Laravel
+        try {
+            $recipients = $this->getTaskRevisitRecipients($task);
+            
+            foreach ($recipients as $recipient) {
+                Mail::to($recipient->email)->send(new TaskRevisitNotification($task, $adminComments, $adminName));
+            }
+            
+            Log::info('Task revisit email sent', [
+                'task_id' => $task->id,
+                'recipients' => $recipients->pluck('email')->toArray(),
+                'admin_comments' => $adminComments
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to send task revisit email', [
+                'task_id' => $task->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Get recipients for task revisit notifications
+     */
+    private function getTaskRevisitRecipients(Task $task)
+    {
+        $recipients = collect();
         
-        // No additional configuration needed as Laravel handles this automatically
+        // Notify all assignees of the task
+        foreach ($task->assignees as $assignee) {
+            $recipients->push($assignee);
+        }
+        
+        // Also notify the legacy assigned user if different from assignees
+        if ($task->assignedTo && !$recipients->contains('id', $task->assignedTo->id)) {
+            $recipients->push($task->assignedTo);
+        }
+        
+        return $recipients->unique('id');
     }
 }

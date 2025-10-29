@@ -84,14 +84,6 @@ class TaskIndex extends Component
             }
         }
 
-        // Check if employee is trying to set Complete status
-        if ($user->isEmployee()) {
-            $status = TaskStatus::findOrFail($statusId);
-            if ($status->name === 'Complete') {
-                session()->flash('error', 'Only managers, admins, and super admins can mark tasks as complete.');
-                return;
-            }
-        }
 
         $oldStatus = $task->status ? $task->status->name : 'No Status';
         $task->update(['status_id' => $statusId]);

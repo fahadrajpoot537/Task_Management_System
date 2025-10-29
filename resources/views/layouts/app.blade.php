@@ -349,7 +349,7 @@ use Illuminate\Support\Facades\Storage;
             left: 0;
             right: 0;
             height: 4px;
-            background: linear-gradient(90deg, var(--primary-color) 0%, var(--secondary-color) 50%, var(--accent-color) 100%);
+           
             opacity: 0.8;
         }
 
@@ -383,6 +383,7 @@ use Illuminate\Support\Facades\Storage;
             background: var(--bg-secondary);
             color: var(--text-primary);
             padding: 1.5rem;
+            border-radius: 20px;
         }
 
         .card-footer {

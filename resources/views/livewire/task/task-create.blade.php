@@ -28,13 +28,18 @@
 
                             <div class="col-md-6 mb-3">
                                 <label for="assigned_to_user_id" class="form-label">Assign To <span class="text-danger">*</span></label>
-                                <select class="form-select @error('assigned_to_user_id') is-invalid @enderror" 
-                                        id="assigned_to_user_id" wire:model="assigned_to_user_id" required>
-                                    <option value="">Select a user</option>
-                                    @foreach($this->availableUsers as $user)
-                                        <option value="{{ $user->id }}">{{ $user->name }}</option>
-                                    @endforeach
-                                </select>
+                                <div class="input-group">
+                                    <input type="text" class="form-control @error('assigned_to_user_id') is-invalid @enderror" 
+                                           id="assigned_to_user_id" 
+                                           name="assigned_to_user_id"
+                                           placeholder="Click to select employee" 
+                                           readonly>
+                                    <input type="hidden" id="assigned_to_user_id_hidden" name="assigned_to_user_id_hidden">
+                                    <button type="button" class="btn btn-outline-primary" 
+                                            onclick="openEmployeeModal()">
+                                        <i class="bi bi-people me-1"></i>Select Employee
+                                    </button>
+                                </div>
                                 @error('assigned_to_user_id')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -332,4 +337,203 @@
             </div>
         </div>
     </div>
+
+    <!-- Employee Selection Modal -->
+    <div class="modal fade" id="employeeModal" tabindex="-1" aria-labelledby="employeeModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold" id="employeeModalLabel">
+                        <i class="bi bi-people me-2"></i>Select Employee
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                
+                <div class="modal-body">
+                    <!-- Search Box -->
+                    <div class="mb-3">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" class="form-control" id="employeeSearch" placeholder="Search employees by name...">
+                        </div>
+                    </div>
+                    
+                    <!-- Employee List -->
+                    <div class="employee-list" style="max-height: 400px; overflow-y: auto;">
+                        <div class="row g-2" id="employeeGrid">
+                            <!-- Employees will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-2"></i>Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<script>
+    let employees = [];
+    let selectedEmployee = null;
+
+    // Load employees when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        loadEmployees();
+    });
+
+    // Load employees from server
+    async function loadEmployees() {
+        try {
+            const response = await fetch('/api/users');
+            if (response.ok) {
+                employees = await response.json();
+                console.log('Loaded employees:', employees); // Debug log
+                displayEmployees(employees);
+            } else {
+                console.error('Failed to load employees');
+                displayEmployees([]);
+            }
+        } catch (error) {
+            console.error('Error loading employees:', error);
+            displayEmployees([]);
+        }
+    }
+
+    // Display employees in the grid
+    function displayEmployees(employeeList) {
+        const grid = document.getElementById('employeeGrid');
+        grid.innerHTML = '';
+
+        if (employeeList.length === 0) {
+            grid.innerHTML = `
+                <div class="col-12 text-center py-4">
+                    <i class="bi bi-person-x text-muted" style="font-size: 3rem;"></i>
+                    <p class="text-muted mt-2 mb-0">No employees available</p>
+                </div>
+            `;
+            return;
+        }
+
+        employeeList.forEach(employee => {
+            const employeeCard = document.createElement('div');
+            employeeCard.className = 'col-md-6 col-lg-4';
+            employeeCard.innerHTML = `
+                <div class="card employee-card h-100" style="cursor: pointer; transition: all 0.2s;" onclick="selectEmployee(${employee.id}, '${employee.name}')">
+                    <div class="card-body text-center p-3">
+                        <div class="mb-2">
+                            <i class="bi bi-person-circle text-primary" style="font-size: 2rem;"></i>
+                        </div>
+                        <h6 class="card-title mb-1">${employee.name}</h6>
+                    </div>
+                </div>
+            `;
+            grid.appendChild(employeeCard);
+        });
+    }
+
+    // Open employee modal
+    function openEmployeeModal() {
+        const modal = new bootstrap.Modal(document.getElementById('employeeModal'));
+        modal.show();
+    }
+
+    // Select employee
+    function selectEmployee(employeeId, employeeName) {
+        selectedEmployee = { id: employeeId, name: employeeName };
+        
+        // Update the form fields
+        document.getElementById('assigned_to_user_id').value = employeeName;
+        document.getElementById('assigned_to_user_id_hidden').value = employeeId;
+        
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('employeeModal'));
+        modal.hide();
+    }
+
+    // Search functionality
+    document.getElementById('employeeSearch').addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const filteredEmployees = employees.filter(employee => 
+            employee.name.toLowerCase().includes(searchTerm)
+        );
+        displayEmployees(filteredEmployees);
+    });
+
+    // Add hover effects
+    document.addEventListener('mouseover', function(e) {
+        if (e.target.closest('.employee-card')) {
+            e.target.closest('.employee-card').style.transform = 'translateY(-2px)';
+            e.target.closest('.employee-card').style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+        }
+    });
+
+    document.addEventListener('mouseout', function(e) {
+        if (e.target.closest('.employee-card')) {
+            e.target.closest('.employee-card').style.transform = 'translateY(0)';
+            e.target.closest('.employee-card').style.boxShadow = 'none';
+        }
+    });
+</script>
+
+<style>
+    .employee-card {
+        border: 1px solid #e9ecef;
+        transition: all 0.2s ease;
+    }
+    
+    .employee-card:hover {
+        border-color: #0d6efd;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .employee-card:active {
+        transform: translateY(0);
+    }
+    
+    .employee-list::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .employee-list::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+    
+    .employee-list::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
+    }
+    
+    .employee-list::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+    }
+    
+    /* Dark theme support */
+    [data-bs-theme="dark"] .employee-card {
+        border-color: #495057;
+        background-color: #2d2d2d;
+    }
+    
+    [data-bs-theme="dark"] .employee-card:hover {
+        border-color: #0d6efd;
+    }
+    
+    [data-bs-theme="dark"] .employee-list::-webkit-scrollbar-track {
+        background: #2d2d2d;
+    }
+    
+    [data-bs-theme="dark"] .employee-list::-webkit-scrollbar-thumb {
+        background: #495057;
+    }
+    
+    [data-bs-theme="dark"] .employee-list::-webkit-scrollbar-thumb:hover {
+        background: #6c757d;
+    }
+</style>
