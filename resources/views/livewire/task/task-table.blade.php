@@ -19,16 +19,12 @@
                             <span class="spinner-border spinner-border-sm ms-2"></span>
                         </span>
                     </button>
-                    <button class="btn btn-outline-light btn-sm" onclick="window.initializeSelect2()"
-                        title="Refresh Select2">
-                        <i class="bi bi-arrow-clockwise"></i>
-                    </button>
                 </div>
             </div>
         </div>
 
         <!-- Filters -->
-        <div class="p-3 border-bottom" style="background-color: var(--bg-tertiary);">
+        <div class="p-3 border-bottom">
             <div class="row g-2">
                 <div class="col-12 col-md-3">
                     <div class="input-group">
@@ -40,7 +36,7 @@
                 <div class="col-6 col-md-2">
                     <select class="form-select" wire:model.live="projectFilter">
                         <option value="">All Projects</option>
-                        @foreach ($this->projects as $project)
+                        @foreach($this->projects as $project)
                             <option value="{{ $project->id }}">{{ $project->title }}</option>
                         @endforeach
                     </select>
@@ -48,7 +44,7 @@
                 <div class="col-6 col-md-2">
                     <select class="form-select" wire:model.live="statusFilter">
                         <option value="">All Status</option>
-                        @foreach ($this->statuses as $status)
+                        @foreach($this->statuses as $status)
                             <option value="{{ $status->id }}">{{ $status->name }}</option>
                         @endforeach
                     </select>
@@ -56,7 +52,7 @@
                 <div class="col-6 col-md-2">
                     <select class="form-select" wire:model.live="categoryFilter">
                         <option value="">All Categories</option>
-                        @foreach ($this->categories as $category)
+                        @foreach($this->categories as $category)
                             <option value="{{ $category->id }}">{{ $category->name }}</option>
                         @endforeach
                     </select>
@@ -64,7 +60,7 @@
                 <div class="col-12 col-md-2">
                     <select class="form-select" wire:model.live="assigneeFilter">
                         <option value="">All Assignees</option>
-                        @foreach ($this->users as $user)
+                        @foreach($this->users as $user)
                             <option value="{{ $user->id }}">{{ $user->name }}</option>
                         @endforeach
                     </select>
@@ -118,7 +114,7 @@
 
         <!-- Mobile Task Cards (Hidden on Desktop) -->
         <div class="mobile-task-cards">
-            @foreach ($this->tasks as $task)
+            @foreach($this->tasks as $task)
                 <div class="mobile-task-item" wire:key="mobile-task-{{ $task->id }}">
                     <div class="mobile-task-header">
                         <div>
@@ -139,8 +135,7 @@
                             @endif
                         </div>
                         <div class="dropdown">
-                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
-                                data-bs-toggle="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
                                 <i class="bi bi-three-dots-vertical"></i>
                             </button>
                             <ul class="dropdown-menu">
@@ -163,12 +158,7 @@
                     </div>
 
                     <div class="mobile-task-meta">
-                        @if ($task->assignees->count() > 0)
-                            <div class="mobile-task-meta-item">
-                                <i class="bi bi-people"></i>
-                                <span>{{ $task->assignee_names }}</span>
-                            </div>
-                        @elseif($task->assignedTo)
+                        @if($task->assignedTo)
                             <div class="mobile-task-meta-item">
                                 <i class="bi bi-person"></i>
                                 <span>{{ $task->assignedTo->name }}</span>
@@ -177,8 +167,7 @@
 
                         @if ($task->priority)
                             <div class="mobile-task-meta-item">
-                                <span
-                                    class="badge bg-{{ $task->priority->color }}">{{ $task->priority->name }}</span>
+                                <span class="badge bg-{{ $task->priority->color }}">{{ $task->priority->name }}</span>
                             </div>
                         @endif
 
@@ -224,7 +213,7 @@
                     @endif
 
                     <div class="mobile-task-actions">
-                        @if ($task->status)
+                        @if($task->status)
                             <div class="dropdown">
                                 <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button"
                                     data-bs-toggle="dropdown">
@@ -342,9 +331,9 @@
         </div>
 
         <!-- Task Table -->
-        <div class="table-responsive" style="overflow-x: auto; overflow-y: visible; max-height: none; height: auto;">
-            <table id="tasksTable" class="table table-hover table-striped mb-0">
-                <thead class="table-dark sticky-top">
+        <div class="table-responsive">
+            <table id="tasksTable" class="table table-hover mb-0">
+                <thead class="table-dark">
                     <tr>
                         <th style="min-width: 50px;">
                             <input type="checkbox" id="selectAllTasks" class="form-check-input"
@@ -365,9 +354,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @if ($this->tasks->count() == 0)
+                    @if($this->tasks->count() == 0)
                         <tr>
-                            <td colspan="12" class="text-center py-4">
+                            <td colspan="11" class="text-center py-4">
                                 <div class="text-muted">
                                     <i class="bi bi-inbox fs-1 d-block mb-3"></i>
                                     <h5>No tasks found</h5>
@@ -378,11 +367,8 @@
                     @endif
 
                     <!-- New Task Row -->
-                    @if ($editingTaskId === 0)
+                    @if($editingTaskId === 0)
                         <tr class="task-row editing">
-                            <td>
-                                <input type="checkbox" class="form-check-input task-checkbox" disabled>
-                            </td>
                             <td class="d-none d-md-table-cell">
                                 <i class="bi bi-plus-circle text-success"></i>
                             </td>
@@ -393,7 +379,7 @@
                             <td class="d-none d-lg-table-cell">
                                 <select class="form-select form-select-sm" wire:model="newTaskProjectId">
                                     <option value="">Select Project</option>
-                                    @foreach ($this->projects as $project)
+                                    @foreach($this->projects as $project)
                                         <option value="{{ $project->id }}">{{ $project->title }}</option>
                                     @endforeach
                                 </select>
@@ -425,7 +411,7 @@
                             <td class="d-none d-lg-table-cell">
                                 <select class="form-select form-select-sm" wire:model="newTaskPriority">
                                     <option value="">Select Priority</option>
-                                    @foreach ($this->priorities as $priority)
+                                    @foreach($this->priorities as $priority)
                                         <option value="{{ $priority->id }}">{{ $priority->name }}</option>
                                     @endforeach
                                 </select>
@@ -441,7 +427,7 @@
                             <td class="d-none d-lg-table-cell">
                                 <select class="form-select form-select-sm" wire:model="newTaskCategory">
                                     <option value="">Select Category</option>
-                                    @foreach ($this->categories as $category)
+                                    @foreach($this->categories as $category)
                                         <option value="{{ $category->id }}">{{ $category->name }}</option>
                                     @endforeach
                                 </select>
@@ -458,21 +444,11 @@
                                 <span class="badge bg-warning">Pending</span>
                             </td>
                             <td class="d-none d-md-table-cell">
-                                <input type="date" class="form-control form-control-sm"
-                                    wire:model="newTaskDueDate">
+                                <input type="date" class="form-control form-control-sm" wire:model="newTaskDueDate">
                             </td>
                             <td class="d-none d-xl-table-cell">
-                                <input type="number" class="form-control form-control-sm"
-                                    wire:model="newTaskEstimatedHours" placeholder="Hours" min="0"
-                                    step="0.5">
-                            </td>
-                            <td class="d-none d-lg-table-cell">
-                                <select class="form-select form-select-sm" wire:model="newTaskNature">
-                                    <option value="daily">Daily</option>
-                                    <option value="weekly">Weekly</option>
-                                    <option value="monthly">Monthly</option>
-                                    <option value="until_stop">Until Stopped</option>
-                                </select>
+                                <input type="number" class="form-control form-control-sm" wire:model="newTaskEstimatedHours" 
+                                       placeholder="Hours" min="0" step="0.5">
                             </td>
                             <td class="d-none d-lg-table-cell">
                                 <button class="btn btn-sm btn-outline-secondary"
@@ -485,8 +461,7 @@
                                     <button class="btn btn-sm btn-success" wire:click="saveTask" title="Save">
                                         <i class="bi bi-check"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-secondary" wire:click="cancelEditing"
-                                        title="Cancel">
+                                    <button class="btn btn-sm btn-secondary" wire:click="cancelEditing" title="Cancel">
                                         <i class="bi bi-x"></i>
                                     </button>
                                 </div>
@@ -517,14 +492,12 @@
                                             </strong>
                                           
                                             <div class="d-flex flex-wrap gap-1 mt-1 d-sm-none">
-                                                @if ($task->project)
-                                                    <span
-                                                        class="badge bg-info badge-sm">{{ Str::limit($task->project->title, 15) }}</span>
+                                                @if($task->project)
+                                                    <span class="badge bg-info badge-sm">{{ Str::limit($task->project->title, 15) }}</span>
                                                 @endif
-                                                @if ($task->priority)
-                                                    @if (is_object($task->priority))
-                                                        <span
-                                                            class="badge bg-{{ $task->priority->color ?? 'secondary' }} badge-sm">
+                                                @if($task->priority)
+                                                    @if(is_object($task->priority))
+                                                        <span class="badge bg-{{ $task->priority->color ?? 'secondary' }} badge-sm">
                                                             {{ $task->priority->name }}
                                                         </span>
                                                     @else
@@ -533,16 +506,15 @@
                                                         </span>
                                                     @endif
                                                 @endif
-                                                @if ($task->category)
-                                                    @if (is_object($task->category))
-                                                        <span
-                                                            class="badge bg-{{ $task->category->color ?? 'secondary' }} badge-sm">
-                                                            <i
-                                                                class="bi {{ $task->category->icon ?? 'bi-tag' }} me-1"></i>
+                                                @if($task->category)
+                                                    @if(is_object($task->category))
+                                                        <span class="badge bg-{{ $task->category->color ?? 'secondary' }} badge-sm">
+                                                            <i class="bi {{ $task->category->icon ?? 'bi-tag' }} me-1"></i>
                                                             {{ $task->category->name }}
                                                         </span>
                                                     @endif
                                                 @endif
+                                                
                                             </div>
                                         </div>
                                     </div>
@@ -615,6 +587,7 @@
                                     @elseif($task->assignedTo)
                                         <div class="d-flex align-items-center">
                                             <div class="avatar-sm bg-gradient-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
+                                            <div class="avatar-sm bg-gradient-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
                                                 {{ substr($task->assignedTo->name, 0, 1) }}
                                             </div>
                                             <div>
@@ -626,8 +599,7 @@
                                         </div>
                                     @else
                                         <div class="d-flex align-items-center">
-                                            <div class="avatar-sm border d-flex align-items-center justify-content-center me-2"
-                                                style="background-color: var(--bg-tertiary);">
+                                            <div class="avatar-sm bg-light border d-flex align-items-center justify-content-center me-2">
                                                 <i class="bi bi-person text-muted"></i>
                                             </div>
                                             <span class="text-muted">Unassigned</span>
@@ -656,7 +628,7 @@
                                             </button>
                                         @endif
                                         <ul class="dropdown-menu">
-                                            @foreach ($this->priorities as $priority)
+                                            @foreach($this->priorities as $priority)
                                                 <li>
                                                     <a class="dropdown-item {{ $task->priority && is_object($task->priority) && $task->priority->id === $priority->id ? 'active' : '' }}"
                                                         href="#"
@@ -666,10 +638,8 @@
                                                     </a>
                                                 </li>
                                             @endforeach
-                                            @if ($this->canManagePriorities())
-                                                <li>
-                                                    <hr class="dropdown-divider">
-                                                </li>
+                                            @if($this->canManagePriorities())
+                                                <li><hr class="dropdown-divider"></li>
                                                 <li>
                                                     <a class="dropdown-item" href="#"
                                                         wire:click="toggleCustomPriorityForm">
@@ -705,7 +675,7 @@
                                             </button>
                                         @endif
                                         <ul class="dropdown-menu">
-                                            @foreach ($this->categories as $category)
+                                            @foreach($this->categories as $category)
                                                 <li>
                                                     <a class="dropdown-item {{ $task->category && is_object($task->category) && $task->category->id === $category->id ? 'active' : '' }}"
                                                         href="#"
@@ -717,10 +687,8 @@
                                                     </a>
                                                 </li>
                                             @endforeach
-                                            @if ($this->canManageCategories())
-                                                <li>
-                                                    <hr class="dropdown-divider">
-                                                </li>
+                                            @if($this->canManageCategories())
+                                                <li><hr class="dropdown-divider"></li>
                                                 <li>
                                                     <a class="dropdown-item" href="#"
                                                         wire:click="toggleCustomCategoryForm">
@@ -789,13 +757,12 @@
                                     @endif
                                 </td>
                                 <td class="d-none d-md-table-cell">
-                                    @if ($task->due_date)
+                                    @if($task->due_date)
                                         <div class="d-flex flex-column">
-                                            <span
-                                                class="badge bg-{{ $task->due_date < now() && (!$task->status || !is_object($task->status) || $task->status->name !== 'Complete') ? 'danger' : 'secondary' }} mb-1">
+                                            <span class="badge bg-{{ $task->due_date < now() && (!$task->status || !is_object($task->status) || $task->status->name !== 'Complete') ? 'danger' : 'secondary' }} mb-1">
                                                 {{ $task->due_date->format('M d') }}
                                             </span>
-                                            @if ($task->status && is_object($task->status) && $task->status->name === 'Complete' && $task->completed_at)
+                                            @if($task->status && is_object($task->status) && $task->status->name === 'Complete' && $task->completed_at)
                                                 <small class="badge {{ $task->delay_badge_class }}">
                                                     {{ $task->delay_badge_text }}
                                                 </small>
@@ -807,13 +774,13 @@
                                 </td>
                                 <td class="d-none d-xl-table-cell">
                                     <div class="d-flex flex-column">
-                                        @if ($task->estimated_hours)
+                                        @if($task->estimated_hours)
                                             <small class="text-muted">Est: {{ $task->estimated_hours }}h</small>
                                         @endif
-                                        @if ($task->actual_hours)
+                                        @if($task->actual_hours)
                                             <small class="text-primary">Act: {{ $task->actual_hours }}h</small>
                                         @endif
-                                        @if (!$task->estimated_hours && !$task->actual_hours)
+                                        @if(!$task->estimated_hours && !$task->actual_hours)
                                             <span class="text-muted">-</span>
                                         @endif
                                     </div>
@@ -838,12 +805,10 @@
                                                     <i class="bi bi-pencil"></i>
                                                 </button>
                                             @endif
-                                            @if ($task->noteComments->count() > 0)
+                                            @if($task->noteComments->count() > 0)
                                                 <div class="mt-1">
                                                     <small class="text-muted">
-                                                        <i
-                                                            class="bi bi-chat-dots me-1"></i>{{ $task->noteComments->count() }}
-                                                        comment(s)
+                                                        <i class="bi bi-chat-dots me-1"></i>{{ $task->noteComments->count() }} comment(s)
                                                     </small>
                                                 </div>
                                             @endif
@@ -863,8 +828,7 @@
                                 <td>
                                     @if (auth()->user()->isSuperAdmin() || auth()->user()->isAdmin() || $task->assigned_by_user_id === auth()->id())
                                     <div class="btn-group" role="group">
-                                        <button class="btn btn-sm btn-outline-primary"
-                                            wire:click="startEditing({{ $task->id }})" title="Edit">
+                                        <button class="btn btn-sm btn-outline-primary" wire:click="startEditing({{ $task->id }})" title="Edit">
                                             <i class="bi bi-pencil"></i>
                                         </button>
 
@@ -1097,7 +1061,7 @@
             }
         });
 
-        // Comprehensive dropdown positioning fix
+        // Fix dropdown positioning to appear above all rows
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize all dropdowns with proper positioning
             function initializeDropdowns() {
@@ -1192,41 +1156,20 @@
             // Handle Bootstrap dropdown events
             document.addEventListener('show.bs.dropdown', function(e) {
                 const dropdownMenu = e.target.querySelector('.dropdown-menu');
-                if (dropdownMenu) {
+                if (dropdownMenu && e.target.closest('.task-table-container')) {
+                    // Set maximum z-index
+                    dropdownMenu.style.zIndex = '99999';
+                    dropdownMenu.style.position = 'absolute';
+                    
+                    // Ensure it appears above all table rows
                     setTimeout(() => {
-                        positionDropdown(e.target, dropdownMenu);
+                        dropdownMenu.style.zIndex = '99999';
+                        dropdownMenu.style.position = 'absolute';
                     }, 10);
                 }
             });
-
-            document.addEventListener('shown.bs.dropdown', function(e) {
-                const dropdownMenu = e.target.querySelector('.dropdown-menu');
-                if (dropdownMenu) {
-                    positionDropdown(e.target, dropdownMenu);
-                }
-            });
-
-            // Close dropdowns on scroll
-            document.addEventListener('scroll', function() {
-                document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
-                    const dropdown = menu.closest('.dropdown');
-                    if (dropdown) {
-                        const toggle = dropdown.querySelector('.dropdown-toggle');
-                        if (toggle) {
-                            toggle.click(); // Close dropdown
-                        }
-                    }
-                });
-            });
-
-            // Initialize dropdowns
-            initializeDropdowns();
-
-            // Re-initialize after Livewire updates
-            document.addEventListener('livewire:updated', function() {
-                setTimeout(initializeDropdowns, 100);
-            });
         });
+
     </script>
 
     <style>
@@ -1319,7 +1262,7 @@
             }
         }
 
-        /* Status Dropdown Styling - Simplified */
+        /* Status Dropdown Styling */
         .dropdown-toggle::after {
             margin-left: 0.5em;
             font-size: 0.7em;
@@ -1328,9 +1271,9 @@
         .dropdown-menu {
             border: none;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            border-radius: 0.375rem;
+            border-radius: 0.5rem;
             padding: 0.5rem 0;
-            z-index: 1050 !important;
+            z-index: 9999 !important;
             position: absolute !important;
         }
 
@@ -1358,20 +1301,18 @@
         /* Fix dropdown z-index issues */
         .dropdown {
             position: relative;
+            z-index: 1000;
         }
 
-        /* Force dropdowns to be visible - Aggressive approach */
         .table-responsive {
-            overflow-x: auto !important;
-            overflow-y: visible !important;
             overflow: visible !important;
         }
 
-        .table-responsive .table {
+        .task-table {
             overflow: visible !important;
         }
 
-        .table-responsive tbody {
+        .task-table .table {
             overflow: visible !important;
         }
 
@@ -1480,11 +1421,6 @@
             position: relative;
         }
 
-        .task-table .p-3 {
-            background: #f8f9fa;
-            border-bottom: 1px solid #dee2e6;
-        }
-
         /* Mobile-specific styles */
         @media (max-width: 991px) {
             .notes-container {
@@ -1578,6 +1514,7 @@
             align-items: center;
         }
 
+
         /* Ensure proper spacing on mobile */
         @media (max-width: 768px) {
             .task-row td {
@@ -1600,7 +1537,7 @@
 
     <script>
         // Initialize DataTable when Livewire updates
-        document.addEventListener('livewire:updated', function() {
+        document.addEventListener('livewire:updated', function () {
             if ($.fn.DataTable.isDataTable('#tasksTable')) {
                 $('#tasksTable').DataTable().destroy();
             }
@@ -1608,33 +1545,14 @@
             $('#tasksTable').DataTable({
                 responsive: true,
                 pageLength: 10,
-                lengthMenu: [
-                    [5, 10, 25, 50, -1],
-                    [5, 10, 25, 50, "All"]
-                ],
-                order: [
-                    [0, 'desc']
-                ],
-                columnDefs: [{
-                        orderable: false,
-                        targets: [10]
-                    }, // Actions column
-                    {
-                        className: "text-center",
-                        targets: [0, 4, 5, 6, 7, 8, 9, 10]
-                    }, // Center align certain columns
-                    {
-                        responsivePriority: 1,
-                        targets: [1]
-                    }, // Title column priority
-                    {
-                        responsivePriority: 2,
-                        targets: [6]
-                    }, // Status column priority
-                    {
-                        responsivePriority: 3,
-                        targets: [10]
-                    }, // Actions column priority
+                lengthMenu: [[5, 10, 25, 50, -1], [5, 10, 25, 50, "All"]],
+                order: [[0, 'desc']],
+                columnDefs: [
+                    { orderable: false, targets: [10] }, // Actions column
+                    { className: "text-center", targets: [0, 4, 5, 6, 7, 8, 9, 10] }, // Center align certain columns
+                    { responsivePriority: 1, targets: [1] }, // Title column priority
+                    { responsivePriority: 2, targets: [6] }, // Status column priority
+                    { responsivePriority: 3, targets: [10] }, // Actions column priority
                 ],
                 language: {
                     search: "Search tasks:",
@@ -1737,39 +1655,23 @@
         });
 
         // Initialize DataTable on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize DataTable if it exists
-            if (document.getElementById('tasksTable')) {
+        document.addEventListener('DOMContentLoaded', function () {
+            setTimeout(function() {
+                if ($.fn.DataTable.isDataTable('#tasksTable')) {
+                    $('#tasksTable').DataTable().destroy();
+                }
+                
                 $('#tasksTable').DataTable({
                     responsive: true,
                     pageLength: 10,
-                    lengthMenu: [
-                        [5, 10, 25, 50, -1],
-                        [5, 10, 25, 50, "All"]
-                    ],
-                    order: [
-                        [0, 'desc']
-                    ],
-                    columnDefs: [{
-                            orderable: false,
-                            targets: [10]
-                        },
-                        {
-                            className: "text-center",
-                            targets: [0, 4, 5, 6, 7, 8, 9, 10]
-                        },
-                        {
-                            responsivePriority: 1,
-                            targets: [1]
-                        },
-                        {
-                            responsivePriority: 2,
-                            targets: [6]
-                        },
-                        {
-                            responsivePriority: 3,
-                            targets: [10]
-                        },
+                    lengthMenu: [[5, 10, 25, 50, -1], [5, 10, 25, 50, "All"]],
+                    order: [[0, 'desc']],
+                    columnDefs: [
+                        { orderable: false, targets: [10] }, // Actions column
+                        { className: "text-center", targets: [0, 4, 5, 6, 7, 8, 9, 10] }, // Center align certain columns
+                        { responsivePriority: 1, targets: [1] }, // Title column priority
+                        { responsivePriority: 2, targets: [6] }, // Status column priority
+                        { responsivePriority: 3, targets: [10] }, // Actions column priority
                     ],
                     language: {
                         search: "Search tasks:",
@@ -2969,7 +2871,7 @@
                                 <!-- Reminder Time -->
                                 <div class="col-md-12 mb-3">
                                     <label for="modalTaskReminderTime" class="form-label">Reminder Date & Time</label>
-                                    <input type="datetime-local" class="form-control @error('modalTaskReminderTime') is-invalid @enderror" 
+                                    <input type="time" class="form-control @error('modalTaskReminderTime') is-invalid @enderror" 
                                             id="modalTaskReminderTime" wire:model="modalTaskReminderTime">
                                     @error('modalTaskReminderTime')
                                         <div class="invalid-feedback">{{ $message }}</div>

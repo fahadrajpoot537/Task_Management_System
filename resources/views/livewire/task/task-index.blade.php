@@ -8,16 +8,16 @@
 
     <!-- Search and Filters -->
     <div class="card mb-4">
-        <div class="card-body" style="background-color: var(--bg-tertiary);">
-            <div class="row g-2">
-                <div class="col-12 col-md-3">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
                     <div class="input-group">
                         <span class="input-group-text"><i class="bi bi-search"></i></span>
                         <input type="text" class="form-control" placeholder="Search tasks..." 
                                wire:model.live="search">
                     </div>
                 </div>
-                <div class="col-6 col-md-2">
+                <div class="col-md-2">
                     <select class="form-select" wire:model.live="statusFilter">
                         <option value="">All Status</option>
                         <option value="pending">Pending</option>
@@ -25,7 +25,7 @@
                         <option value="completed">Completed</option>
                     </select>
                 </div>
-                <div class="col-6 col-md-2">
+                <div class="col-md-2">
                     <select class="form-select" wire:model.live="priorityFilter">
                         <option value="">All Priority</option>
                         <option value="high">High</option>
@@ -34,7 +34,7 @@
                     </select>
                 </div>
                 @if(auth()->user()->isSuperAdmin() || auth()->user()->isManager())
-                <div class="col-12 col-md-2">
+                <div class="col-md-2">
                     <select class="form-select" wire:model.live="userFilter">
                         <option value="">All Users</option>
                         @foreach($this->availableUsers as $user)
@@ -44,43 +44,6 @@
                 </div>
                 @endif
             </div>
-            
-            <!-- Mobile Filter Toggle -->
-            <div class="d-md-none mt-2">
-                <button class="btn btn-outline-secondary btn-sm w-100" type="button" data-bs-toggle="collapse" data-bs-target="#mobileFiltersIndex" aria-expanded="false">
-                    <i class="bi bi-funnel me-2"></i>More Filters
-                </button>
-                <div class="collapse mt-2" id="mobileFiltersIndex">
-                    <div class="row g-2">
-                        <div class="col-6">
-                            <select class="form-select form-select-sm" wire:model.live="statusFilter">
-                                <option value="">All Status</option>
-                                <option value="pending">Pending</option>
-                                <option value="in_progress">In Progress</option>
-                                <option value="completed">Completed</option>
-                            </select>
-                        </div>
-                        <div class="col-6">
-                            <select class="form-select form-select-sm" wire:model.live="priorityFilter">
-                                <option value="">All Priority</option>
-                                <option value="high">High</option>
-                                <option value="medium">Medium</option>
-                                <option value="low">Low</option>
-                            </select>
-                        </div>
-                        @if(auth()->user()->isSuperAdmin() || auth()->user()->isManager())
-                        <div class="col-12">
-                            <select class="form-select form-select-sm" wire:model.live="userFilter">
-                                <option value="">All Users</option>
-                                @foreach($this->availableUsers as $user)
-                                    <option value="{{ $user->id }}">{{ $user->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        @endif
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -88,37 +51,37 @@
     <div class="card">
         <div class="card-body">
             @if($this->tasks->count() > 0)
-                <div class="table-responsive" style="overflow-x: auto; max-height: 70vh;">
-                    <table class="table table-hover table-striped">
-                        <thead class="table-dark sticky-top">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
                             <tr>
-                                <th wire:click="sortBy('title')" style="cursor: pointer; min-width: 200px;">
+                                <th wire:click="sortBy('title')" style="cursor: pointer;">
                                     Title
                                     @if($sortField === 'title')
                                         <i class="bi bi-arrow-{{ $sortDirection === 'asc' ? 'up' : 'down' }}"></i>
                                     @endif
                                 </th>
-                                <th style="min-width: 120px;">Project</th>
-                                <th style="min-width: 150px;">Assigned To</th>
-                                <th wire:click="sortBy('priority')" style="cursor: pointer; min-width: 100px;">
+                                <th>Project</th>
+                                <th>Assigned To</th>
+                                <th wire:click="sortBy('priority')" style="cursor: pointer;">
                                     Priority
                                     @if($sortField === 'priority')
                                         <i class="bi bi-arrow-{{ $sortDirection === 'asc' ? 'up' : 'down' }}"></i>
                                     @endif
                                 </th>
-                                <th wire:click="sortBy('status')" style="cursor: pointer; min-width: 120px;">
+                                <th wire:click="sortBy('status')" style="cursor: pointer;">
                                     Status
                                     @if($sortField === 'status')
                                         <i class="bi bi-arrow-{{ $sortDirection === 'asc' ? 'up' : 'down' }}"></i>
                                     @endif
                                 </th>
-                                <th wire:click="sortBy('due_date')" style="cursor: pointer; min-width: 120px;">
+                                <th wire:click="sortBy('due_date')" style="cursor: pointer;">
                                     Due Date
                                     @if($sortField === 'due_date')
                                         <i class="bi bi-arrow-{{ $sortDirection === 'asc' ? 'up' : 'down' }}"></i>
                                     @endif
                                 </th>
-                                <th style="min-width: 100px;">Actions</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -228,84 +191,6 @@
             </div>
         </div>
     </div>
-
-    <style>
-        /* Responsive table styles */
-        .table-responsive {
-            position: relative;
-            border: 1px solid #dee2e6;
-            border-radius: 0.375rem;
-            overflow-x: auto !important;
-            overflow-y: auto;
-        }
-        
-        .table-responsive .sticky-top {
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            background-color: #212529 !important;
-        }
-        
-        .table-responsive table {
-            min-width: 900px !important; /* Ensure table has minimum width for horizontal scroll */
-            width: 100%;
-        }
-        
-        .table-responsive::-webkit-scrollbar {
-            height: 8px;
-        }
-        
-        .table-responsive::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 4px;
-        }
-        
-        .table-responsive::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 4px;
-        }
-        
-        .table-responsive::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
-        
-        @media (max-width: 768px) {
-            .table-responsive {
-                border: none;
-            }
-            
-            .table {
-                font-size: 0.875rem;
-            }
-            
-            .btn-group .btn {
-                padding: 0.25rem 0.5rem;
-            }
-            
-            .dropdown-menu {
-                font-size: 0.8rem;
-            }
-            
-            .table-responsive table {
-                min-width: 700px !important; /* Smaller minimum width on mobile */
-            }
-        }
-        
-        @media (max-width: 576px) {
-            .table {
-                font-size: 0.8rem;
-            }
-            
-            .btn-sm {
-                padding: 0.2rem 0.4rem;
-                font-size: 0.75rem;
-            }
-            
-            .badge {
-                font-size: 0.65rem;
-            }
-        }
-    </style>
 
     <script>
         let taskIdToDelete = null;

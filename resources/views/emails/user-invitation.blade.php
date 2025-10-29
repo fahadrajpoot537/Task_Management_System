@@ -61,42 +61,32 @@
 <body>
     <div class="header">
         <h1>{{ config('app.name') }}</h1>
-        <h2>🎉 Welcome! Your Account Has Been Created</h2>
+        <h2>Account Invitation</h2>
     </div>
     
     <div class="content">
-        <p>Hello <strong>{{ $user->name }}</strong>,</p>
+        <p>Hello {{ $user->name }},</p>
         
-        <p>Your account has been successfully created in <strong>{{ config('app.name') }}</strong>!</p>
-        
-        <p>You can now access the system using the credentials below:</p>
+        <p>You have been invited to join <strong>{{ config('app.name') }}</strong>!</p>
         
         <div class="credentials">
-            <h3>🔐 Your Login Credentials</h3>
-            <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0;">
-                <p><strong>📧 Email Address:</strong> <code style="background: #e9ecef; padding: 2px 6px; border-radius: 3px;">{{ $user->email }}</code></p>
-                <p><strong>🔑 Temporary Password:</strong> <code style="background: #e9ecef; padding: 2px 6px; border-radius: 3px; font-size: 16px; font-weight: bold;">{{ $tempPassword }}</code></p>
-                <p><strong>👤 Your Role:</strong> <span style="background: #007bff; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">{{ ucfirst(str_replace('_', ' ', $user->role->name)) }}</span></p>
-            </div>
+            <h3>Your Login Credentials:</h3>
+            <p><strong>Email:</strong> {{ $user->email }}</p>
+            <p><strong>Temporary Password:</strong> {{ $tempPassword }}</p>
+            <p><strong>Role:</strong> {{ ucfirst(str_replace('_', ' ', $user->role->name)) }}</p>
         </div>
         
         <div class="warning">
-            <strong>⚠️ Security Notice:</strong> This is a temporary password. Please change it immediately after your first login for security reasons.
+            <strong>⚠️ Important:</strong> Please change your password after your first login for security reasons.
         </div>
         
-        <p><strong>Next Steps:</strong></p>
-        <ol>
-            <li>Click the login button below</li>
-            <li>Enter your email and temporary password</li>
-            <li>Change your password to something secure</li>
-            <li>Complete your profile setup</li>
-        </ol>
+        <p>Click the button below to access your account:</p>
         
         <div style="text-align: center; margin: 20px 0;">
-            <a href="{{ $loginUrl }}" class="btn">🚀 Login to Your Account</a>
+            <a href="{{ $loginUrl }}" class="btn">Login to Your Account</a>
         </div>
         
-        <p>If you have any questions or need assistance, please contact your administrator or manager.</p>
+        <p>If you have any questions or need assistance, please contact your administrator.</p>
     </div>
     
     <div class="footer">

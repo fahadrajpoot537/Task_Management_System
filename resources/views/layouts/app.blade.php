@@ -15,8 +15,6 @@ use Illuminate\Support\Facades\Storage;
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Font Awesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,13 +23,6 @@ use Illuminate\Support\Facades\Storage;
     <!-- DataTables CSS -->
     <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css" rel="stylesheet">
-    
-    <!-- Select2 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
-    
-    <!-- SweetAlert2 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
     
     <!-- Custom CSS -->
     <style>
@@ -436,15 +427,15 @@ use Illuminate\Support\Facades\Storage;
         }
 
         .btn-outline-primary {
-            color: var(--primary-color);
-            border-color: var(--primary-color);
+            color: var(--blue-600);
+            border-color: var(--blue-600);
             border-radius: 0.75rem;
             font-weight: 600;
         }
 
         .btn-outline-primary:hover {
-            background-color: var(--primary-color);
-            border-color: var(--primary-color);
+            background-color: var(--blue-600);
+            border-color: var(--blue-600);
         }
 
         .form-control, .form-select {
@@ -539,7 +530,7 @@ use Illuminate\Support\Facades\Storage;
 
         .badge.bg-primary {
             background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%) !important;
-            color: white !important;
+            color: white;
         }
 
         .badge.bg-success {
@@ -560,839 +551,6 @@ use Illuminate\Support\Facades\Storage;
         .badge.bg-info {
             background: linear-gradient(135deg, var(--info-color) 0%, #0ea5e9 100%) !important;
             color: white;
-        }
-
-        /* Theme-aware priority badges */
-        .badge.bg-secondary {
-            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%) !important;
-            color: white;
-        }
-
-        .badge.bg-dark {
-            background: linear-gradient(135deg, #374151 0%, #1f2937 100%) !important;
-            color: white;
-        }
-
-        /* Theme-aware priority colors for better contrast */
-        [data-bs-theme="light"] .badge.bg-dark {
-            background: linear-gradient(135deg, #374151 0%, #1f2937 100%) !important;
-            color: white !important;
-        }
-
-        [data-bs-theme="dark"] .badge.bg-dark {
-            background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%) !important;
-            color: #1f2937 !important;
-        }
-
-        [data-bs-theme="light"] .badge.bg-secondary {
-            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%) !important;
-            color: white !important;
-        }
-
-        [data-bs-theme="dark"] .badge.bg-secondary {
-            background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%) !important;
-            color: #1f2937 !important;
-        }
-
-        /* Fix dropdown z-index for task details */
-        .card .dropdown-menu {
-            z-index: 1060 !important;
-            position: absolute !important;
-        }
-
-        .card {
-            overflow: visible !important;
-        }
-
-        .card-body {
-            overflow: visible !important;
-        }
-
-        /* Comprehensive Theme Support */
-        
-        /* Cards */
-        .card {
-            background-color: var(--bg-secondary) !important;
-            border: 1px solid var(--border-color) !important;
-            color: var(--text-primary) !important;
-        }
-
-        .card-header {
-            background-color: var(--bg-tertiary) !important;
-            border-bottom: 1px solid var(--border-color) !important;
-            color: var(--text-primary) !important;
-        }
-
-        .card-body {
-            background-color: var(--bg-secondary) !important;
-            color: var(--text-primary) !important;
-        }
-
-        .card-footer {
-            background-color: var(--bg-tertiary) !important;
-            border-top: 1px solid var(--border-color) !important;
-            color: var(--text-primary) !important;
-        }
-
-        /* Tables */
-        .table {
-            color: var(--text-primary) !important;
-        }
-
-        .table th {
-            background-color: var(--bg-tertiary) !important;
-            color: var(--text-primary) !important;
-            border-color: var(--border-color) !important;
-        }
-
-        .table td {
-            background-color: var(--bg-secondary) !important;
-            color: var(--text-primary) !important;
-            border-color: var(--border-color) !important;
-        }
-
-        .table-striped tbody tr:nth-of-type(odd) {
-            background-color: var(--bg-tertiary) !important;
-        }
-
-        .table-hover tbody tr:hover {
-            background-color: var(--bg-tertiary) !important;
-        }
-
-        /* Headers */
-        h1, h2, h3, h4, h5, h6 {
-            color: var(--text-primary) !important;
-        }
-
-        /* Text Colors */
-        .text-primary {
-            color: var(--text-primary) !important;
-        }
-
-        .text-secondary {
-            color: var(--text-secondary) !important;
-        }
-
-        .text-muted {
-            color: var(--text-muted) !important;
-        }
-
-        /* Form Elements */
-        .form-control {
-            background-color: var(--bg-secondary) !important;
-            border: 1px solid var(--border-color) !important;
-            color: var(--text-primary) !important;
-        }
-
-        .form-control:focus {
-            background-color: var(--bg-secondary) !important;
-            border-color: var(--primary-color) !important;
-            color: var(--text-primary) !important;
-            box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25) !important;
-        }
-
-        .form-select {
-            background-color: var(--bg-secondary) !important;
-            border: 1px solid var(--border-color) !important;
-            color: var(--text-primary) !important;
-        }
-
-        .form-select:focus {
-            background-color: var(--bg-secondary) !important;
-            border-color: var(--primary-color) !important;
-            color: var(--text-primary) !important;
-        }
-
-        /* Dropdowns */
-        .dropdown-menu {
-            background-color: var(--bg-secondary) !important;
-            border: 1px solid var(--border-color) !important;
-            color: var(--text-primary) !important;
-        }
-
-        .dropdown-item {
-            color: var(--text-primary) !important;
-        }
-
-        .dropdown-item:hover {
-            background-color: var(--bg-tertiary) !important;
-            color: var(--text-primary) !important;
-        }
-
-        /* Buttons */
-        .btn-outline-primary {
-            color: var(--primary-color) !important;
-            border-color: var(--primary-color) !important;
-        }
-
-        .btn-outline-primary:hover {
-            background-color: var(--primary-color) !important;
-            color: white !important;
-        }
-
-        .btn-outline-secondary {
-            color: var(--text-secondary) !important;
-            border-color: var(--border-color) !important;
-        }
-
-        .btn-outline-secondary:hover {
-            background-color: var(--bg-tertiary) !important;
-            color: var(--text-primary) !important;
-        }
-
-        /* Modals */
-        .modal-content {
-            background-color: var(--bg-secondary) !important;
-            border: 1px solid var(--border-color) !important;
-            color: var(--text-primary) !important;
-        }
-
-        .modal-header {
-            background-color: var(--bg-tertiary) !important;
-            border-bottom: 1px solid var(--border-color) !important;
-            color: var(--text-primary) !important;
-        }
-
-        .modal-footer {
-            background-color: var(--bg-tertiary) !important;
-            border-top: 1px solid var(--border-color) !important;
-            color: var(--text-primary) !important;
-        }
-
-        /* Alerts */
-        .alert {
-            background-color: var(--bg-secondary) !important;
-            border: 1px solid var(--border-color) !important;
-            color: var(--text-primary) !important;
-        }
-
-        /* List Groups */
-        .list-group-item {
-            background-color: var(--bg-secondary) !important;
-            border: 1px solid var(--border-color) !important;
-            color: var(--text-primary) !important;
-        }
-
-        .list-group-item:hover {
-            background-color: var(--bg-tertiary) !important;
-        }
-
-        /* Navs */
-        .nav-link {
-            color: var(--text-primary) !important;
-        }
-
-        .nav-link:hover {
-            color: var(--primary-color) !important;
-        }
-
-        .nav-link.active {
-            color: var(--primary-color) !important;
-        }
-
-        /* Pagination */
-        .page-link {
-            background-color: var(--bg-secondary) !important;
-            border: 1px solid var(--border-color) !important;
-            color: var(--text-primary) !important;
-        }
-
-        .page-link:hover {
-            background-color: var(--bg-tertiary) !important;
-            color: var(--text-primary) !important;
-        }
-
-        .page-item.active .page-link {
-            background-color: var(--primary-color) !important;
-            border-color: var(--primary-color) !important;
-            color: white !important;
-        }
-
-        /* Breadcrumbs */
-        .breadcrumb {
-            background-color: var(--bg-tertiary) !important;
-        }
-
-        .breadcrumb-item {
-            color: var(--text-primary) !important;
-        }
-
-        .breadcrumb-item.active {
-            color: var(--text-muted) !important;
-        }
-
-        /* Progress Bars */
-        .progress {
-            background-color: var(--bg-tertiary) !important;
-        }
-
-        .progress-bar {
-            background-color: var(--primary-color) !important;
-        }
-
-        /* Badges */
-        .badge {
-            color: white !important;
-        }
-
-        /* Input Groups */
-        .input-group-text {
-            background-color: var(--bg-tertiary) !important;
-            border: 1px solid var(--border-color) !important;
-            color: var(--text-primary) !important;
-        }
-
-        /* Accordion */
-        .accordion-item {
-            background-color: var(--bg-secondary) !important;
-            border: 1px solid var(--border-color) !important;
-        }
-
-        .accordion-header button {
-            background-color: var(--bg-tertiary) !important;
-            color: var(--text-primary) !important;
-        }
-
-        .accordion-body {
-            background-color: var(--bg-secondary) !important;
-            color: var(--text-primary) !important;
-        }
-
-        /* Offcanvas */
-        .offcanvas {
-            background-color: var(--bg-secondary) !important;
-            color: var(--text-primary) !important;
-        }
-
-        .offcanvas-header {
-            background-color: var(--bg-tertiary) !important;
-            border-bottom: 1px solid var(--border-color) !important;
-        }
-
-        /* Tooltips */
-        .tooltip {
-            --bs-tooltip-bg: var(--bg-tertiary) !important;
-            --bs-tooltip-color: var(--text-primary) !important;
-        }
-
-        /* Popovers */
-        .popover {
-            background-color: var(--bg-secondary) !important;
-            border: 1px solid var(--border-color) !important;
-            color: var(--text-primary) !important;
-        }
-
-        .popover-header {
-            background-color: var(--bg-tertiary) !important;
-            border-bottom: 1px solid var(--border-color) !important;
-            color: var(--text-primary) !important;
-        }
-
-        /* Custom Components */
-        .comment-item {
-            background-color: var(--bg-secondary) !important;
-            border-color: var(--border-color) !important;
-        }
-
-        .attachment-item {
-            background-color: var(--bg-tertiary) !important;
-            color: var(--text-primary) !important;
-        }
-
-        .task-row {
-            background-color: var(--bg-secondary) !important;
-            border-color: var(--border-color) !important;
-        }
-
-        .task-row:hover {
-            background-color: var(--bg-tertiary) !important;
-        }
-
-        /* Status and Priority Badges - Theme Aware */
-        [data-bs-theme="light"] .badge.bg-success {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
-            color: white !important;
-        }
-
-        [data-bs-theme="dark"] .badge.bg-success {
-            background: linear-gradient(135deg, #34d399 0%, #10b981 100%) !important;
-            color: #064e3b !important;
-        }
-
-        [data-bs-theme="light"] .badge.bg-warning {
-            background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%) !important;
-            color: white !important;
-        }
-
-        [data-bs-theme="dark"] .badge.bg-warning {
-            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%) !important;
-            color: #451a03 !important;
-        }
-
-        [data-bs-theme="light"] .badge.bg-danger {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
-            color: white !important;
-        }
-
-        [data-bs-theme="dark"] .badge.bg-danger {
-            background: linear-gradient(135deg, #f87171 0%, #ef4444 100%) !important;
-            color: #450a0a !important;
-        }
-
-        [data-bs-theme="light"] .badge.bg-info {
-            background: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%) !important;
-            color: white !important;
-        }
-
-        /* Additional Theme Support */
-        
-        /* Ensure all text elements use theme colors */
-        body {
-            background-color: var(--bg-primary) !important;
-            color: var(--text-primary) !important;
-        }
-
-        /* Override any hardcoded colors */
-        .text-dark {
-            color: var(--text-primary) !important;
-        }
-
-        .text-light {
-            color: var(--text-primary) !important;
-        }
-
-        /* Ensure links use theme colors */
-        a {
-            color: var(--primary-color) !important;
-        }
-
-        a:hover {
-            color: var(--secondary-color) !important;
-        }
-
-        /* Ensure all backgrounds use theme colors */
-        .bg-light {
-            background-color: var(--bg-secondary) !important;
-        }
-
-        .bg-dark {
-            background-color: var(--bg-tertiary) !important;
-        }
-
-        .bg-white {
-            background-color: var(--bg-secondary) !important;
-        }
-
-        /* Ensure borders use theme colors */
-        .border {
-            border-color: var(--border-color) !important;
-        }
-
-        .border-light {
-            border-color: var(--border-color) !important;
-        }
-
-        .border-dark {
-            border-color: var(--border-color) !important;
-        }
-
-        /* Ensure shadows use theme colors */
-        .shadow {
-            box-shadow: 0 0.5rem 1rem var(--shadow-color) !important;
-        }
-
-        .shadow-sm {
-            box-shadow: 0 0.125rem 0.25rem var(--shadow-color) !important;
-        }
-
-        .shadow-lg {
-            box-shadow: 0 1rem 3rem var(--shadow-color) !important;
-        }
-
-        /* Custom Header Classes - Theme Aware */
-        .contacts-header {
-            background-color: var(--bg-tertiary) !important;
-            color: var(--text-primary) !important;
-            border: 1px solid var(--border-color) !important;
-        }
-
-        /* Chat System Theme-Aware Styles */
-        .chat-container {
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
-            border: 1px solid var(--border-color);
-            border-radius: 1rem;
-            overflow: hidden;
-            box-shadow: 0 4px 12px var(--shadow-color);
-        }
-
-        .contacts-sidebar {
-            background-color: var(--bg-secondary);
-            border-right: 1px solid var(--border-color);
-            color: var(--text-primary);
-        }
-
-        .contacts-sidebar.chat-open {
-            border-right: 1px solid var(--border-color);
-        }
-
-        .contact-item {
-            background-color: var(--bg-secondary);
-            color: var(--text-primary);
-            border-bottom: 1px solid var(--border-color);
-            transition: all 0.3s ease;
-        }
-
-        .contact-item:hover {
-            background-color: var(--bg-tertiary);
-            color: var(--text-primary);
-        }
-
-        .contact-item.active {
-            background-color: var(--primary-color);
-            color: white;
-        }
-
-        .contact-item.active:hover {
-            background-color: var(--secondary-color);
-            color: white;
-        }
-
-        .contact-name {
-            color: var(--text-primary);
-            font-weight: 600;
-        }
-
-        .contact-item.active .contact-name {
-            color: white;
-        }
-
-        .last-message-preview {
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-        }
-
-        .contact-item.active .last-message-preview {
-            color: rgba(255, 255, 255, 0.8);
-        }
-
-        .message-time {
-            color: var(--text-muted);
-            font-size: 0.75rem;
-        }
-
-        .contact-item.active .message-time {
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        .unread-count-badge {
-            background-color: var(--danger-color);
-            color: white;
-            border-radius: 50%;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .unread-indicator {
-            background-color: var(--primary-color);
-            border-radius: 50%;
-        }
-
-        .message-area {
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
-        }
-
-        .message-input-container {
-            background-color: var(--bg-secondary);
-            border-top: 1px solid var(--border-color);
-            padding: 1rem;
-        }
-
-        .message-input {
-            background-color: var(--bg-tertiary);
-            color: var(--text-primary);
-            border: 1px solid var(--border-color);
-            border-radius: 0.75rem;
-            padding: 0.75rem 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .message-input:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 0.2rem rgba(2, 132, 199, 0.25);
-            background-color: var(--bg-secondary);
-        }
-
-        .message-input::placeholder {
-            color: var(--text-muted);
-        }
-
-        .send-button {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 0.75rem;
-            padding: 0.75rem 1.5rem;
-            transition: all 0.3s ease;
-        }
-
-        .send-button:hover {
-            background-color: var(--secondary-color);
-            transform: translateY(-1px);
-        }
-
-        .message-bubble {
-            background-color: var(--bg-secondary);
-            color: var(--text-primary);
-            border: 1px solid var(--border-color);
-            border-radius: 1rem;
-            padding: 0.75rem 1rem;
-            margin-bottom: 0.5rem;
-            max-width: 70%;
-        }
-
-        .message-bubble.own-message {
-            background-color: var(--primary-color);
-            color: white;
-            margin-left: auto;
-        }
-
-        .message-bubble.own-message .message-time {
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        .message-sender {
-            color: var(--text-primary);
-            font-weight: 600;
-            font-size: 0.875rem;
-        }
-
-        .message-bubble.own-message .message-sender {
-            color: white;
-        }
-
-        .message-content {
-            color: var(--text-primary);
-            margin: 0.25rem 0;
-        }
-
-        .message-bubble.own-message .message-content {
-            color: white;
-        }
-
-        .search-container {
-            background-color: var(--bg-tertiary);
-            border-bottom: 1px solid var(--border-color);
-            padding: 1rem;
-        }
-
-        .search-input {
-            background-color: var(--bg-secondary);
-            color: var(--text-primary);
-            border: 1px solid var(--border-color);
-            border-radius: 0.75rem;
-            padding: 0.75rem 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .search-input:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 0.2rem rgba(2, 132, 199, 0.25);
-        }
-
-        .search-input::placeholder {
-            color: var(--text-muted);
-        }
-
-        .header-action-buttons .header-btn {
-            background-color: var(--bg-tertiary);
-            color: var(--text-primary);
-            border: 1px solid var(--border-color);
-            border-radius: 0.5rem;
-            padding: 0.5rem 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .header-action-buttons .header-btn:hover {
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
-        }
-
-        .header-action-buttons .header-btn.active {
-            background-color: var(--primary-color);
-            color: white;
-            border-color: var(--primary-color);
-        }
-
-        .section-header {
-            background-color: var(--bg-tertiary);
-            color: var(--text-primary);
-            border-bottom: 1px solid var(--border-color);
-            padding: 0.75rem 1rem;
-        }
-
-        .section-title {
-            color: var(--text-primary);
-            font-weight: 600;
-            font-size: 0.875rem;
-        }
-
-        .avatar-placeholder {
-            background-color: var(--primary-color);
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-        }
-
-        .contact-avatar img {
-            border: 2px solid var(--border-color);
-            transition: all 0.3s ease;
-        }
-
-        .contact-item:hover .contact-avatar img {
-            border-color: var(--primary-color);
-        }
-
-        .contact-item.active .contact-avatar img {
-            border-color: white;
-        }
-
-        .table-header {
-            background-color: var(--bg-tertiary) !important;
-            color: var(--text-primary) !important;
-            border: 1px solid var(--border-color) !important;
-        }
-
-        .table-dark {
-            background-color: var(--bg-tertiary) !important;
-            color: var(--text-primary) !important;
-        }
-
-        .table-dark th {
-            background-color: var(--bg-tertiary) !important;
-            color: var(--text-primary) !important;
-            border-color: var(--border-color) !important;
-        }
-
-        .table-dark td {
-            background-color: var(--bg-secondary) !important;
-            color: var(--text-primary) !important;
-            border-color: var(--border-color) !important;
-        }
-
-        .table-dark tbody tr:hover {
-            background-color: var(--bg-primary) !important;
-        }
-
-        /* Additional Custom Classes */
-        .header-dark {
-            background-color: var(--bg-tertiary) !important;
-            color: var(--text-primary) !important;
-        }
-
-        .header-light {
-            background-color: var(--bg-secondary) !important;
-            color: var(--text-primary) !important;
-        }
-
-        /* Ensure all text in these classes uses theme colors */
-        .contacts-header *,
-        .table-header *,
-        .table-dark *,
-        .header-dark *,
-        .header-light * {
-            color: inherit !important;
-        }
-
-        /* Override any hardcoded text colors in these classes */
-        .contacts-header .text-dark,
-        .table-header .text-dark,
-        .table-dark .text-dark {
-            color: var(--text-primary) !important;
-        }
-
-        .contacts-header .text-light,
-        .table-header .text-light,
-        .table-dark .text-light {
-            color: var(--text-primary) !important;
-        }
-
-        .contacts-header .text-white,
-        .table-header .text-white,
-        .table-dark .text-white {
-            color: var(--text-primary) !important;
-        }
-
-        /* Additional Table and Header Classes */
-        .table-light {
-            background-color: var(--bg-secondary) !important;
-            color: var(--text-primary) !important;
-        }
-
-        .table-light th {
-            background-color: var(--bg-tertiary) !important;
-            color: var(--text-primary) !important;
-            border-color: var(--border-color) !important;
-        }
-
-        .table-light td {
-            background-color: var(--bg-secondary) !important;
-            color: var(--text-primary) !important;
-            border-color: var(--border-color) !important;
-        }
-
-        /* Header variations */
-        .page-header {
-            background-color: var(--bg-tertiary) !important;
-            color: var(--text-primary) !important;
-            border-bottom: 1px solid var(--border-color) !important;
-        }
-
-        .section-header {
-            background-color: var(--bg-tertiary) !important;
-            color: var(--text-primary) !important;
-            border: 1px solid var(--border-color) !important;
-        }
-
-        .content-header {
-            background-color: var(--bg-secondary) !important;
-            color: var(--text-primary) !important;
-            border-bottom: 1px solid var(--border-color) !important;
-        }
-
-        /* Ensure all nested elements inherit theme colors */
-        .contacts-header h1,
-        .contacts-header h2,
-        .contacts-header h3,
-        .contacts-header h4,
-        .contacts-header h5,
-        .contacts-header h6,
-        .table-header h1,
-        .table-header h2,
-        .table-header h3,
-        .table-header h4,
-        .table-header h5,
-        .table-header h6,
-        .table-dark h1,
-        .table-dark h2,
-        .table-dark h3,
-        .table-dark h4,
-        .table-dark h5,
-        .table-dark h6 {
-            color: var(--text-primary) !important;
-        }
-
-        /* Override Bootstrap's default dark table colors */
-        .table-dark.table-striped tbody tr:nth-of-type(odd) {
-            background-color: var(--bg-primary) !important;
-        }
-
-        .table-dark.table-hover tbody tr:hover {
-            background-color: var(--bg-primary) !important;
         }
 
         .alert {
@@ -1445,10 +603,10 @@ use Illuminate\Support\Facades\Storage;
 
         /* Profile Dropdown Styles */
         .profile-dropdown {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.98);
+            border: 1px solid rgba(2, 132, 199, 0.1);
             border-radius: 1rem;
-            box-shadow: 0 12px 40px var(--shadow-color);
+            box-shadow: 0 12px 40px rgba(2, 132, 199, 0.15);
             backdrop-filter: blur(10px);
             padding: 0.5rem 0;
             min-width: 280px;
@@ -1457,14 +615,14 @@ use Illuminate\Support\Facades\Storage;
 
         .profile-dropdown .dropdown-header {
             padding: 1rem 1.5rem;
-            background: var(--bg-tertiary);
-            border-bottom: 1px solid var(--border-color);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.6) 100%);
+            border-bottom: 1px solid rgba(2, 132, 199, 0.1);
             margin-bottom: 0.5rem;
         }
 
         .profile-dropdown .dropdown-item {
             padding: 0.75rem 1.5rem;
-            color: var(--text-primary);
+            color: var(--blue-800);
             font-weight: 500;
             transition: all 0.2s ease;
             border-radius: 0.5rem;
@@ -1472,39 +630,39 @@ use Illuminate\Support\Facades\Storage;
         }
 
         .profile-dropdown .dropdown-item:hover {
-            background: var(--bg-tertiary);
-            color: var(--text-primary);
+            background: linear-gradient(135deg, var(--blue-50) 0%, var(--blue-100) 100%);
+            color: var(--blue-700);
             transform: translateX(4px);
         }
 
         .profile-dropdown .dropdown-item.text-danger:hover {
-            background: var(--bg-tertiary);
-            color: var(--danger-color);
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+            color: #dc2626;
         }
 
         .profile-dropdown .dropdown-divider {
             margin: 0.5rem 0;
-            border-color: var(--border-color);
+            border-color: rgba(2, 132, 199, 0.1);
         }
 
         .profile-avatar img {
             object-fit: cover;
-            border: 2px solid var(--border-color);
+            border: 2px solid rgba(255, 255, 255, 0.3);
             transition: all 0.3s ease;
         }
 
         .profile-avatar:hover img {
-            border-color: var(--primary-color);
+            border-color: var(--blue-400);
             transform: scale(1.05);
         }
 
         .avatar-placeholder {
-            border: 2px solid var(--border-color);
+            border: 2px solid rgba(255, 255, 255, 0.3);
             transition: all 0.3s ease;
         }
 
         .avatar-placeholder:hover {
-            border-color: var(--primary-color);
+            border-color: var(--blue-400);
             transform: scale(1.05);
         }
 
@@ -1708,7 +866,9 @@ use Illuminate\Support\Facades\Storage;
                 padding: 1.5rem;
             }
             
-            
+            .sidebar {
+                min-width: 250px;
+            }
         }
 
         @media (max-width: 992px) {
@@ -2030,18 +1190,18 @@ use Illuminate\Support\Facades\Storage;
             }
         }
 
-        /* Dropdown fix for tables - Simplified and consistent */
+        /* Dropdown fix for tables */
         .table-responsive .dropdown-menu {
-            z-index: 1050 !important;
+            z-index: 999999 !important;
             position: absolute !important;
             top: 100% !important;
             left: 0 !important;
             transform: none !important;
             margin-top: 2px !important;
             background: var(--bg-secondary) !important;
-            border: 1px solid var(--border-color) !important;
-            border-radius: 0.375rem !important;
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+            border: 2px solid var(--border-color) !important;
+            border-radius: 0.75rem !important;
+            box-shadow: 0 8px 32px var(--shadow-color) !important;
             min-width: 150px !important;
         }
 
@@ -2050,26 +1210,28 @@ use Illuminate\Support\Facades\Storage;
             background: var(--bg-tertiary);
             border: 1px solid var(--border-color);
             color: var(--text-primary);
-            border-radius: 0.375rem;
+            border-radius: 0.5rem;
             padding: 0.25rem 0.5rem;
             font-size: 0.8rem;
             transition: all 0.2s ease;
+            z-index: 999998 !important;
             position: relative !important;
         }
 
-        /* Ensure dropdowns are properly positioned */
+        /* Ensure dropdowns are always visible */
         .dropdown-menu {
-            z-index: 1050 !important;
+            z-index: 999999 !important;
             position: absolute !important;
         }
 
         .dropdown {
             position: relative !important;
+            z-index: 999998 !important;
         }
 
         /* Fix for Bootstrap dropdown positioning */
         .table td .dropdown-menu {
-            z-index: 1050 !important;
+            z-index: 999999 !important;
             position: absolute !important;
             top: 100% !important;
             left: 0 !important;
@@ -2087,9 +1249,9 @@ use Illuminate\Support\Facades\Storage;
             overflow: visible !important;
         }
 
-        /* Specific fixes for tasks table status dropdowns - Simplified */
+        /* Specific fixes for tasks table status dropdowns */
         #tasksTable .dropdown-menu {
-            z-index: 1050 !important;
+            z-index: 999999 !important;
             position: absolute !important;
             top: 100% !important;
             left: 0 !important;
@@ -2097,9 +1259,9 @@ use Illuminate\Support\Facades\Storage;
             transform: none !important;
             margin-top: 2px !important;
             background: var(--bg-secondary) !important;
-            border: 1px solid var(--border-color) !important;
-            border-radius: 0.375rem !important;
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+            border: 2px solid var(--border-color) !important;
+            border-radius: 0.75rem !important;
+            box-shadow: 0 8px 32px var(--shadow-color) !important;
             min-width: 150px !important;
             display: none !important;
         }
@@ -2112,6 +1274,7 @@ use Illuminate\Support\Facades\Storage;
 
         #tasksTable .dropdown {
             position: relative !important;
+            z-index: 999998 !important;
         }
 
         #tasksTable td {
@@ -2122,21 +1285,22 @@ use Illuminate\Support\Facades\Storage;
 
         #tasksTable tr {
             position: relative !important;
+            z-index: 1 !important;
         }
 
         #tasksTable tr:hover {
             z-index: 2 !important;
         }
 
-        /* Task table dropdown styling */
+        /* Ensure dropdowns in task table are always visible but closable */
         .task-table .dropdown-menu {
-            z-index: 1050 !important;
+            z-index: 999999 !important;
             position: absolute !important;
             display: none !important;
         }
 
         .task-table .dropdown-menu.show {
-            z-index: 1050 !important;
+            z-index: 999999 !important;
             position: absolute !important;
             display: block !important;
             visibility: visible !important;
@@ -2165,7 +1329,7 @@ use Illuminate\Support\Facades\Storage;
             border-top-color: var(--text-secondary);
         }
 
-        /* DataTables specific fixes - Simplified */
+        /* DataTables specific fixes */
         #tasksTable_wrapper {
             overflow: visible !important;
         }
@@ -2175,6 +1339,14 @@ use Illuminate\Support\Facades\Storage;
         }
 
         #tasksTable_wrapper .dataTables_scroll {
+            overflow: visible !important;
+        }
+
+        #tasksTable_wrapper {
+            overflow: visible !important;
+        }
+
+        #tasksTable_wrapper .dataTables_scrollBody {
             overflow: visible !important;
         }
 
@@ -2191,7 +1363,28 @@ use Illuminate\Support\Facades\Storage;
             overflow: visible !important;
         }
 
-        /* Task table container fixes */
+        /* Additional dropdown visibility fixes */
+        .task-table-container .dropdown-menu.show {
+            z-index: 999999 !important;
+            position: absolute !important;
+            display: block !important;
+        }
+
+        /* Force dropdown above all table elements */
+        .task-table-container .dropdown-menu {
+            z-index: 999999 !important;
+            position: absolute !important;
+            top: 100% !important;
+            left: 0 !important;
+            transform: none !important;
+            margin-top: 2px !important;
+            background: white !important;
+            border: 1px solid #dee2e6 !important;
+            border-radius: 0.375rem !important;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+        }
+
+        /* Ensure table doesn't clip dropdowns */
         .task-table-container {
             overflow: visible !important;
             position: relative !important;
@@ -2272,7 +1465,7 @@ use Illuminate\Support\Facades\Storage;
         }
 
         .modal-header {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            background: linear-gradient(135deg, var(--blue-600) 0%, var(--blue-700) 100%);
             color: white;
             border-radius: 1rem 1rem 0 0;
             border-bottom: none;
@@ -2287,21 +1480,19 @@ use Illuminate\Support\Facades\Storage;
         }
 
         .modal-footer {
-            border-top: 1px solid var(--border-color);
+            border-top: 1px solid var(--blue-200);
             padding: 1rem 2rem;
         }
 
         .notes-content {
-            background: var(--bg-tertiary);
-            color: var(--text-primary);
+            background: var(--light-blue-50);
             padding: 1.5rem;
             border-radius: 0.75rem;
-            border: 1px solid var(--border-color);
-            transition: all 0.3s ease;
+            border: 1px solid var(--blue-200);
         }
 
         .notes-view .text-muted {
-            color: var(--text-secondary) !important;
+            color: var(--blue-500) !important;
         }
 
         .modal-backdrop {
@@ -2772,7 +1963,7 @@ use Illuminate\Support\Facades\Storage;
                                 @if(auth()->user()->avatar)
                                     <img src="{{ Storage::url(auth()->user()->avatar) }}" alt="{{ auth()->user()->name }}" class="rounded-circle" width="32" height="32">
                                 @else
-                                    <div class="avatar-placeholder rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); color: white; font-weight: 600; font-size: 0.875rem;">
+                                    <div class="avatar-placeholder rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; background: linear-gradient(135deg, var(--blue-500) 0%, var(--blue-600) 100%); color: white; font-weight: 600; font-size: 0.875rem;">
                                         {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
                                     </div>
                                 @endif
@@ -2786,7 +1977,7 @@ use Illuminate\Support\Facades\Storage;
                                         @if(auth()->user()->avatar)
                                             <img src="{{ Storage::url(auth()->user()->avatar) }}" alt="{{ auth()->user()->name }}" class="rounded-circle" width="48" height="48">
                                         @else
-                                            <div class="avatar-placeholder rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); color: white; font-weight: 600; font-size: 1.25rem;">
+                                            <div class="avatar-placeholder rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; background: linear-gradient(135deg, var(--blue-500) 0%, var(--blue-600) 100%); color: white; font-weight: 600; font-size: 1.25rem;">
                                                 {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
                                             </div>
                                         @endif
@@ -2841,11 +2032,25 @@ use Illuminate\Support\Facades\Storage;
                                 <i class="bi bi-list-task"></i>
                             </a>
                         </li>
-                        
-                     
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('slack-chat') ? 'active' : '' }}" href="{{ route('slack-chat') }}" title="Slack-like Chat">
                                 <i class="bi bi-chat"></i>
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('attendance.*') ? 'active' : '' }}" href="{{ route('attendance.viewer') }}" title="Attendance Viewer">
+                                <i class="bi bi-clock-history"></i>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('salary.*') ? 'active' : '' }}" href="{{ route('salary.management') }}" title="Salary Management">
+                                <i class="bi bi-currency-dollar"></i>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('probation.*') ? 'active' : '' }}" href="{{ route('probation.management') }}" title="Probation Management">
+                                <i class="bi bi-hourglass-split"></i>
                             </a>
                         </li>
                         
@@ -2935,9 +2140,6 @@ use Illuminate\Support\Facades\Storage;
     <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
     <!-- jQuery (required for DataTables) -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-    
-    <!-- Select2 JS -->
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     
     <!-- Theme Toggle Script -->
     <script>
@@ -3103,52 +2305,6 @@ use Illuminate\Support\Facades\Storage;
             }
         });
     </script>
-    
-    <!-- Theme Switching JavaScript -->
-    <script>
-        // Theme switching functionality
-        function switchTheme(theme) {
-            document.documentElement.setAttribute('data-bs-theme', theme);
-            localStorage.setItem('theme', theme);
-            
-            // Update theme toggle button
-            const themeToggle = document.getElementById('themeToggle');
-            if (themeToggle) {
-                const icon = themeToggle.querySelector('i');
-                if (theme === 'dark') {
-                    icon.className = 'bi bi-sun-fill';
-                    themeToggle.title = 'Switch to Light Theme';
-                } else {
-                    icon.className = 'bi bi-moon-fill';
-                    themeToggle.title = 'Switch to Dark Theme';
-                }
-            }
-            
-            // Force refresh of all elements
-            document.body.style.display = 'none';
-            document.body.offsetHeight; // Trigger reflow
-            document.body.style.display = '';
-        }
-        
-        // Load saved theme on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            const savedTheme = localStorage.getItem('theme') || 'light';
-            switchTheme(savedTheme);
-        });
-        
-        // Theme toggle button functionality
-        document.addEventListener('click', function(e) {
-            if (e.target.closest('#themeToggle')) {
-                e.preventDefault();
-                const currentTheme = document.documentElement.getAttribute('data-bs-theme') || 'light';
-                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-                switchTheme(newTheme);
-            }
-        });
-    </script>
-    
-    <!-- SweetAlert2 JavaScript -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     @livewireScripts
 </body>

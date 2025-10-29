@@ -338,7 +338,7 @@
 
         <!-- Sidebar -->
         <div class="col-lg-4">
-            @if (!$task->is_approved)
+            @if (!$task->is_approved && $task->status->name === 'Complete')
             <div class="card mb-3">
                
                 <div class="card-header py-2">
@@ -696,12 +696,6 @@
         function confirmDeleteAttachment(attachmentId) {
             attachmentIdToDelete = attachmentId;
             const modal = new bootstrap.Modal(document.getElementById('deleteAttachmentModal'));
-            modal.show();
-        }
-
-        function confirmDeleteComment(commentId) {
-            commentIdToDelete = commentId;
-            const modal = new bootstrap.Modal(document.getElementById('deleteCommentModal'));
             modal.show();
         }
 

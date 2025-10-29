@@ -10,6 +10,10 @@ use App\Livewire\Task\TaskCreate;
 use App\Livewire\Task\TaskDetails;
 use App\Livewire\Task\TaskIndex;
 use App\Livewire\Team\TeamManager;
+use App\Livewire\Attendance\AttendanceManager;
+use App\Livewire\Attendance\UserAttendanceDetails;
+use App\Livewire\User\SalaryManager;
+use App\Livewire\User\ProbationManager;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -36,8 +40,7 @@ Route::post('/logout', function () {
     request()->session()->regenerateToken();
     return redirect('/login');
 })->name('logout');
-//zkteco route
-Route::middleware('auth')->get('/zkteco', \App\Livewire\Zkteco\AttendanceManager::class)->name('zkteco');
+
 // Protected Routes
 Route::middleware('auth')->group(function () {
     // Dashboard
@@ -59,8 +62,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/tasks', \App\Livewire\Task\TaskTable::class)->name('tasks.index');
     Route::get('/tasks/create', TaskCreate::class)->name('tasks.create');
     Route::get('/tasks/{taskId}', TaskDetails::class)->name('tasks.details');
+
+    // Attendance Routes
+    Route::get('/attendance', AttendanceManager::class)->name('attendance');
+    Route::get('/attendance/user/{userId}', UserAttendanceDetails::class)->name('attendance.user');
+    Route::get('/attendance-viewer', \App\Livewire\Attendance\AttendanceViewer::class)->name('attendance.viewer');
     
-    // Attachments
     Route::get('/attachments/{attachment}/download', [App\Http\Controllers\AttachmentController::class, 'download'])->name('attachments.download');
     Route::get('/attachments/{attachment}/preview', [App\Http\Controllers\AttachmentController::class, 'preview'])->name('attachments.preview');
     Route::get('/attachments/{attachment}/data', [App\Http\Controllers\AttachmentController::class, 'data'])->name('attachments.data');
@@ -70,6 +77,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/chat', \App\Livewire\SlackLikeChatComponent::class)->name('chat');
     Route::get('/private-messages', \App\Livewire\PrivateChatComponent::class)->name('private-messages');
     Route::get('/slack-chat', \App\Livewire\SlackLikeChatComponent::class)->name('slack-chat');
+    // Salary Management Routes
+    Route::get('/salary-management', SalaryManager::class)->name('salary.management');
+    
+    // Probation Management Routes
+    Route::get('/probation-management', ProbationManager::class)->name('probation.management');
 
                 // Admin Routes (Super Admin only)
                 Route::get('/permissions', PermissionManager::class)->name('permissions.index');
