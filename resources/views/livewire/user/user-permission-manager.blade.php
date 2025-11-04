@@ -25,9 +25,11 @@
                 </div>
                 <div class="col-md-6">
                     <h5>Permission Summary</h5>
-                    <p><strong>Role Permissions:</strong> {{ $this->userRolePermissions->count() }}</p>
-                    <p><strong>Custom Permissions:</strong> {{ $this->userCustomPermissions->count() }}</p>
-                    <p><strong>Total Permissions:</strong> {{ $this->userRolePermissions->count() + $this->userCustomPermissions->count() }}</p>
+                    <p><strong>Assigned Permissions:</strong> {{ count($userPermissions) }}</p>
+                    <p><strong>Total Available:</strong> {{ $allPermissions->count() }}</p>
+                    @if($user->isSuperAdmin())
+                        <p class="text-success"><strong>Super Admin:</strong> Has all permissions automatically</p>
+                    @endif
                 </div>
             </div>
         </div>
@@ -40,13 +42,13 @@
         </div>
         <div class="card-body">
             <div class="d-flex gap-2">
-                <button type="button" class="btn btn-warning" wire:click="resetToRolePermissions" 
-                        onclick="return confirm('Reset user permissions to role defaults?')">
-                    <i class="bi bi-arrow-clockwise me-2"></i>Reset to Role Defaults
+                <button type="button" class="btn btn-success" wire:click="assignAllPermissions" 
+                        onclick="return confirm('Assign all permissions to this user?')">
+                    <i class="bi bi-check-all me-2"></i>Assign All Permissions
                 </button>
-                <button type="button" class="btn btn-danger" wire:click="clearAllCustomPermissions" 
-                        onclick="return confirm('Clear all custom permissions? This will remove all permissions except role defaults.')">
-                    <i class="bi bi-x-circle me-2"></i>Clear Custom Permissions
+                <button type="button" class="btn btn-danger" wire:click="clearAllPermissions" 
+                        onclick="return confirm('Clear all permissions from this user? This will remove all assigned permissions.')">
+                    <i class="bi bi-x-circle me-2"></i>Clear All Permissions
                 </button>
             </div>
         </div>
@@ -84,41 +86,41 @@
                         <tbody>
                             @foreach($allPermissions as $permission)
                                 @php
-                                    $hasRolePermission = $this->userRolePermissions->contains('id', $permission->id);
-                                    $hasCustomPermission = in_array($permission->id, $userPermissions);
-                                    $isEnabled = $hasRolePermission || $hasCustomPermission;
+                                    $hasPermission = in_array($permission->id, $userPermissions);
+                                    $isSuperAdmin = $user->isSuperAdmin();
                                 @endphp
-                                <tr class="{{ $isEnabled ? 'table-success' : '' }}">
+                                <tr class="{{ $hasPermission || $isSuperAdmin ? 'table-success' : '' }}">
                                     <td>
-                                        @if($hasRolePermission)
-                                            <span class="badge bg-primary" title="From Role">R</span>
-                                        @elseif($hasCustomPermission)
-                                            <span class="badge bg-warning" title="Custom Permission">C</span>
+                                        @if($isSuperAdmin)
+                                            <span class="badge bg-danger" title="Super Admin - All Permissions">SA</span>
+                                        @elseif($hasPermission)
+                                            <span class="badge bg-success" title="Assigned">✓</span>
                                         @else
                                             <span class="badge bg-secondary" title="Not Assigned">-</span>
                                         @endif
                                     </td>
                                     <td>
-                                        <strong>{{ $permission->name }}</strong>
+                                        <strong>{{ $permission->display_name }}</strong>
+                                        <small class="text-muted d-block">{{ $permission->name }}</small>
                                     </td>
-                                    <td>{{ $permission->description ?? 'No description available' }}</td>
+                                    <td>{{ $permission->description ?? ucfirst(str_replace('_', ' ', $permission->name)) }}</td>
                                     <td>
-                                        @if($hasRolePermission)
-                                            <span class="text-primary">Role: {{ ucfirst(str_replace('_', ' ', $user->role->name)) }}</span>
-                                        @elseif($hasCustomPermission)
-                                            <span class="text-warning">Custom</span>
+                                        @if($isSuperAdmin)
+                                            <span class="text-danger">Super Admin (Automatic)</span>
+                                        @elseif($hasPermission)
+                                            <span class="text-success">Assigned</span>
                                         @else
                                             <span class="text-muted">Not assigned</span>
                                         @endif
                                     </td>
                                     <td>
-                                        @if($hasRolePermission)
-                                            <span class="text-muted">Cannot modify (from role)</span>
+                                        @if($isSuperAdmin)
+                                            <span class="text-muted">Cannot modify (Super Admin)</span>
                                         @else
                                             <button type="button" 
-                                                    class="btn btn-sm {{ $hasCustomPermission ? 'btn-outline-danger' : 'btn-outline-success' }}"
+                                                    class="btn btn-sm {{ $hasPermission ? 'btn-outline-danger' : 'btn-outline-success' }}"
                                                     wire:click="togglePermission({{ $permission->id }})">
-                                                @if($hasCustomPermission)
+                                                @if($hasPermission)
                                                     <i class="bi bi-x-circle me-1"></i>Remove
                                                 @else
                                                     <i class="bi bi-plus-circle me-1"></i>Add
@@ -146,14 +148,14 @@
         <div class="card-body">
             <h6>Legend:</h6>
             <div class="d-flex gap-3">
-                <span class="badge bg-primary">R</span> <small>Permission from Role</small>
-                <span class="badge bg-warning">C</span> <small>Custom Permission</small>
+                <span class="badge bg-danger">SA</span> <small>Super Admin (All Permissions Automatic)</small>
+                <span class="badge bg-success">✓</span> <small>Permission Assigned</small>
                 <span class="badge bg-secondary">-</span> <small>Not Assigned</small>
             </div>
             <div class="mt-2">
                 <small class="text-muted">
-                    <strong>Note:</strong> Role permissions cannot be modified individually. 
-                    To change role permissions, modify the role itself in the Permissions section.
+                    <strong>Note:</strong> Permissions are assigned directly to users. 
+                    Super admin automatically has all permissions and cannot have them removed.
                 </small>
             </div>
         </div>

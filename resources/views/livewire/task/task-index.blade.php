@@ -99,7 +99,11 @@
                                         </small>
                                     </td>
                                     <td>
-                                        <span class="badge bg-info">{{ $task->project->title }}</span>
+                                        @if($task->project)
+                                            <span class="badge bg-info">{{ $task->project->title }}</span>
+                                        @else
+                                            <span class="badge bg-secondary">No Project</span>
+                                        @endif
                                     </td>
                                     <td>{{ $task->assignedTo->name }}</td>
                                     <td>

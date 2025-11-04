@@ -17,6 +17,12 @@ class Kernel extends ConsoleKernel
                  ->dailyAt('02:00')
                  ->withoutOverlapping()
                  ->runInBackground();
+        
+        // Send task reminders every hour
+        $schedule->command('tasks:send-reminders')
+                 ->hourly()
+                 ->withoutOverlapping()
+                 ->runInBackground();
     }
 
     /**

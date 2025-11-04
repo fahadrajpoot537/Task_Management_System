@@ -160,6 +160,10 @@
                                                class="btn btn-sm btn-outline-info" title="Manage Permissions">
                                                 <i class="bi bi-shield-check"></i>
                                             </a>
+                                            <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                    wire:click="openEdit({{ $user->id }})" title="Edit Employment">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </button>
                                             @if(auth()->user()->isSuperAdmin())
                                                 <button type="button" class="btn btn-sm btn-outline-warning" 
                                                         wire:click="resendInvitation({{ $user->id }})"
@@ -178,12 +182,14 @@
                             @endforeach
                         </tbody>
                     </table>
+                    
+                       <!-- Pagination -->
+                <div class="d-flex justify-content-center mt-4">
+                    {{ $this->users->links('pagination::bootstrap-5') }}
+                </div>
                 </div>
 
-                <!-- Pagination -->
-                <div class="d-flex justify-content-center mt-4">
-                    {{ $this->users->links() }}
-                </div>
+             
             @else
                 <div class="text-center py-5">
                     <i class="bi bi-people text-muted" style="font-size: 3rem;"></i>
@@ -213,6 +219,66 @@
         </div>
     </div>
 
+    <!-- Edit Employment Modal -->
+    <div class="modal fade" id="editEmploymentModal" tabindex="-1" wire:ignore.self>
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Employment Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" wire:click="cancelEdit"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Monthly Salary</label>
+                            <input type="number" step="0.01" class="form-control @error('edit_monthly_salary') is-invalid @enderror" wire:model.defer="edit_monthly_salary">
+                            @error('edit_monthly_salary')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Device User ID</label>
+                            <input type="text" class="form-control @error('edit_device_user_id') is-invalid @enderror" wire:model.defer="edit_device_user_id">
+                            @error('edit_device_user_id')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Check In Time</label>
+                            <input type="time" class="form-control @error('edit_check_in_time') is-invalid @enderror" wire:model.defer="edit_check_in_time">
+                            @error('edit_check_in_time')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Check Out Time</label>
+                            <input type="time" class="form-control @error('edit_check_out_time') is-invalid @enderror" wire:model.defer="edit_check_out_time">
+                            @error('edit_check_out_time')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Employment Status</label>
+                            <select class="form-select @error('edit_employment_status') is-invalid @enderror" wire:model.defer="edit_employment_status">
+                                <option value="">—</option>
+                                <option value="probation">Probation</option>
+                                <option value="permanent">Permanent</option>
+                                <option value="terminated">Terminated</option>
+                            </select>
+                            @error('edit_employment_status')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" wire:click="cancelEdit">Cancel</button>
+                    <button type="button" class="btn btn-primary" wire:click="saveEdit"><i class="bi bi-check2 me-1"></i>Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         let userIdToDelete = null;
 
@@ -228,6 +294,18 @@
                 const modal = bootstrap.Modal.getInstance(document.getElementById('deleteModal'));
                 modal.hide();
             }
+        });
+
+        // Edit modal open/close listeners
+        document.addEventListener('livewire:init', () => {
+            Livewire.on('open-edit-modal', () => {
+                const modal = new bootstrap.Modal(document.getElementById('editEmploymentModal'));
+                modal.show();
+            });
+            Livewire.on('close-edit-modal', () => {
+                const instance = bootstrap.Modal.getInstance(document.getElementById('editEmploymentModal'));
+                if (instance) instance.hide();
+            });
         });
     </script>
 

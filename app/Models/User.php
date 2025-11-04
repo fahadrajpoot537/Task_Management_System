@@ -143,17 +143,18 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user has a specific permission (from role or custom).
+     * Check if user has a specific permission (user-based only).
+     * Super admin automatically has all permissions.
      */
     public function hasPermission(string $permission): bool
     {
-        // Check role permissions
-        $hasRolePermission = $this->role->permissions()->where('name', $permission)->exists();
+        // Super admin has all permissions automatically
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
         
-        // Check custom permissions
-        $hasCustomPermission = $this->permissions()->where('name', $permission)->exists();
-        
-        return $hasRolePermission || $hasCustomPermission;
+        // Check user permissions only (no role-based permissions)
+        return $this->permissions()->where('name', $permission)->exists();
     }
 
     public function isSuperAdmin(): bool

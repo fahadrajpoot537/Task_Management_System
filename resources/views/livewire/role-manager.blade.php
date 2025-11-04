@@ -92,7 +92,7 @@
                                                    value="{{ $permission->id }}" 
                                                    wire:model="selectedPermissions">
                                             <label class="form-check-label" for="permission_{{ $permission->id }}">
-                                                {{ ucfirst(str_replace('_', ' ', $permission->name)) }}
+                                                {{ $permission->display_name }}
                                             </label>
                                         </div>
                                     </div>
@@ -187,7 +187,7 @@
                                             <div class="d-flex flex-wrap gap-1">
                                                 @foreach($role->permissions->take(3) as $permission)
                                                     <span class="badge bg-light text-dark small">
-                                                        {{ ucfirst(str_replace('_', ' ', $permission->name)) }}
+                                                        {{ $permission->display_name }}
                                                     </span>
                                                 @endforeach
                                                 @if($role->permissions->count() > 3)

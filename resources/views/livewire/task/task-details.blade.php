@@ -83,7 +83,7 @@
                         </div>
                     @endif --}}
                 </div>
-                @if ($task->attachments && $task->attachments->count() > 0)
+                {{-- @if ($task->attachments && $task->attachments->count() > 0) --}}
                 <!-- Attachments -->
                 <div class="card mb-3">
                     <div class="card-header py-2">
@@ -189,7 +189,7 @@
                         @endif
                     </div>
                 </div>
-                @endif
+                {{-- @endif --}}
             </div>
 
             <!-- Comments Section -->
@@ -338,7 +338,7 @@
 
         <!-- Sidebar -->
         <div class="col-lg-4">
-            @if (!$task->is_approved && $task->status->name === 'Complete')
+            @if ((!$task->is_approved && $task->status->name === 'Complete' && (auth()->user()->isSuperAdmin() || auth()->user()->isAdmin() || auth()->user()->isManager()) || $task->is_recurring_active === true))
             <div class="card mb-3">
                
                 <div class="card-header py-2">
@@ -388,7 +388,11 @@
                         <div class="info-card-compact">
                             <i class="bi bi-folder text-info me-2"></i>
                             <span class="text-muted small">Project:</span>
-                            <span class="badge bg-info small">{{ $task->project->title }}</span>
+                            @if($task->project)
+                                <span class="badge bg-info small">{{ $task->project->title }}</span>
+                            @else
+                                <span class="badge bg-secondary small">No Project</span>
+                            @endif
                         </div>
                         <div class="info-card-compact">
                             <i class="bi bi-flag text-warning me-2"></i>
@@ -497,7 +501,7 @@
                             <strong><i class="bi bi-info-circle me-2"></i>Task Information:</strong>
                             <p class="mb-0 mt-2">
                                 <strong>Title:</strong> {{ $task->title }}<br>
-                                <strong>Project:</strong> {{ $task->project->title }}<br>
+                                <strong>Project:</strong> {{ $task->project ? $task->project->title : 'No Project' }}<br>
                                 <strong>Assigned To:</strong>
                                 {{ $task->assignedTo ? $task->assignedTo->name : 'Unassigned' }}
                             </p>

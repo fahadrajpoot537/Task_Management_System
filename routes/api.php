@@ -14,6 +14,29 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
+Route::post('/attendance/upload', function (Request $request) {
+    $data = $request->input('attendance', []);
+
+    if (empty($data)) {
+        return response()->json(['message' => 'No data received'], 400);
+    }
+
+    foreach ($data as $record) {
+        // Save into your attendance table
+        \App\Models\AttendanceRecord::updateOrCreate(
+            [
+                'device_uid' => $record['id'],
+                'timestamp' => $record['timestamp'],
+            ],
+            [
+                'status' => 'present', // customize
+                'user_id' => 1,        // map your user if needed
+            ]
+        );
+    }
+
+    return response()->json(['message' => 'Data uploaded successfully'], 200);
+});
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });

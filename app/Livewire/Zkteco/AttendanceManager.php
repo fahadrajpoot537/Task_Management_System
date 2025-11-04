@@ -7,6 +7,7 @@ use Jmrashed\Zkteco\Lib\ZKTeco;
 use App\Models\User;
 use App\Models\AttendanceRecord;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class AttendanceManager extends Component
 {
@@ -140,7 +141,7 @@ class AttendanceManager extends Component
                 
                 if (!$user) {
                     // Log unmatched records for debugging
-                    \Log::info("No user found for device_user_id: {$deviceUserId}");
+                    Log::info("No user found for device_user_id: {$deviceUserId}");
                     continue; // Skip if user not found
                 }
 
@@ -163,7 +164,7 @@ class AttendanceManager extends Component
                     // Determine if this is likely a check-out based on time
                     $expectedCheckOut = $user->check_out_time ? Carbon::parse($recordDate . ' ' . $user->check_out_time) : null;
                     
-                    if ($expectedCheckOut && $actualTime->greaterThan($expectedCheckOut->subHours(2))) {
+                    if ($expectedCheckOut && $actualTime->greaterThan($expectedCheckOut->copy()->subHours(2))) {
                         // This is likely a check-out
                         $isCheckOut = true;
                         if ($actualTime->lessThan($expectedCheckOut)) {
@@ -172,12 +173,31 @@ class AttendanceManager extends Component
                         }
                     } else {
                         // This is likely a check-in - compare with COMPANY SET TIME
-                        if ($actualTime->greaterThan($companySetCheckInTime)) {
-                            // User checked in AFTER company set time = LATE (ZERO TOLERANCE)
-                            $lateMinutes = $actualTime->diffInMinutes($companySetCheckInTime);
+                        // Ignore seconds - compare only at minute level
+                        $companySetCheckInTimeNoSeconds = $companySetCheckInTime->copy()->startOfMinute();
+                        $actualTimeNoSeconds = $actualTime->copy()->startOfMinute();
+                        
+                        if ($actualTimeNoSeconds->greaterThan($companySetCheckInTimeNoSeconds)) {
+                            // User checked in AFTER company set time (ignoring seconds) = LATE
+                            $calculatedLateMinutes = $actualTimeNoSeconds->diffInMinutes($companySetCheckInTimeNoSeconds);
+                            
+                            // Apply late calculation rules:
+                            // - If late < 30 minutes: store exact late minutes
+                            // - If late >= 30 minutes and < 60 minutes: store 60 minutes (1 hour)
+                            // - If late >= 60 minutes: store exact late minutes
+                            if ($calculatedLateMinutes < 30) {
+                                $lateMinutes = (int)$calculatedLateMinutes; // Store exact time
+                            } elseif ($calculatedLateMinutes >= 30 && $calculatedLateMinutes < 60) {
+                                $lateMinutes = 60; // Mark as 1 hour
+                            } else {
+                                $lateMinutes = (int)$calculatedLateMinutes; // Store exact time for 1 hour or more
+                            }
+                            
                             $status = 'late'; // Any late arrival is marked as late
+                            
+                            Log::info("Late calculation for user {$user->name}: Calculated={$calculatedLateMinutes} min, Stored={$lateMinutes} min, Check-in={$actualCheckInTime}, Expected={$expectedCheckInTime}");
                         } else {
-                            // User checked in ON TIME or EARLY = PRESENT
+                            // User checked in ON TIME or EARLY (same minute or earlier, ignoring seconds) = PRESENT
                             $status = 'present';
                         }
                     }
@@ -213,12 +233,46 @@ class AttendanceManager extends Component
                             $updateData['check_in_time'] = $actualCheckInTime;
                             $updateData['late_minutes'] = $lateMinutes;
                             $updateData['status'] = $status;
+                        } else {
+                            // Even if we don't update check-in time (because existing is earlier),
+                            // we should recalculate late_minutes based on the EARLIEST check-in time
+                            // Use the existing check-in time to recalculate late minutes
+                            $existingCheckInTime = $existingRecord->check_in_time;
+                            $existingCheckInTimeObj = Carbon::parse($recordDate . ' ' . $existingCheckInTime);
+                            $companySetCheckInTime = Carbon::parse($recordDate . ' ' . $expectedCheckInTime);
+                            
+                            $companySetCheckInTimeNoSeconds = $companySetCheckInTime->copy()->startOfMinute();
+                            $existingCheckInTimeNoSeconds = $existingCheckInTimeObj->copy()->startOfMinute();
+                            
+                            if ($existingCheckInTimeNoSeconds->greaterThan($companySetCheckInTimeNoSeconds)) {
+                                $calculatedLateMinutes = $existingCheckInTimeNoSeconds->diffInMinutes($companySetCheckInTimeNoSeconds);
+                                
+                                // Apply late calculation rules:
+                                // - If late < 30 minutes: store exact late minutes
+                                // - If late >= 30 minutes and < 60 minutes: store 60 minutes (1 hour)
+                                // - If late >= 60 minutes: store exact late minutes
+                                if ($calculatedLateMinutes < 30) {
+                                    $recalculatedLateMinutes = (int)$calculatedLateMinutes;
+                                } elseif ($calculatedLateMinutes >= 30 && $calculatedLateMinutes < 60) {
+                                    $recalculatedLateMinutes = 60;
+                                } else {
+                                    $recalculatedLateMinutes = (int)$calculatedLateMinutes;
+                                }
+                                
+                                $updateData['late_minutes'] = $recalculatedLateMinutes;
+                                $updateData['status'] = 'late';
+                                
+                                Log::info("Recalculated late for user {$user->name}: Calculated={$calculatedLateMinutes} min, Stored={$recalculatedLateMinutes} min, Check-in={$existingCheckInTime}, Expected={$expectedCheckInTime}");
+                            } else {
+                                $updateData['late_minutes'] = 0;
+                                $updateData['status'] = 'present';
+                            }
                         }
                     }
                     
                     $existingRecord->update($updateData);
                     $savedCount++;
-                    \Log::info("Updated attendance record for user: {$user->name} (ID: {$deviceUserId}) - " . 
+                    Log::info("Updated attendance record for user: {$user->name} (ID: {$deviceUserId}) - " . 
                               ($isCheckOut ? "Check-out: {$actualCheckInTime}, Early: {$earlyMinutes} min" : "Check-in: {$actualCheckInTime}, Company Set Time: {$expectedCheckInTime}, Late: {$lateMinutes} min") . 
                               ", Status: {$status}");
                 } else {
@@ -240,7 +294,7 @@ class AttendanceManager extends Component
                     
                     AttendanceRecord::create($recordData);
                     $savedCount++;
-                    \Log::info("Created attendance record for user: {$user->name} (ID: {$deviceUserId}) - " . 
+                    Log::info("Created attendance record for user: {$user->name} (ID: {$deviceUserId}) - " . 
                               ($isCheckOut ? "Check-out: {$actualCheckInTime}, Early: {$earlyMinutes} min" : "Check-in: {$actualCheckInTime}, Company Set Time: {$expectedCheckInTime}, Late: {$lateMinutes} min") . 
                               ", Status: {$status}");
                 }

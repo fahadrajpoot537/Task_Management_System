@@ -10,6 +10,7 @@ use App\Mail\TaskCreated;
 use App\Mail\TaskStatusChanged;
 use App\Mail\TaskNoteCommentAdded;
 use App\Mail\TaskRevisitNotification;
+use App\Mail\TaskReminder;
 use App\Mail\TaskUpdated;
 use App\Models\Task;
 use App\Models\User;
@@ -350,6 +351,50 @@ class EmailNotificationService
      * Get recipients for task revisit notifications
      */
     private function getTaskRevisitRecipients(Task $task)
+    {
+        $recipients = collect();
+        
+        // Notify all assignees of the task
+        foreach ($task->assignees as $assignee) {
+            $recipients->push($assignee);
+        }
+        
+        // Also notify the legacy assigned user if different from assignees
+        if ($task->assignedTo && !$recipients->contains('id', $task->assignedTo->id)) {
+            $recipients->push($task->assignedTo);
+        }
+        
+        return $recipients->unique('id');
+    }
+
+    /**
+     * Send task reminder email to assignees
+     */
+    public function sendTaskReminderNotification(Task $task)
+    {
+        try {
+            $recipients = $this->getTaskReminderRecipients($task);
+            
+            foreach ($recipients as $recipient) {
+                Mail::to($recipient->email)->send(new TaskReminder($task, 'Task Reminder: Complete by Due Date', 'Task Reminder'));
+            }
+            
+            Log::info('Task reminder email sent', [
+                'task_id' => $task->id,
+                'recipients' => $recipients->pluck('email')->toArray(),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to send task reminder email', [
+                'task_id' => $task->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Get recipients for task reminder notifications
+     */
+    private function getTaskReminderRecipients(Task $task)
     {
         $recipients = collect();
         
