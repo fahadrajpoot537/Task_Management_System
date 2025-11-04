@@ -17,7 +17,21 @@ class Permission extends Model
      */
     protected $fillable = [
         'name',
+        'display_name',
     ];
+    
+    /**
+     * Get the display name for the permission
+     * If display_name is not set, generate it from the name
+     */
+    public function getDisplayNameAttribute($value)
+    {
+        if ($value !== null) {
+            return $value;
+        }
+        // Fallback: generate display name from permission name
+        return ucfirst(str_replace('_', ' ', $this->attributes['name'] ?? $this->name));
+    }
 
     /**
      * The roles that belong to the permission.

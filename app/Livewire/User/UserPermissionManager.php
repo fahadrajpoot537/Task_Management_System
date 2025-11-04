@@ -16,7 +16,13 @@ class UserPermissionManager extends Component
 
     public function mount($userId)
     {
-        $this->user = User::with(['role.permissions', 'permissions'])->findOrFail($userId);
+        // Check if user has permission to manage user permissions
+        $currentUser = auth()->user();
+        if (!$currentUser->isSuperAdmin() && !$currentUser->hasPermission('manage_users')) {
+            abort(403, 'You do not have permission to manage user permissions.');
+        }
+        
+        $this->user = User::with(['role', 'permissions'])->findOrFail($userId);
         $this->loadPermissions();
     }
 
@@ -28,7 +34,7 @@ class UserPermissionManager extends Component
                   ->orWhere('description', 'like', '%' . $this->search . '%');
         })->orderBy('name')->get();
 
-        // Get user's current permissions (both from role and custom)
+        // Get user's current permissions (user-based only)
         $this->userPermissions = $this->user->permissions->pluck('id')->toArray();
     }
 
@@ -39,6 +45,12 @@ class UserPermissionManager extends Component
 
     public function togglePermission($permissionId)
     {
+        // Super admin cannot have permissions removed
+        if ($this->user->isSuperAdmin() && in_array($permissionId, $this->userPermissions)) {
+            session()->flash('info', 'Super admin has all permissions automatically. Cannot remove permissions.');
+            return;
+        }
+        
         $permission = Permission::findOrFail($permissionId);
         
         if (in_array($permissionId, $this->userPermissions)) {
@@ -64,45 +76,42 @@ class UserPermissionManager extends Component
         }
     }
 
-    public function resetToRolePermissions()
+    public function assignAllPermissions()
     {
-        // Remove all custom permissions
-        $this->user->permissions()->detach();
+        if ($this->user->isSuperAdmin()) {
+            session()->flash('info', 'Super admin already has all permissions automatically.');
+            return;
+        }
         
-        // Add all role permissions
-        $rolePermissions = $this->user->role->permissions->pluck('id')->toArray();
-        $this->user->permissions()->attach($rolePermissions);
-        
-        $this->userPermissions = $rolePermissions;
+        // Assign all permissions to user
+        $allPermissionIds = $this->allPermissions->pluck('id')->toArray();
+        $this->user->permissions()->sync($allPermissionIds);
+        $this->userPermissions = $allPermissionIds;
         
         // Log the action
-        Log::createLog(auth()->id(), 'reset_user_permissions', 
-            "Reset permissions to role defaults for user: {$this->user->name}");
+        Log::createLog(auth()->id(), 'assign_all_permissions', 
+            "Assigned all permissions to user: {$this->user->name}");
             
-        session()->flash('success', 'User permissions reset to role defaults.');
+        session()->flash('success', 'All permissions assigned to user.');
     }
 
-    public function clearAllCustomPermissions()
+    public function clearAllPermissions()
     {
-        // Remove all custom permissions (keep only role permissions)
+        // Super admin cannot have permissions cleared
+        if ($this->user->isSuperAdmin()) {
+            session()->flash('error', 'Cannot clear permissions from super admin.');
+            return;
+        }
+        
+        // Remove all permissions
         $this->user->permissions()->detach();
         $this->userPermissions = [];
         
         // Log the action
         Log::createLog(auth()->id(), 'clear_user_permissions', 
-            "Cleared all custom permissions for user: {$this->user->name}");
+            "Cleared all permissions from user: {$this->user->name}");
             
-        session()->flash('success', 'All custom permissions cleared.');
-    }
-
-    public function getUserRolePermissionsProperty()
-    {
-        return $this->user->role->permissions;
-    }
-
-    public function getUserCustomPermissionsProperty()
-    {
-        return $this->user->permissions;
+        session()->flash('success', 'All permissions cleared from user.');
     }
 
     public function render()

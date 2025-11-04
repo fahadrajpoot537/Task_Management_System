@@ -19,6 +19,13 @@ class UserManager extends Component
     public $search = '';
     public $roleFilter = '';
     public $showCreateForm = false;
+	// Edit modal state
+	public $editingUserId = null;
+	public $edit_monthly_salary = '';
+	public $edit_device_user_id = '';
+	public $edit_check_in_time = '';
+	public $edit_check_out_time = '';
+	public $edit_employment_status = '';
     
     // Create user form fields
     public $name = '';
@@ -147,6 +154,70 @@ class UserManager extends Component
         session()->flash('success', 'Invitation resent successfully!');
     }
 
+	public function openEdit($userId)
+	{
+		$user = User::findOrFail($userId);
+		$this->editingUserId = $user->id;
+		$this->edit_monthly_salary = $user->monthly_salary;
+		$this->edit_device_user_id = $user->device_user_id;
+		$this->edit_check_in_time = $user->check_in_time ? substr($user->check_in_time, 0, 5) : '';
+		$this->edit_check_out_time = $user->check_out_time ? substr($user->check_out_time, 0, 5) : '';
+		$this->edit_employment_status = $user->employment_status;
+
+		$this->dispatch('open-edit-modal');
+	}
+
+	public function cancelEdit()
+	{
+		$this->editingUserId = null;
+		$this->edit_monthly_salary = '';
+		$this->edit_device_user_id = '';
+		$this->edit_check_in_time = '';
+		$this->edit_check_out_time = '';
+		$this->edit_employment_status = '';
+		$this->resetErrorBag();
+		$this->dispatch('close-edit-modal');
+	}
+
+	public function saveEdit()
+	{
+		$this->validate([
+			'edit_monthly_salary' => 'nullable|numeric|min:0',
+			'edit_device_user_id' => 'nullable|max:255',
+			'edit_check_in_time' => ['nullable','regex:/^\d{2}:\d{2}(?::\d{2})?$/'],
+			'edit_check_out_time' => ['nullable','regex:/^\d{2}:\d{2}(?::\d{2})?$/'],
+			'edit_employment_status' => 'nullable|in:probation,permanent,terminated',
+		]);
+
+		$user = User::findOrFail($this->editingUserId);
+
+		$user->update([
+			'monthly_salary' => $this->edit_monthly_salary !== '' ? $this->edit_monthly_salary : null,
+			'device_user_id' => $this->edit_device_user_id !== '' ? (string)$this->edit_device_user_id : null,
+			'check_in_time' => $this->edit_check_in_time !== '' ? substr($this->edit_check_in_time, 0, 5) : null,
+			'check_out_time' => $this->edit_check_out_time !== '' ? substr($this->edit_check_out_time, 0, 5) : null,
+			'employment_status' => $this->edit_employment_status !== '' ? strtolower($this->edit_employment_status) : null,
+		]);
+
+		session()->flash('success', 'User updated successfully.');
+		$this->dispatch('close-edit-modal');
+		$this->cancelEdit();
+	}
+
+	public function makePermanent($userId)
+	{
+		$user = User::findOrFail($userId);
+		$user->update(['employment_status' => 'permanent']);
+		session()->flash('success', $user->name . ' is now permanent.');
+	}
+
+	public function terminate($userId)
+	{
+		$user = User::findOrFail($userId);
+		$user->update(['employment_status' => 'terminated']);
+		session()->flash('success', $user->name . ' has been terminated.');
+	}
+
     public function getUsersProperty()
     {
         $user = auth()->user();
@@ -192,7 +263,10 @@ class UserManager extends Component
         })->get();
     }
 
-    public function render()
+	/**
+	 * @return mixed
+	 */
+	public function render()
     {
         return view('livewire.user.user-manager')
             ->layout('layouts.app');

@@ -307,7 +307,7 @@
                             @endforeach
                         </ul>
                     </div>
-                    <div class="dropdown">
+                    {{-- <div class="dropdown">
                         <button class="btn btn-sm btn-outline-info dropdown-toggle" type="button"
                             data-bs-toggle="dropdown">
                             <i class="bi bi-gear me-1"></i>Update Nature
@@ -318,7 +318,7 @@
                             <li><a class="dropdown-item" href="#"
                                     onclick="bulkUpdateNature('recurring', 'Recurring')">Recurring</a></li>
                         </ul>
-                    </div>
+                    </div> --}}
                     <button class="btn btn-sm btn-outline-danger" onclick="bulkDeleteTasks()">
                         <i class="bi bi-trash me-1"></i>Delete Selected
                     </button>
@@ -786,7 +786,7 @@
                                     </div>
                                 </td>
                                 <td class="d-none d-lg-table-cell">
-                                    <span class="badge bg-info">{{ $task->nature_of_task_display }}</span>
+                                    <span class="badge bg-info">{{ ucfirst(str_replace('_', ' ', $task->nature_of_task)) }}</span>
                                 </td>
                             
                                 {{-- <td class="d-none d-lg-table-cell">
@@ -885,10 +885,10 @@
                 <div wire:ignore.self class="modal fade show d-block" tabindex="-1"
                     role="dialog" style="@if ($showAdminReviewModal) background: rgba(0,0,0,0.5); z-index: 1055; @endif">
                     <div class="modal-dialog modal-lg modal-dialog-centered" role="document" style="z-index: 1056;">
-                        <div class="modal-content">
+                        <div class="modal-content admin-review-modal-content">
     
                         <!-- Header -->
-                        <div class="modal-header bg-primary text-white">
+                        <div class="modal-header admin-review-modal-header">
                             <h5 class="modal-title fw-bold">
                                 @if($adminReviewAction === 'approve')
                                     <i class="bi bi-check-circle me-2"></i>Approve Task
@@ -903,23 +903,23 @@
                         </div>
     
                             <!-- Body -->
-                            <div class="modal-body">
+                            <div class="modal-body" style="background-color: var(--bg-secondary); color: var(--text-primary);">
                                 @php
                                     $task = \App\Models\Task::find($adminReviewTaskId);
                                 @endphp
     
                                 @if ($task)
                                     <!-- Task Details -->
-                                    <div class="bg-light p-3 rounded mb-4">
-                                        <h6 class="fw-bold mb-3">
+                                    <div class="p-3 rounded mb-4 task-details-box">
+                                        <h6 class="fw-bold mb-3" style="color: var(--text-primary);">
                                             <i class="bi bi-list-task text-primary me-2"></i>Task Details
                                         </h6>
     
                                         <div class="row">
                                             <div class="col-md-6 mb-2">
-                                                <p><strong>Title:</strong> {{ $task->title }}</p>
-                                                <p><strong>Project:</strong> {{ $task->project->title ?? 'No Project' }}</p>
-                                                <p>
+                                                <p style="color: var(--text-primary);"><strong>Title:</strong> {{ $task->title }}</p>
+                                                <p style="color: var(--text-primary);"><strong>Project:</strong> {{ $task->project->title ?? 'No Project' }}</p>
+                                                <p style="color: var(--text-primary);">
                                                     <strong>Priority:</strong>
                                                     <span class="badge"
                                                         style="background: {{ $task->priority->color ?? '#6c757d' }};">
@@ -928,12 +928,12 @@
                                                 </p>
                                             </div>
                                             <div class="col-md-6 mb-2">
-                                                <p><strong>Assigned To:</strong> {{ $task->assigneeNames ?? 'N/A' }}</p>
+                                                <p style="color: var(--text-primary);"><strong>Assigned To:</strong> {{ $task->assigneeNames ?? 'N/A' }}</p>
                                                 @if ($task->due_date)
-                                                    <p><strong>Due Date:</strong>
+                                                    <p style="color: var(--text-primary);"><strong>Due Date:</strong>
                                                         {{ \Carbon\Carbon::parse($task->due_date)->format('M d, Y') }}</p>
                                                 @endif
-                                                <p><strong>Completed At:</strong>
+                                                <p style="color: var(--text-primary);"><strong>Completed At:</strong>
                                                     {{ $task->completed_at ? \Carbon\Carbon::parse($task->completed_at)->format('M d, Y H:i') : 'N/A' }}
                                                 </p>
                                             </div>
@@ -941,9 +941,9 @@
     
                                         @if ($task->description)
                                             <div class="mt-3">
-                                                <strong>Description:</strong>
-                                                <div class="border rounded p-2 bg-white mt-1">
-                                                    {{ $task->description }}
+                                                <strong style="color: var(--text-primary);">Description:</strong>
+                                                <div class="border rounded p-2 mt-1 description-box">
+                                                    <span style="color: var(--text-primary);">{{ $task->description }}</span>
                                                 </div>
                                             </div>
                                         @endif
@@ -951,7 +951,7 @@
     
                                 <!-- Comments Section -->
                                 <div class="mb-4">
-                                    <label class="fw-bold mb-2">
+                                    <label class="fw-bold mb-2" style="color: var(--text-primary);">
                                         <i class="bi bi-chat-text me-2"></i>
                                         @if($adminReviewAction === 'approve')
                                             Approval Comments (Optional)
@@ -961,7 +961,7 @@
                                             Admin Comments (Optional)
                                         @endif
                                     </label>
-                                    <textarea wire:model="adminReviewComments" rows="4" class="form-control"
+                                    <textarea wire:model="adminReviewComments" rows="4" class="form-control admin-review-textarea"
                                         placeholder="@if($adminReviewAction === 'approve')Add any comments about the task completion...@elseif($adminReviewAction === 'revisit')Explain why the task needs to be revisited...@elseAdd any comments or feedback for the assignee...@endif"></textarea>
                                     <small class="text-muted">
                                         @if($adminReviewAction === 'approve')
@@ -1000,7 +1000,7 @@
                             </div>
     
                         <!-- Footer -->
-                        <div class="modal-footer">
+                        <div class="modal-footer" style="background-color: var(--bg-secondary); border-top: 1px solid var(--border-color);">
                             <button type="button" class="btn btn-secondary" wire:click="closeAdminReviewModal">
                                 <i class="bi bi-x-circle me-2"></i>Cancel
                             </button>
@@ -1009,14 +1009,14 @@
                                     <i class="bi bi-check-circle me-2"></i>Approve Task
                                 </button>
                             @elseif($adminReviewAction === 'revisit')
-                                <button type="button" class="btn btn-warning text-dark" wire:click="revisitTask">
+                                <button type="button" class="btn btn-warning admin-review-warning-btn" wire:click="revisitTask">
                                     <i class="bi bi-arrow-clockwise me-2"></i>Mark for Revisit
                                 </button>
                             @else
                                 <button type="button" class="btn btn-success" wire:click="approveTask">
                                     <i class="bi bi-check-circle me-2"></i>Approve Task
                                 </button>
-                                <button type="button" class="btn btn-warning text-dark" wire:click="revisitTask">
+                                <button type="button" class="btn btn-warning admin-review-warning-btn" wire:click="revisitTask">
                                     <i class="bi bi-arrow-clockwise me-2"></i>Mark for Revisit
                                 </button>
                             @endif
@@ -2742,14 +2742,21 @@
 
                                 <!-- Project and Assignee -->
                                 <div class="col-md-6 mb-3">
-                                    <label for="modalTaskProjectId" class="form-label">Project <span class="text-danger">*</span></label>
-                                    <select class="form-select @error('modalTaskProjectId') is-invalid @enderror" 
-                                            id="modalTaskProjectId" wire:model="modalTaskProjectId" required>
-                                        <option value="">Select a project</option>
-                                        @foreach($this->projects as $project)
-                                            <option value="{{ $project->id }}">{{ $project->title }}</option>
-                                        @endforeach
-                                    </select>
+                                    <label for="modalTaskProjectId" class="form-label">Project</label>
+                                    <div class="input-group">
+                                        <select class="form-select @error('modalTaskProjectId') is-invalid @enderror" 
+                                                id="modalTaskProjectId" wire:model="modalTaskProjectId">
+                                            <option value="">Select a project (Optional)</option>
+                                            @foreach($this->projects as $project)
+                                                <option value="{{ $project->id }}">{{ $project->title }}</option>
+                                            @endforeach
+                                        </select>
+                                        <button type="button" class="btn btn-outline-primary" 
+                                                wire:click="openProjectCreateModal" 
+                                                title="Add New Project">
+                                            <i class="bi bi-plus-lg"></i>
+                                        </button>
+                                    </div>
                                     @error('modalTaskProjectId')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -2808,13 +2815,20 @@
 
                                 <div class="col-md-6 mb-3">
                                     <label for="modalTaskCategory" class="form-label">Category <span class="text-danger">*</span></label>
-                                    <select class="form-select @error('modalTaskCategory') is-invalid @enderror" 
-                                            id="modalTaskCategory" wire:model="modalTaskCategory" required>
-                                        <option value="">Select category</option>
-                                        @foreach($this->categories as $category)
-                                            <option value="{{ $category->id }}">{{ $category->name }}</option>
-                                        @endforeach
-                                    </select>
+                                    <div class="input-group">
+                                        <select class="form-select @error('modalTaskCategory') is-invalid @enderror" 
+                                                id="modalTaskCategory" wire:model="modalTaskCategory" required>
+                                            <option value="">Select category</option>
+                                            @foreach($this->categories as $category)
+                                                <option value="{{ $category->id }}">{{ $category->name }}</option>
+                                            @endforeach
+                                        </select>
+                                        <button type="button" class="btn btn-outline-primary" 
+                                                wire:click="openCategoryCreateModal" 
+                                                title="Add New Category">
+                                            <i class="bi bi-plus-lg"></i>
+                                        </button>
+                                    </div>
                                     @error('modalTaskCategory')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -2926,6 +2940,192 @@
         </div>
     @endif
 
+    <!-- Project Creation Modal -->
+    @if($showProjectCreateModal)
+        <div wire:ignore.self class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0,0,0,0.7); z-index: 1060; position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: auto;">
+            <div class="modal-dialog modal-dialog-centered modal-lg" style="z-index: 1061; position: relative;">
+                <div class="modal-content" style="z-index: 1062;">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title fw-bold">
+                            <i class="bi bi-folder-plus me-2"></i>Create New Project
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" wire:click="closeProjectCreateModal"></button>
+                    </div>
+                    
+                    <!-- Flash Messages -->
+                    @if (session()->has('success'))
+                        <div class="alert alert-success alert-dismissible fade show m-3" role="alert">
+                            <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    @endif
+
+                    @if (session()->has('error'))
+                        <div class="alert alert-danger alert-dismissible fade show m-3" role="alert">
+                            <i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    @endif
+                    
+                    <div class="modal-body">
+                        <form wire:submit="createProjectFromModal">
+                            <!-- Project Title -->
+                            <div class="mb-3">
+                                <label for="newProjectTitle" class="form-label">Project Title <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control @error('newProjectTitle') is-invalid @enderror" 
+                                       id="newProjectTitle" wire:model="newProjectTitle" required
+                                       placeholder="Enter a descriptive project title...">
+                                <div class="form-text">
+                                    <i class="bi bi-lightbulb me-1"></i>
+                                    Choose a clear, descriptive name that reflects your project's purpose
+                                </div>
+                                @error('newProjectTitle')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <!-- Project Description -->
+                            <div class="mb-3">
+                                <label for="newProjectDescription" class="form-label">Project Description <span class="text-danger">*</span></label>
+                                <textarea class="form-control @error('newProjectDescription') is-invalid @enderror" 
+                                          id="newProjectDescription" wire:model="newProjectDescription" 
+                                          rows="5" required
+                                          placeholder="Describe the project's purpose, goals, scope, deliverables, and key information (minimum 10 characters)..."></textarea>
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Describe the project's purpose, goals, scope, deliverables, and key information (minimum 10 characters)
+                                </div>
+                                @error('newProjectDescription')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" wire:click="closeProjectCreateModal">
+                            <i class="bi bi-x-circle me-2"></i>Cancel
+                        </button>
+                        <button type="button" class="btn btn-primary" wire:click="createProjectFromModal">
+                            <i class="bi bi-check-circle me-2"></i>Create Project
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- Category Creation Modal -->
+    @if($showCategoryCreateModal)
+        <div wire:ignore.self class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0,0,0,0.7); z-index: 1060; position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: auto;">
+            <div class="modal-dialog modal-dialog-centered modal-lg" style="z-index: 1061; position: relative;">
+                <div class="modal-content" style="z-index: 1062;">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title fw-bold">
+                            <i class="bi bi-tag-plus me-2"></i>Create New Category
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" wire:click="closeCategoryCreateModal"></button>
+                    </div>
+                    
+                    <!-- Flash Messages -->
+                    @if (session()->has('success'))
+                        <div class="alert alert-success alert-dismissible fade show m-3" role="alert">
+                            <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    @endif
+
+                    @if (session()->has('error'))
+                        <div class="alert alert-danger alert-dismissible fade show m-3" role="alert">
+                            <i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    @endif
+                    
+                    <div class="modal-body">
+                        <form wire:submit="createCategoryFromModal">
+                            <!-- Category Name -->
+                            <div class="mb-3">
+                                <label for="newCategoryTitle" class="form-label">Category Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control @error('newCategoryTitle') is-invalid @enderror" 
+                                       id="newCategoryTitle" wire:model.live="newCategoryTitle" required
+                                       placeholder="Enter category name...">
+                                <div class="form-text">
+                                    <i class="bi bi-lightbulb me-1"></i>
+                                    Choose a clear, descriptive name for the category
+                                </div>
+                                @error('newCategoryTitle')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <!-- Category Icon -->
+                            <div class="mb-3">
+                                <label for="newCategoryIcon" class="form-label">Icon <span class="text-danger">*</span></label>
+                                <select class="form-select @error('newCategoryIcon') is-invalid @enderror" 
+                                        id="newCategoryIcon" wire:model.live="newCategoryIcon" required>
+                                    <option value="bi-list-task">List Task</option>
+                                    <option value="bi-code-slash">Code</option>
+                                    <option value="bi-palette">Palette</option>
+                                    <option value="bi-bug">Bug</option>
+                                    <option value="bi-file-text">Document</option>
+                                    <option value="bi-people">People</option>
+                                    <option value="bi-gear">Settings</option>
+                                    <option value="bi-calendar">Calendar</option>
+                                    <option value="bi-check-circle">Check</option>
+                                    <option value="bi-clock">Clock</option>
+                                    <option value="bi-folder">Folder</option>
+                                    <option value="bi-chat-dots">Chat</option>
+                                    <option value="bi-graph-up">Graph</option>
+                                    <option value="bi-lightning">Lightning</option>
+                                    <option value="bi-star">Star</option>
+                                </select>
+                                <div class="form-text">
+                                    <i class="bi {{ $newCategoryIcon }} me-1"></i>
+                                    Preview: <span class="badge bg-{{ $newCategoryColor }}"><i class="bi {{ $newCategoryIcon }} me-1"></i>{{ $newCategoryTitle ?: 'Category Name' }}</span>
+                                </div>
+                                @error('newCategoryIcon')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <!-- Category Color -->
+                            <div class="mb-3">
+                                <label for="newCategoryColor" class="form-label">Color <span class="text-danger">*</span></label>
+                                <select class="form-select @error('newCategoryColor') is-invalid @enderror" 
+                                        id="newCategoryColor" wire:model.live="newCategoryColor" required>
+                                    <option value="primary">Primary (Blue)</option>
+                                    <option value="secondary">Secondary (Gray)</option>
+                                    <option value="success">Success (Green)</option>
+                                    <option value="danger">Danger (Red)</option>
+                                    <option value="warning">Warning (Yellow)</option>
+                                    <option value="info">Info (Cyan)</option>
+                                    <option value="dark">Dark (Black)</option>
+                                </select>
+                                <div class="form-text">
+                                    <i class="bi bi-palette me-1"></i>
+                                    Choose a color for the category badge
+                                </div>
+                                @error('newCategoryColor')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" wire:click="closeCategoryCreateModal">
+                            <i class="bi bi-x-circle me-2"></i>Cancel
+                        </button>
+                        <button type="button" class="btn btn-primary" wire:click="createCategoryFromModal">
+                            <i class="bi bi-check-circle me-2"></i>Create Category
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <!-- Task Edit Modal -->
     @if($showEditModal)
         <div wire:ignore.self class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5); z-index: 1055;">
@@ -2968,10 +3168,10 @@
 
                                 <!-- Project and Assignee -->
                                 <div class="col-md-6 mb-3">
-                                    <label for="editModalTaskProjectId" class="form-label">Project <span class="text-danger">*</span></label>
+                                    <label for="editModalTaskProjectId" class="form-label">Project</label>
                                     <select class="form-select @error('editModalTaskProjectId') is-invalid @enderror" 
-                                            id="editModalTaskProjectId" wire:model="editModalTaskProjectId" required>
-                                        <option value="">Select a project</option>
+                                            id="editModalTaskProjectId" wire:model="editModalTaskProjectId">
+                                        <option value="">Select a project (Optional)</option>
                                         @foreach($this->projects as $project)
                                             <option value="{{ $project->id }}">{{ $project->title }}</option>
                                         @endforeach
@@ -3252,6 +3452,74 @@
         [data-bs-theme="dark"] .employee-list::-webkit-scrollbar-thumb:hover {
             background: #6c757d;
         }
+        
+        /* Admin Review Modal Dark Theme Support */
+        .admin-review-modal-header {
+            background: linear-gradient(135deg, #0d6efd 0%, #6610f2 100%);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+        
+        [data-bs-theme="dark"] .admin-review-modal-content {
+            background-color: var(--bg-secondary);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        [data-bs-theme="dark"] .admin-review-modal-content .modal-header {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border-bottom-color: var(--border-color);
+            color: #ffffff;
+        }
+        
+        .task-details-box {
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+        }
+        
+        [data-bs-theme="dark"] .task-details-box {
+            background-color: var(--bg-tertiary);
+            border-color: var(--border-color);
+        }
+        
+        .description-box {
+            background-color: var(--bg-secondary);
+            border-color: var(--border-color);
+        }
+        
+        [data-bs-theme="dark"] .description-box {
+            background-color: var(--bg-secondary);
+            border-color: var(--border-color);
+        }
+        
+        [data-bs-theme="dark"] .admin-review-textarea {
+            background-color: var(--bg-tertiary);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        [data-bs-theme="dark"] .admin-review-textarea:focus {
+            background-color: var(--bg-tertiary);
+            border-color: #0d6efd;
+            color: var(--text-primary);
+            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+        }
+        
+        [data-bs-theme="dark"] .admin-review-textarea::placeholder {
+            color: var(--text-muted);
+        }
+        
+        [data-bs-theme="dark"] .admin-review-warning-btn {
+            color: #000 !important;
+        }
+        
+        [data-bs-theme="dark"] .text-muted {
+            color: var(--text-muted) !important;
+        }
+        
+        [data-bs-theme="dark"] .admin-review-modal-content .text-danger {
+            color: #f56565 !important;
+        }
     </style>
 
     <!-- Task Clone Modal -->
@@ -3445,6 +3713,34 @@
             setTimeout(window.initializeSelect2, 100);
             setTimeout(initializeTooltips, 100);
             setTimeout(initializePopovers, 100);
+        });
+
+        // Listen for project creation to refresh projects list
+        Livewire.on('project-created', () => {
+            // Force Livewire to re-render and update the projects dropdown
+            // The projects property will automatically refresh on next render
+            setTimeout(() => {
+                // Refresh the project select dropdown after Livewire updates
+                const projectSelect = document.getElementById('modalTaskProjectId');
+                if (projectSelect) {
+                    // Trigger change event to ensure Livewire binding is updated
+                    projectSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }, 100);
+        });
+
+        // Listen for category creation to refresh categories list
+        Livewire.on('category-created', () => {
+            // Force Livewire to re-render and update the categories dropdown
+            // The categories property will automatically refresh on next render
+            setTimeout(() => {
+                // Refresh the category select dropdown after Livewire updates
+                const categorySelect = document.getElementById('modalTaskCategory');
+                if (categorySelect) {
+                    // Trigger change event to ensure Livewire binding is updated
+                    categorySelect.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }, 100);
         });
 
         // Handle morph updates
@@ -3662,70 +3958,141 @@
             return;
         }
 
-        console.log('Bulk updating status for tasks:', Array.from(window.selectedTasks), 'to status:', statusId,
-            statusName);
+        const taskCount = window.selectedTasks.size;
+        const taskIds = Array.from(window.selectedTasks);
+
+        console.log('Bulk updating status for tasks:', taskIds, 'to status:', statusId, statusName);
 
         // Show SweetAlert confirmation dialog
         Swal.fire({
             title: 'Update Status',
-            html: `Are you sure you want to update <strong>${window.selectedTasks.size}</strong> task${window.selectedTasks.size > 1 ? 's' : ''} to status <strong>${statusName}</strong>?`,
+            html: `Are you sure you want to update <strong>${taskCount}</strong> task${taskCount > 1 ? 's' : ''} to status <strong>${statusName}</strong>?`,
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#3085d6',
             cancelButtonColor: '#d33',
             confirmButtonText: 'Yes, update them!',
             cancelButtonText: 'Cancel',
-            showLoaderOnConfirm: true,
-            preConfirm: () => {
-                return new Promise((resolve) => {
-                    // Call Livewire method to update status
-                    @this.call('bulkUpdateStatus', Array.from(window.selectedTasks), statusId)
-                        .then(() => {
-                            resolve();
-                        })
-                        .catch((error) => {
-                            Swal.showValidationMessage('Error: ' + error.message);
-                        });
-                });
-            },
-            allowOutsideClick: () => !Swal.isLoading()
+            allowOutsideClick: false,
+            allowEscapeKey: false
         }).then((result) => {
             if (result.isConfirmed) {
-                // Clear selection after successful update
-                clearSelection();
-
-                // Show success message
+                // Show loader immediately
                 Swal.fire({
-                    icon: 'success',
-                    title: 'Status Updated!',
-                    text: `Successfully updated ${window.selectedTasks.size} task${window.selectedTasks.size > 1 ? 's' : ''} to status: ${statusName}`,
-                    confirmButtonColor: '#10b981',
-                    timer: 3000,
-                    timerProgressBar: true
+                    title: 'Processing...',
+                    html: `Updating ${taskCount} task${taskCount > 1 ? 's' : ''} status to <strong>${statusName}</strong>`,
+                    icon: 'info',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
                 });
+
+                // Call Livewire method and wait for completion
+                @this.call('bulkUpdateStatus', taskIds, statusId)
+                    .then(() => {
+                        // Wait a bit for Livewire to finish processing
+                        setTimeout(() => {
+                            clearSelection();
+                            
+                            // Show success message
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Status Updated!',
+                                text: `Successfully updated ${taskCount} task${taskCount > 1 ? 's' : ''} to status: ${statusName}`,
+                                confirmButtonColor: '#10b981',
+                                timer: 3000,
+                                timerProgressBar: true,
+                                allowOutsideClick: false
+                            });
+                        }, 300);
+                    })
+                    .catch((error) => {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Update Failed',
+                            text: 'Error: ' + (error.message || 'An error occurred while updating tasks'),
+                            confirmButtonColor: '#d33'
+                        });
+                    });
             }
         });
     }
 
     function bulkUpdatePriority(priorityId, priorityName) {
         if (window.selectedTasks.size === 0) {
-            alert('Please select tasks first');
+            Swal.fire({
+                icon: 'warning',
+                title: 'No Tasks Selected',
+                text: 'Please select tasks first before updating their priority.',
+                confirmButtonColor: '#3085d6'
+            });
             return;
         }
 
-        console.log('Bulk updating priority for tasks:', Array.from(window.selectedTasks), 'to priority:', priorityId,
-            priorityName);
+        const taskCount = window.selectedTasks.size;
+        const taskIds = Array.from(window.selectedTasks);
 
-        // Call Livewire method to update priority
-        @this.call('bulkUpdatePriority', Array.from(window.selectedTasks), priorityId);
+        console.log('Bulk updating priority for tasks:', taskIds, 'to priority:', priorityId, priorityName);
 
-        // Show success message
-        alert(
-            `Updated ${window.selectedTasks.size} task${window.selectedTasks.size > 1 ? 's' : ''} to priority: ${priorityName}`
-            );
+        // Show SweetAlert confirmation dialog
+        Swal.fire({
+            title: 'Update Priority',
+            html: `Are you sure you want to update <strong>${taskCount}</strong> task${taskCount > 1 ? 's' : ''} to priority <strong>${priorityName}</strong>?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, update them!',
+            cancelButtonText: 'Cancel',
+            allowOutsideClick: false,
+            allowEscapeKey: false
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Show loader immediately
+                Swal.fire({
+                    title: 'Processing...',
+                    html: `Updating ${taskCount} task${taskCount > 1 ? 's' : ''} priority to <strong>${priorityName}</strong>`,
+                    icon: 'info',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
 
-        // Clear selection after successful update
-        clearSelection();
+                // Call Livewire method and wait for completion
+                @this.call('bulkUpdatePriority', taskIds, priorityId)
+                    .then(() => {
+                        // Wait a bit for Livewire to finish processing
+                        setTimeout(() => {
+                            clearSelection();
+                            
+                            // Show success message
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Priority Updated!',
+                                text: `Successfully updated ${taskCount} task${taskCount > 1 ? 's' : ''} to priority: ${priorityName}`,
+                                confirmButtonColor: '#10b981',
+                                timer: 3000,
+                                timerProgressBar: true,
+                                allowOutsideClick: false
+                            });
+                        }, 300);
+                    })
+                    .catch((error) => {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Update Failed',
+                            text: 'Error: ' + (error.message || 'An error occurred while updating tasks'),
+                            confirmButtonColor: '#d33'
+                        });
+                    });
+            }
+        });
     }
 
     function bulkUpdateAssignee(userId, userName) {
@@ -3739,70 +4106,141 @@
             return;
         }
 
-        console.log('Bulk updating assignee for tasks:', Array.from(window.selectedTasks), 'to user:', userId,
-            userName);
+        const taskCount = window.selectedTasks.size;
+        const taskIds = Array.from(window.selectedTasks);
+
+        console.log('Bulk updating assignee for tasks:', taskIds, 'to user:', userId, userName);
 
         // Show SweetAlert confirmation dialog
         Swal.fire({
             title: 'Assign Tasks',
-            html: `Are you sure you want to assign <strong>${window.selectedTasks.size}</strong> task${window.selectedTasks.size > 1 ? 's' : ''} to <strong>${userName}</strong>?`,
+            html: `Are you sure you want to assign <strong>${taskCount}</strong> task${taskCount > 1 ? 's' : ''} to <strong>${userName}</strong>?`,
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#3085d6',
             cancelButtonColor: '#d33',
             confirmButtonText: 'Yes, assign them!',
             cancelButtonText: 'Cancel',
-            showLoaderOnConfirm: true,
-            preConfirm: () => {
-                return new Promise((resolve) => {
-                    // Call Livewire method to update assignee
-                    @this.call('bulkUpdateAssignee', Array.from(window.selectedTasks), userId)
-                        .then(() => {
-                            resolve();
-                        })
-                        .catch((error) => {
-                            Swal.showValidationMessage('Error: ' + error.message);
-                        });
-                });
-            },
-            allowOutsideClick: () => !Swal.isLoading()
+            allowOutsideClick: false,
+            allowEscapeKey: false
         }).then((result) => {
             if (result.isConfirmed) {
-                // Clear selection after successful update
-                clearSelection();
-
-                // Show success message
+                // Show loader immediately
                 Swal.fire({
-                    icon: 'success',
-                    title: 'Tasks Assigned!',
-                    text: `Successfully assigned ${window.selectedTasks.size} task${window.selectedTasks.size > 1 ? 's' : ''} to ${userName}`,
-                    confirmButtonColor: '#10b981',
-                    timer: 3000,
-                    timerProgressBar: true
+                    title: 'Processing...',
+                    html: `Assigning ${taskCount} task${taskCount > 1 ? 's' : ''} to <strong>${userName}</strong>`,
+                    icon: 'info',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
                 });
+
+                // Call Livewire method and wait for completion
+                @this.call('bulkUpdateAssignee', taskIds, userId)
+                    .then(() => {
+                        // Wait a bit for Livewire to finish processing
+                        setTimeout(() => {
+                            clearSelection();
+                            
+                            // Show success message
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Tasks Assigned!',
+                                text: `Successfully assigned ${taskCount} task${taskCount > 1 ? 's' : ''} to ${userName}`,
+                                confirmButtonColor: '#10b981',
+                                timer: 3000,
+                                timerProgressBar: true,
+                                allowOutsideClick: false
+                            });
+                        }, 300);
+                    })
+                    .catch((error) => {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Assignment Failed',
+                            text: 'Error: ' + (error.message || 'An error occurred while assigning tasks'),
+                            confirmButtonColor: '#d33'
+                        });
+                    });
             }
         });
     }
 
     function bulkUpdateNature(nature, natureName) {
         if (window.selectedTasks.size === 0) {
-            alert('Please select tasks first');
+            Swal.fire({
+                icon: 'warning',
+                title: 'No Tasks Selected',
+                text: 'Please select tasks first before updating their nature.',
+                confirmButtonColor: '#3085d6'
+            });
             return;
         }
 
-        console.log('Bulk updating nature for tasks:', Array.from(window.selectedTasks), 'to nature:', nature,
-            natureName);
+        const taskCount = window.selectedTasks.size;
+        const taskIds = Array.from(window.selectedTasks);
 
-        // Call Livewire method to update nature
-        @this.call('bulkUpdateNature', Array.from(window.selectedTasks), nature);
+        console.log('Bulk updating nature for tasks:', taskIds, 'to nature:', nature, natureName);
 
-        // Show success message
-        alert(
-            `Updated ${window.selectedTasks.size} task${window.selectedTasks.size > 1 ? 's' : ''} to nature: ${natureName}`
-            );
+        // Show SweetAlert confirmation dialog
+        Swal.fire({
+            title: 'Update Nature',
+            html: `Are you sure you want to update <strong>${taskCount}</strong> task${taskCount > 1 ? 's' : ''} to nature <strong>${natureName}</strong>?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, update them!',
+            cancelButtonText: 'Cancel',
+            allowOutsideClick: false,
+            allowEscapeKey: false
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Show loader immediately
+                Swal.fire({
+                    title: 'Processing...',
+                    html: `Updating ${taskCount} task${taskCount > 1 ? 's' : ''} nature to <strong>${natureName}</strong>`,
+                    icon: 'info',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
 
-        // Clear selection after successful update
-        clearSelection();
+                // Call Livewire method and wait for completion
+                @this.call('bulkUpdateNature', taskIds, nature)
+                    .then(() => {
+                        // Wait a bit for Livewire to finish processing
+                        setTimeout(() => {
+                            clearSelection();
+                            
+                            // Show success message
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Nature Updated!',
+                                text: `Successfully updated ${taskCount} task${taskCount > 1 ? 's' : ''} to nature: ${natureName}`,
+                                confirmButtonColor: '#10b981',
+                                timer: 3000,
+                                timerProgressBar: true,
+                                allowOutsideClick: false
+                            });
+                        }, 300);
+                    })
+                    .catch((error) => {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Update Failed',
+                            text: 'Error: ' + (error.message || 'An error occurred while updating tasks'),
+                            confirmButtonColor: '#d33'
+                        });
+                    });
+            }
+        });
     }
 
     function bulkDeleteTasks() {
@@ -3816,44 +4254,63 @@
             return;
         }
 
+        const taskCount = window.selectedTasks.size;
+        const taskIds = Array.from(window.selectedTasks);
+
         // Show SweetAlert confirmation dialog
         Swal.fire({
             title: 'Delete Tasks',
-            html: `Are you sure you want to delete <strong>${window.selectedTasks.size}</strong> selected task${window.selectedTasks.size > 1 ? 's' : ''}?<br><br><span class="text-danger"><strong>This action cannot be undone!</strong></span>`,
+            html: `Are you sure you want to delete <strong>${taskCount}</strong> selected task${taskCount > 1 ? 's' : ''}?<br><br><span class="text-danger"><strong>This action cannot be undone!</strong></span>`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
             cancelButtonColor: '#3085d6',
             confirmButtonText: 'Yes, delete them!',
             cancelButtonText: 'Cancel',
-            showLoaderOnConfirm: true,
-            preConfirm: () => {
-                return new Promise((resolve) => {
-                    // Call Livewire method to delete tasks
-                    @this.call('bulkDeleteTasks', Array.from(window.selectedTasks))
-                        .then(() => {
-                            resolve();
-                        })
-                        .catch((error) => {
-                            Swal.showValidationMessage('Error: ' + error.message);
-                        });
-                });
-            },
-            allowOutsideClick: () => !Swal.isLoading()
+            allowOutsideClick: false,
+            allowEscapeKey: false
         }).then((result) => {
             if (result.isConfirmed) {
-                // Clear selection after successful deletion
-                clearSelection();
-
-                // Show success message
+                // Show loader immediately
                 Swal.fire({
-                    icon: 'success',
-                    title: 'Tasks Deleted!',
-                    text: `Successfully deleted ${window.selectedTasks.size} task${window.selectedTasks.size > 1 ? 's' : ''}`,
-                    confirmButtonColor: '#10b981',
-                    timer: 3000,
-                    timerProgressBar: true
+                    title: 'Processing...',
+                    html: `Deleting ${taskCount} task${taskCount > 1 ? 's' : ''}...`,
+                    icon: 'info',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
                 });
+
+                // Call Livewire method and wait for completion
+                @this.call('bulkDeleteTasks', taskIds)
+                    .then(() => {
+                        // Wait a bit for Livewire to finish processing
+                        setTimeout(() => {
+                            clearSelection();
+                            
+                            // Show success message
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Tasks Deleted!',
+                                text: `Successfully deleted ${taskCount} task${taskCount > 1 ? 's' : ''}`,
+                                confirmButtonColor: '#10b981',
+                                timer: 3000,
+                                timerProgressBar: true,
+                                allowOutsideClick: false
+                            });
+                        }, 300);
+                    })
+                    .catch((error) => {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Deletion Failed',
+                            text: 'Error: ' + (error.message || 'An error occurred while deleting tasks'),
+                            confirmButtonColor: '#d33'
+                        });
+                    });
             }
         });
     }

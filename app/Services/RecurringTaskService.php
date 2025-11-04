@@ -66,8 +66,18 @@ class RecurringTaskService
      */
     public function stopRecurringTask(Task $task): void
     {
-        if ($task->nature_of_task === 'recurring') {
+        // Check if task is a recurring task (daily, weekly, monthly, until_stop)
+        if (in_array($task->nature_of_task, ['daily', 'weekly', 'monthly', 'until_stop'])) {
             $task->stopRecurring();
+            
+            // Also stop all child tasks (clones) if they exist
+            $childTasks = Task::where('parent_task_id', $task->id)
+                ->where('is_recurring_active', 1)
+                ->get();
+            
+            foreach ($childTasks as $childTask) {
+                $childTask->update(['is_recurring_active' => false]);
+            }
         }
     }
 

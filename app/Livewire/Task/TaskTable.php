@@ -103,6 +103,12 @@ class TaskTable extends Component
     public $newProjectTitle = '';
     public $newProjectDescription = '';
     
+    // Category creation modal properties
+    public $showCategoryCreateModal = false;
+    public $newCategoryTitle = '';
+    public $newCategoryIcon = 'bi-list-task';
+    public $newCategoryColor = 'secondary';
+    
     public $newTaskDueDate = '';
     public $newTaskEstimatedHours = '';
     public $newTaskNotes = '';
@@ -237,7 +243,7 @@ class TaskTable extends Component
         $this->validate([
             'newTaskTitle' => 'required|string|max:255',
             'newTaskDescription' => 'nullable|string',
-            'newTaskProjectId' => 'required|exists:projects,id',
+            'newTaskProjectId' => 'nullable|exists:projects,id',
             'newTaskAssigneeId' => 'nullable|exists:users,id',
             'newTaskAssigneeIds' => 'nullable|array',
             'newTaskAssigneeIds.*' => 'exists:users,id',
@@ -272,7 +278,7 @@ class TaskTable extends Component
         $task = Task::create([
             'title' => $this->newTaskTitle,
             'description' => $this->newTaskDescription,
-            'project_id' => $this->newTaskProjectId,
+            'project_id' => $this->newTaskProjectId ?: null,
             'assigned_to_user_id' => $primaryAssigneeId,
             'priority_id' => $this->newTaskPriority,
             'category_id' => $this->newTaskCategory,
@@ -316,7 +322,7 @@ class TaskTable extends Component
         $this->validate([
             'newTaskTitle' => 'required|string|max:255',
             'newTaskDescription' => 'nullable|string',
-            'newTaskProjectId' => 'required|exists:projects,id',
+            'newTaskProjectId' => 'nullable|exists:projects,id',
             'newTaskAssigneeId' => 'nullable|exists:users,id',
             'newTaskAssigneeIds' => 'nullable|array',
             'newTaskAssigneeIds.*' => 'exists:users,id',
@@ -349,7 +355,7 @@ class TaskTable extends Component
         $task->update([
             'title' => $this->newTaskTitle,
             'description' => $this->newTaskDescription,
-            'project_id' => $this->newTaskProjectId,
+            'project_id' => $this->newTaskProjectId ?: null,
             'assigned_to_user_id' => $primaryAssigneeId,
             'priority_id' => $this->newTaskPriority,
             'category_id' => $this->newTaskCategory,
@@ -1129,7 +1135,7 @@ class TaskTable extends Component
         $this->validate([
             'modalTaskTitle' => 'required|string|max:255',
             'modalTaskDescription' => 'nullable|string',
-            'modalTaskProjectId' => 'required|exists:projects,id',
+            'modalTaskProjectId' => 'nullable|exists:projects,id',
             'modalTaskAssigneeIds' => 'required|array|min:1',
             'modalTaskAssigneeIds.*' => 'exists:users,id',
             'modalTaskPriority' => 'required|exists:task_priorities,id',
@@ -1171,7 +1177,7 @@ class TaskTable extends Component
             }
             
             $task = Task::create([
-                'project_id' => $this->modalTaskProjectId,
+                'project_id' => $this->modalTaskProjectId ?: null,
                 'title' => $this->modalTaskTitle,
                 'description' => $this->modalTaskDescription,
                 'assigned_to_user_id' => $primaryAssigneeId, // First assignee as primary
@@ -1262,7 +1268,7 @@ class TaskTable extends Component
         $this->validate([
             'editModalTaskTitle' => 'required|string|max:255',
             'editModalTaskDescription' => 'nullable|string',
-            'editModalTaskProjectId' => 'required|exists:projects,id',
+            'editModalTaskProjectId' => 'nullable|exists:projects,id',
             'editModalTaskAssigneeIds' => 'required|array|min:1',
             'editModalTaskAssigneeIds.*' => 'exists:users,id',
             'editModalTaskPriority' => 'required|exists:task_priorities,id',
@@ -1304,7 +1310,7 @@ class TaskTable extends Component
             
             $task = Task::findOrFail($this->editModalTaskId);
             $task->update([
-                'project_id' => $this->editModalTaskProjectId,
+                'project_id' => $this->editModalTaskProjectId ?: null,
                 'title' => $this->editModalTaskTitle,
                 'description' => $this->editModalTaskDescription,
                 'assigned_to_user_id' => $primaryAssigneeId,
@@ -1465,15 +1471,84 @@ class TaskTable extends Component
 
             // Close the modal and set the newly created project in the task form
             $this->modalTaskProjectId = $project->id;
+            
+            // Clear the form fields
+            $this->newProjectTitle = '';
+            $this->newProjectDescription = '';
+            
+            // Close the modal
             $this->closeProjectCreateModal();
             
-            session()->flash('success', 'Project created successfully! You can now create your task.');
+            // Dispatch event to refresh projects list
+            $this->dispatch('project-created');
+            
+            session()->flash('success', 'Project created successfully! The project has been selected in the task form.');
 
         } catch (\Exception $e) {
             LogFacade::error('Project creation failed: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString()
             ]);
             session()->flash('error', 'Failed to create project: ' . $e->getMessage());
+        }
+    }
+    
+    // Category creation modal methods
+    public function openCategoryCreateModal()
+    {
+        $this->showCategoryCreateModal = true;
+        $this->newCategoryTitle = '';
+        $this->newCategoryIcon = 'bi-list-task';
+        $this->newCategoryColor = 'secondary';
+    }
+    
+    public function closeCategoryCreateModal()
+    {
+        $this->showCategoryCreateModal = false;
+        $this->newCategoryTitle = '';
+        $this->newCategoryIcon = 'bi-list-task';
+        $this->newCategoryColor = 'secondary';
+    }
+    
+    public function createCategoryFromModal()
+    {
+        $this->validate([
+            'newCategoryTitle' => 'required|string|max:255|unique:task_categories,name',
+            'newCategoryIcon' => 'required|string|max:50',
+            'newCategoryColor' => 'required|string|in:primary,secondary,success,danger,warning,info,dark',
+        ]);
+
+        try {
+            $category = TaskCategory::create([
+                'name' => $this->newCategoryTitle,
+                'icon' => $this->newCategoryIcon,
+                'color' => $this->newCategoryColor,
+                'is_default' => false,
+            ]);
+
+            // Log the creation
+            Log::createLog(auth()->id(), 'create_category', "Created category: {$category->name}");
+
+            // Close the modal and set the newly created category in the task form
+            $this->modalTaskCategory = $category->id;
+            
+            // Clear the form fields
+            $this->newCategoryTitle = '';
+            $this->newCategoryIcon = 'bi-list-task';
+            $this->newCategoryColor = 'secondary';
+            
+            // Close the modal
+            $this->closeCategoryCreateModal();
+            
+            // Dispatch event to refresh categories list
+            $this->dispatch('category-created');
+            
+            session()->flash('success', 'Category created successfully! The category has been selected in the task form.');
+
+        } catch (\Exception $e) {
+            LogFacade::error('Category creation failed: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            session()->flash('error', 'Failed to create category: ' . $e->getMessage());
         }
     }
 
@@ -1600,19 +1675,14 @@ class TaskTable extends Component
                     continue;
                 }
                 
+                $oldStatusId = $task->status_id;
                 $task->status_id = $statusId;
                 $task->save();
                 $updatedCount++;
                 
                 // Log the status change
-                Log::create([
-                    'task_id' => $task->id,
-                    'user_id' => auth()->id(),
-                    'action' => 'status_changed',
-                    'details' => "Status changed to {$statusId} via bulk update",
-                    'old_value' => $task->getOriginal('status_id'),
-                    'new_value' => $statusId,
-                ]);
+                Log::createLog(auth()->id(), 'bulk_update_status', 
+                    "Bulk updated task '{$task->title}' status from {$oldStatusId} to {$statusId}");
             }
             
             $message = "Successfully updated {$updatedCount} task(s) status.";
@@ -1621,7 +1691,6 @@ class TaskTable extends Component
             }
             
             session()->flash('success', $message);
-            $this->dispatch('tasksUpdated');
             
         } catch (\Exception $e) {
             session()->flash('error', 'Error updating task status: ' . $e->getMessage());
@@ -1635,23 +1704,17 @@ class TaskTable extends Component
             $updatedCount = 0;
             
             foreach ($tasks as $task) {
+                $oldPriorityId = $task->priority_id;
                 $task->priority_id = $priorityId;
                 $task->save();
                 $updatedCount++;
                 
                 // Log the priority change
-                Log::create([
-                    'task_id' => $task->id,
-                    'user_id' => auth()->id(),
-                    'action' => 'priority_changed',
-                    'details' => "Priority changed to {$priorityId} via bulk update",
-                    'old_value' => $task->getOriginal('priority_id'),
-                    'new_value' => $priorityId,
-                ]);
+                Log::createLog(auth()->id(), 'bulk_update_priority', 
+                    "Bulk updated task '{$task->title}' priority from {$oldPriorityId} to {$priorityId}");
             }
             
             session()->flash('success', "Successfully updated {$updatedCount} task(s) priority.");
-            $this->dispatch('tasksUpdated');
             
         } catch (\Exception $e) {
             session()->flash('error', 'Error updating task priority: ' . $e->getMessage());
@@ -1695,14 +1758,8 @@ class TaskTable extends Component
                 ]);
                 
                 // Log the assignee change
-                Log::create([
-                    'task_id' => $task->id,
-                    'user_id' => auth()->id(),
-                    'action' => 'assignee_changed',
-                    'details' => "Assignee changed to {$userId} via bulk update",
-                    'old_value' => $oldAssigneeId,
-                    'new_value' => $userId,
-                ]);
+                Log::createLog(auth()->id(), 'bulk_update_assignee', 
+                    "Bulk updated task '{$task->title}' assignee from {$oldAssigneeId} to {$userId}");
             }
             
             \Illuminate\Support\Facades\Log::info('Bulk assignee update completed', [
@@ -1710,7 +1767,6 @@ class TaskTable extends Component
             ]);
             
             session()->flash('success', "Successfully assigned {$updatedCount} task(s) to user.");
-            $this->dispatch('tasksUpdated');
             
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Error in bulk assignee update', [
@@ -1727,25 +1783,36 @@ class TaskTable extends Component
             $tasks = Task::whereIn('id', $taskIds)->get();
             $updatedCount = 0;
             
+            // Convert 'recurring' to appropriate nature_of_task value
+            // For bulk update, we need to determine the nature based on the input
+            // If nature is 'recurring', we'll need to ask for frequency or use default
+            // For now, if nature is 'recurring', we'll set it to 'weekly' as default
+            $natureOfTask = ($nature === 'recurring') ? 'weekly' : $nature;
+            
             foreach ($tasks as $task) {
-                $oldNature = $task->nature;
-                $task->nature = $nature;
+                $oldNature = $task->nature_of_task;
+                
+                // Update nature_of_task
+                $task->nature_of_task = $natureOfTask;
+                
+                // If setting to recurring type, ensure is_recurring_active is true
+                if (in_array($natureOfTask, ['daily', 'weekly', 'monthly', 'until_stop'])) {
+                    $task->is_recurring = true;
+                    $task->is_recurring_active = true;
+                } else {
+                    $task->is_recurring = false;
+                    $task->is_recurring_active = false;
+                }
+                
                 $task->save();
                 $updatedCount++;
                 
                 // Log the nature change
-                Log::create([
-                    'task_id' => $task->id,
-                    'user_id' => auth()->id(),
-                    'action' => 'nature_changed',
-                    'details' => "Nature changed to {$nature} via bulk update",
-                    'old_value' => $oldNature,
-                    'new_value' => $nature,
-                ]);
+                Log::createLog(auth()->id(), 'bulk_update_nature', 
+                    "Bulk updated task '{$task->title}' nature from {$oldNature} to {$natureOfTask}");
             }
             
             session()->flash('success', "Successfully updated {$updatedCount} task(s) nature.");
-            $this->dispatch('tasksUpdated');
             
         } catch (\Exception $e) {
             session()->flash('error', 'Error updating task nature: ' . $e->getMessage());
@@ -1759,22 +1826,17 @@ class TaskTable extends Component
             $deletedCount = 0;
             
             foreach ($tasks as $task) {
+                $taskTitle = $task->title;
+                
                 // Log the deletion
-                Log::create([
-                    'task_id' => $task->id,
-                    'user_id' => auth()->id(),
-                    'action' => 'task_deleted',
-                    'details' => "Task deleted via bulk delete",
-                    'old_value' => $task->toJson(),
-                    'new_value' => null,
-                ]);
+                Log::createLog(auth()->id(), 'bulk_delete_task', 
+                    "Bulk deleted task '{$taskTitle}'");
                 
                 $task->delete();
                 $deletedCount++;
             }
             
             session()->flash('success', "Successfully deleted {$deletedCount} task(s).");
-            $this->dispatch('tasksUpdated');
             
         } catch (\Exception $e) {
             session()->flash('error', 'Error deleting tasks: ' . $e->getMessage());

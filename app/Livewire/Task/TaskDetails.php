@@ -242,9 +242,13 @@ class TaskDetails extends Component
 
     public function stopRecurringTask()
     {
-        if ($this->task->nature_of_task === 'recurring') {
+        // Check if task is a recurring task (daily, weekly, monthly, until_stop)
+        if (in_array($this->task->nature_of_task, ['daily', 'weekly', 'monthly', 'until_stop'])) {
             $recurringService = new \App\Services\RecurringTaskService();
             $recurringService->stopRecurringTask($this->task);
+            
+            // Reload task to get updated values
+            $this->task = $this->task->fresh();
             
             // Log the action
             Log::createLog(auth()->id(), 'stop_recurring_task', "Stopped recurring task: {$this->task->title}");
@@ -275,19 +279,44 @@ class TaskDetails extends Component
                 'comment' => $this->newComment,
             ]);
 
-            // Handle comment attachments
-            if ($this->commentAttachments && count($this->commentAttachments) > 0) {
-                foreach ($this->commentAttachments as $attachment) {
-                    $path = $attachment->store('attachments');
+            // Handle comment attachments - check if files exist and are valid
+            if (!empty($this->commentAttachments)) {
+                // Ensure commentAttachments is an array (Livewire may return array or single file)
+                $attachments = is_array($this->commentAttachments) ? $this->commentAttachments : [$this->commentAttachments];
+                
+                foreach ($attachments as $attachment) {
+                    // Skip null or invalid attachments
+                    if (!$attachment) {
+                        continue;
+                    }
                     
-                    Attachment::create([
-                        'task_id' => $this->task->id,
-                        'comment_id' => $comment->id,
-                        'file_path' => $path,
-                        'file_name' => $attachment->getClientOriginalName(),
-                        'file_size' => $attachment->getSize(),
-                        'uploaded_by_user_id' => auth()->id(),
-                    ]);
+                    // Check if it's a valid uploaded file object
+                    if (!is_object($attachment) || !method_exists($attachment, 'store')) {
+                        \Illuminate\Support\Facades\Log::warning('Invalid attachment object in comment upload');
+                        continue;
+                    }
+                    
+                    try {
+                        // Store the file - use default disk like other attachments
+                        $path = $attachment->store('attachments');
+                        
+                        if ($path) {
+                            Attachment::create([
+                                'task_id' => $this->task->id,
+                                'comment_id' => $comment->id,
+                                'file_path' => $path,
+                                'file_name' => $attachment->getClientOriginalName(),
+                                'file_size' => $attachment->getSize(),
+                                'uploaded_by_user_id' => auth()->id(),
+                            ]);
+                        } else {
+                            \Illuminate\Support\Facades\Log::error('Failed to store attachment file - store() returned false');
+                        }
+                    } catch (\Exception $fileException) {
+                        // Log file storage error but continue with comment
+                        \Illuminate\Support\Facades\Log::error('Error storing comment attachment: ' . $fileException->getMessage());
+                        \Illuminate\Support\Facades\Log::error('Attachment error trace: ' . $fileException->getTraceAsString());
+                    }
                 }
             }
 
@@ -307,6 +336,8 @@ class TaskDetails extends Component
             
             session()->flash('success', 'Comment added successfully.');
         } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error adding comment: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Stack trace: ' . $e->getTraceAsString());
             session()->flash('error', 'Error adding comment: ' . $e->getMessage());
         }
     }
