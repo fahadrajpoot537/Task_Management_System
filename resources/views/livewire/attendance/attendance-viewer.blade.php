@@ -12,11 +12,18 @@
                     @endif
                 </p>
             </div>
-            @if($canManageAttendance || ($canOnlyViewOwn && $selectedUser && $viewType === 'monthly'))
-                <button class="btn btn-success" wire:click="openBreakdownModal">
-                    <i class="bi bi-calculator me-2"></i>Make Breakdown
-                </button>
-            @endif
+            <div class="d-flex gap-2">
+                @if($canManageAttendance)
+                    <button class="btn btn-primary" wire:click="openImportModal">
+                        <i class="bi bi-upload me-2"></i>Import Attendance
+                    </button>
+                @endif
+                @if($canManageAttendance || ($canOnlyViewOwn && $selectedUser && $viewType === 'monthly'))
+                    <button class="btn btn-success" wire:click="openBreakdownModal">
+                        <i class="bi bi-calculator me-2"></i>Make Breakdown
+                    </button>
+                @endif
+            </div>
         </div>
 
         <!-- Flash Messages -->
@@ -1465,6 +1472,85 @@
                                     Saving...
                                 </span>
                             </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        <!-- Import Attendance Modal -->
+        @if ($showImportModal)
+            <div class="modal-backdrop fade show" wire:click="closeImportModal"
+                style="opacity: 0.5; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1054;">
+            </div>
+            <div class="modal fade show" id="importModal" tabindex="-1" aria-labelledby="importModalLabel"
+                aria-hidden="false" style="display: block; z-index: 1055;" wire:ignore.self>
+                <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                    <div class="modal-content">
+                        <div class="modal-header bg-primary text-white">
+                            <h5 class="modal-title" id="importModalLabel">
+                                <i class="bi bi-upload me-2"></i>Import Attendance from CSV/XLS
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" wire:click="closeImportModal"
+                                aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <strong>File Format:</strong> Upload a CSV or XLS file with the following columns:
+                                <ul class="mb-0 mt-2">
+                                    <li><strong>No.</strong> or <strong>device_user_id</strong> - The device user ID (required)</li>
+                                    <li><strong>Date/Time</strong> or <strong>timestamp</strong> - Date and time in format: MM/DD/YYYY HH:MM or Y-m-d H:i:s (required)</li>
+                                </ul>
+                                <small class="d-block mt-2">Example CSV format:<br>
+                                    <code>No.,Date/Time<br>15,11/03/2025 09:00</code><br>
+                                    <code>device_user_id,timestamp<br>123,2024-01-15 09:00:00</code>
+                                </small>
+                            </div>
+
+                            @if ($importError)
+                                <div class="alert alert-danger">
+                                    <i class="bi bi-exclamation-triangle me-2"></i>{{ $importError }}
+                                </div>
+                            @endif
+
+                            @if ($importSuccess)
+                                <div class="alert alert-success">
+                                    <i class="bi bi-check-circle me-2"></i>{{ $importSuccess }}
+                                </div>
+                            @endif
+
+                            <form wire:submit.prevent="importAttendance">
+                                <div class="mb-3">
+                                    <label for="importFile" class="form-label">Select File (CSV or XLS)</label>
+                                    <input type="file" class="form-control" id="importFile" wire:model="importFile"
+                                        accept=".csv,.xls,.xlsx" required>
+                                    @error('importFile')
+                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                    @enderror
+                                    @if ($importFile)
+                                        <small class="text-muted d-block mt-1">
+                                            Selected: {{ $importFile->getClientOriginalName() }}
+                                            ({{ number_format($importFile->getSize() / 1024, 2) }} KB)
+                                        </small>
+                                    @endif
+                                </div>
+
+                                <div class="d-flex justify-content-end gap-2">
+                                    <button type="button" class="btn btn-secondary" wire:click="closeImportModal"
+                                        wire:loading.attr="disabled">Cancel</button>
+                                    <button type="submit" class="btn btn-primary" wire:loading.attr="disabled">
+                                        <span wire:loading.remove>
+                                            <i class="bi bi-upload me-2"></i>Import
+                                        </span>
+                                        <span wire:loading>
+                                            <span class="spinner-border spinner-border-sm me-2" role="status"
+                                                aria-hidden="true"></span>
+                                            Importing...
+                                        </span>
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>

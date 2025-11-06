@@ -4,16 +4,18 @@ namespace App\Livewire\Attendance;
 
 use Livewire\Component;
 use Livewire\WithPagination;
+use Livewire\WithFileUploads;
 use App\Models\AttendanceRecord;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\MonthlySalarySummary;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class AttendanceViewer extends Component
 {
-    use WithPagination;
+    use WithPagination, WithFileUploads;
 
     public $search = '';
     public $selectedUser = '';
@@ -46,7 +48,13 @@ class AttendanceViewer extends Component
     public $showHolidayModal = false;
     public $holidayStartDate = '';
     public $holidayEndDate = '';
-
+    
+    // Import Modal properties
+    public $showImportModal = false;
+    public $importFile = null;
+    public $importError = '';
+    public $importSuccess = '';
+    
     // Edit Attendance modal state
     public $showEditModal = false;
     public $editRecordId = null;
@@ -1147,6 +1155,588 @@ class AttendanceViewer extends Component
         
         $this->closeHolidayModal();
         $this->resetPage();
+    }
+    
+    /**
+     * Open import modal
+     */
+    public function openImportModal()
+    {
+        // Check if user has permission to manage attendance
+        $user = auth()->user();
+        if (!$user->isSuperAdmin() && !$user->hasPermission('manage_attendance')) {
+            session()->flash('error', 'You do not have permission to import attendance records.');
+            return;
+        }
+        
+        $this->showImportModal = true;
+        $this->importFile = null;
+        $this->importError = '';
+        $this->importSuccess = '';
+        $this->resetErrorBag();
+    }
+    
+    /**
+     * Close import modal
+     */
+    public function closeImportModal()
+    {
+        $this->showImportModal = false;
+        $this->importFile = null;
+        $this->importError = '';
+        $this->importSuccess = '';
+        $this->resetErrorBag();
+    }
+    
+    /**
+     * Import attendance from CSV/XLS file
+     */
+    public function importAttendance()
+    {
+        // Check if user has permission to manage attendance
+        $user = auth()->user();
+        if (!$user->isSuperAdmin() && !$user->hasPermission('manage_attendance')) {
+            $this->importError = 'You do not have permission to import attendance records.';
+            return;
+        }
+        
+        // Validate file
+        $this->validate([
+            'importFile' => ['required', 'file', 'mimes:csv,xls,xlsx', 'max:10240'], // Max 10MB
+        ], [
+            'importFile.required' => 'Please select a file to import.',
+            'importFile.file' => 'The uploaded file is invalid.',
+            'importFile.mimes' => 'The file must be a CSV or Excel file (CSV, XLS, XLSX).',
+            'importFile.max' => 'The file size must not exceed 10MB.',
+        ]);
+        
+        if (!$this->importFile) {
+            $this->importError = 'No file selected.';
+            return;
+        }
+        
+        try {
+            // Read file based on extension
+            $extension = strtolower($this->importFile->getClientOriginalExtension());
+            $records = [];
+            
+            // Get the file path - Livewire stores files temporarily
+            $filePath = $this->importFile->getRealPath();
+            if (!$filePath || !file_exists($filePath)) {
+                // Try alternative path for Livewire temporary files
+                $filePath = $this->importFile->path();
+            }
+            
+            if (!$filePath || !file_exists($filePath)) {
+                $this->importError = 'Unable to access uploaded file. Please try again.';
+                Log::error("Import Attendance: File path not accessible", [
+                    'real_path' => $this->importFile->getRealPath(),
+                    'path' => $this->importFile->path(),
+                    'extension' => $extension
+                ]);
+                return;
+            }
+            
+            Log::info("Import Attendance: Reading file", [
+                'file_path' => $filePath,
+                'extension' => $extension,
+                'size' => filesize($filePath)
+            ]);
+            
+            if ($extension === 'csv') {
+                $records = $this->readCsvFile($filePath);
+            } elseif (in_array($extension, ['xls', 'xlsx'])) {
+                $records = $this->readExcelFile($filePath, $extension);
+            } else {
+                $this->importError = 'Unsupported file format. Please upload CSV or Excel files.';
+                return;
+            }
+            
+            Log::info("Import Attendance: Records read from file", [
+                'count' => count($records)
+            ]);
+            
+            if (empty($records)) {
+                $this->importError = 'No valid records found in the file. Please check the file format.';
+                return;
+            }
+            
+            // Process and save attendance records
+            $savedCount = $this->saveAttendanceToDatabase($records);
+            
+            Log::info("Import Attendance: Records saved", [
+                'saved_count' => $savedCount,
+                'total_records' => count($records)
+            ]);
+            
+            if ($savedCount > 0) {
+                $this->importSuccess = "Successfully imported {$savedCount} attendance record(s).";
+                session()->flash('message', "Successfully imported {$savedCount} attendance record(s).");
+            } else {
+                $this->importError = 'No records were saved. Please check if users exist with matching device_user_id.';
+            }
+            $this->importFile = null;
+            
+            // Reset page to refresh the view
+            $this->resetPage();
+            
+        } catch (\Exception $e) {
+            $this->importError = 'Error importing file: ' . $e->getMessage();
+            Log::error("Import Attendance Error: " . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+        }
+    }
+    
+    /**
+     * Read CSV file and return array of records
+     */
+    private function readCsvFile($filePath)
+    {
+        $records = [];
+        $handle = fopen($filePath, 'r');
+        
+        if ($handle === false) {
+            throw new \Exception('Unable to open CSV file.');
+        }
+        
+        // Read header row
+        $header = fgetcsv($handle);
+        if ($header === false) {
+            fclose($handle);
+            throw new \Exception('CSV file is empty or invalid.');
+        }
+        
+        // Normalize header (lowercase, trim)
+        $header = array_map(function($h) {
+            return strtolower(trim($h));
+        }, $header);
+        
+        // Find required columns - check for "No." first (most common in export format)
+        $deviceUserIdIndex = array_search('no.', $header);
+        if ($deviceUserIdIndex === false) {
+            $deviceUserIdIndex = array_search('no', $header);
+        }
+        if ($deviceUserIdIndex === false) {
+            $deviceUserIdIndex = array_search('device_user_id', $header);
+        }
+        if ($deviceUserIdIndex === false) {
+            $deviceUserIdIndex = array_search('id', $header);
+        }
+        if ($deviceUserIdIndex === false) {
+            $deviceUserIdIndex = array_search('user_id', $header);
+        }
+        if ($deviceUserIdIndex === false) {
+            $deviceUserIdIndex = array_search('device_uid', $header);
+        }
+        
+        // Find timestamp column - check for "Date/Time" first (most common in export format)
+        $timestampIndex = array_search('date/time', $header);
+        if ($timestampIndex === false) {
+            $timestampIndex = array_search('date_time', $header);
+        }
+        if ($timestampIndex === false) {
+            $timestampIndex = array_search('datetime', $header);
+        }
+        if ($timestampIndex === false) {
+            $timestampIndex = array_search('timestamp', $header);
+        }
+        if ($timestampIndex === false) {
+            $timestampIndex = array_search('date', $header);
+        }
+        
+        if ($deviceUserIdIndex === false || $timestampIndex === false) {
+            fclose($handle);
+            $missingColumns = [];
+            if ($deviceUserIdIndex === false) {
+                $missingColumns[] = '"No." or "device_user_id"';
+            }
+            if ($timestampIndex === false) {
+                $missingColumns[] = '"Date/Time" or "timestamp"';
+            }
+            throw new \Exception('CSV file must contain ' . implode(' and ', $missingColumns) . ' column(s).');
+        }
+        
+        // Read data rows
+        $rowNumber = 1;
+        while (($row = fgetcsv($handle)) !== false) {
+            $rowNumber++;
+            
+            if (count($row) < max($deviceUserIdIndex, $timestampIndex) + 1) {
+                continue; // Skip incomplete rows
+            }
+            
+            $deviceUserId = trim($row[$deviceUserIdIndex]);
+            $timestamp = trim($row[$timestampIndex]);
+            
+            if (empty($deviceUserId) || empty($timestamp)) {
+                continue; // Skip empty rows
+            }
+            
+            // Parse timestamp - try multiple formats including MM/DD/YYYY HH:MM
+            try {
+                // Try MM/DD/YYYY HH:MM format first (common in export files)
+                if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})$/', $timestamp, $matches)) {
+                    $month = $matches[1];
+                    $day = $matches[2];
+                    $year = $matches[3];
+                    $hour = $matches[4];
+                    $minute = $matches[5];
+                    $parsedDate = Carbon::create($year, $month, $day, $hour, $minute, 0);
+                } else {
+                    // Try standard Carbon parsing for other formats
+                    $parsedDate = Carbon::parse($timestamp);
+                }
+                
+                $records[] = [
+                    'id' => $deviceUserId,
+                    'timestamp' => $parsedDate->format('Y-m-d H:i:s'),
+                ];
+            } catch (\Exception $e) {
+                Log::warning("Skipping invalid timestamp in CSV row {$rowNumber}: {$timestamp} - " . $e->getMessage());
+                continue;
+            }
+        }
+        
+        fclose($handle);
+        return $records;
+    }
+    
+    /**
+     * Read Excel file and return array of records
+     */
+    private function readExcelFile($filePath, $extension)
+    {
+        // Check if PhpSpreadsheet is available
+        if (!class_exists(IOFactory::class)) {
+            throw new \Exception('Excel files require PhpSpreadsheet. Please install it using: composer require phpoffice/phpspreadsheet');
+        }
+        
+        $spreadsheet = IOFactory::load($filePath);
+        $worksheet = $spreadsheet->getActiveSheet();
+        $records = [];
+        
+        // Get header row (first row)
+        $headerRow = $worksheet->getRowIterator(1, 1)->current();
+        $header = [];
+        foreach ($headerRow->getCellIterator() as $cell) {
+            $header[] = strtolower(trim($cell->getValue()));
+        }
+        
+        // Find required columns - check for "No." first (most common in export format)
+        $deviceUserIdIndex = array_search('no.', $header);
+        if ($deviceUserIdIndex === false) {
+            $deviceUserIdIndex = array_search('no', $header);
+        }
+        if ($deviceUserIdIndex === false) {
+            $deviceUserIdIndex = array_search('device_user_id', $header);
+        }
+        if ($deviceUserIdIndex === false) {
+            $deviceUserIdIndex = array_search('id', $header);
+        }
+        if ($deviceUserIdIndex === false) {
+            $deviceUserIdIndex = array_search('user_id', $header);
+        }
+        if ($deviceUserIdIndex === false) {
+            $deviceUserIdIndex = array_search('device_uid', $header);
+        }
+        
+        // Find timestamp column - check for "Date/Time" first (most common in export format)
+        $timestampIndex = array_search('date/time', $header);
+        if ($timestampIndex === false) {
+            $timestampIndex = array_search('date_time', $header);
+        }
+        if ($timestampIndex === false) {
+            $timestampIndex = array_search('datetime', $header);
+        }
+        if ($timestampIndex === false) {
+            $timestampIndex = array_search('timestamp', $header);
+        }
+        if ($timestampIndex === false) {
+            $timestampIndex = array_search('date', $header);
+        }
+        
+        if ($deviceUserIdIndex === false || $timestampIndex === false) {
+            $missingColumns = [];
+            if ($deviceUserIdIndex === false) {
+                $missingColumns[] = '"No." or "device_user_id"';
+            }
+            if ($timestampIndex === false) {
+                $missingColumns[] = '"Date/Time" or "timestamp"';
+            }
+            throw new \Exception('Excel file must contain ' . implode(' and ', $missingColumns) . ' column(s).');
+        }
+        
+        // Read data rows (starting from row 2)
+        $rowIterator = $worksheet->getRowIterator(2);
+        $rowNumber = 1;
+        
+        foreach ($rowIterator as $row) {
+            $rowNumber++;
+            $cellIterator = $row->getCellIterator();
+            $cellIterator->setIterateOnlyExistingCells(false);
+            
+            $rowData = [];
+            foreach ($cellIterator as $cell) {
+                $rowData[] = $cell->getValue();
+            }
+            
+            if (count($rowData) < max($deviceUserIdIndex, $timestampIndex) + 1) {
+                continue; // Skip incomplete rows
+            }
+            
+            $deviceUserId = trim($rowData[$deviceUserIdIndex] ?? '');
+            $timestamp = trim($rowData[$timestampIndex] ?? '');
+            
+            if (empty($deviceUserId) || empty($timestamp)) {
+                continue; // Skip empty rows
+            }
+            
+            // Parse timestamp - try multiple formats including MM/DD/YYYY HH:MM
+            try {
+                $timestampStr = is_object($timestamp) ? $timestamp->getFormattedValue() : (string)$timestamp;
+                
+                // Try MM/DD/YYYY HH:MM format first (common in export files)
+                if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})$/', $timestampStr, $matches)) {
+                    $month = $matches[1];
+                    $day = $matches[2];
+                    $year = $matches[3];
+                    $hour = $matches[4];
+                    $minute = $matches[5];
+                    $parsedDate = Carbon::create($year, $month, $day, $hour, $minute, 0);
+                } else {
+                    // Try standard Carbon parsing for other formats
+                    $parsedDate = Carbon::parse($timestampStr);
+                }
+                
+                $records[] = [
+                    'id' => $deviceUserId,
+                    'timestamp' => $parsedDate->format('Y-m-d H:i:s'),
+                ];
+            } catch (\Exception $e) {
+                Log::warning("Skipping invalid timestamp in Excel row {$rowNumber}: {$timestampStr} - " . $e->getMessage());
+                continue;
+            }
+        }
+        
+        return $records;
+    }
+    
+    /**
+     * Save attendance records to database (same logic as FetchDailyAttendance)
+     */
+    private function saveAttendanceToDatabase(array $attendance): int
+    {
+        $savedCount = 0;
+        $skippedCount = 0;
+        $errorCount = 0;
+        
+        foreach ($attendance as $index => $record) {
+            try {
+                Log::info("Import Attendance: Record: " . json_encode($record));
+                $deviceUserId = $record['id'];
+                
+                // Find user by device_user_id
+                $user = User::where('device_user_id', $deviceUserId)->first();
+                
+                if (!$user) {
+                    // Try to find by zkteco_uid as fallback
+                    $user = User::where('zkteco_uid', $deviceUserId)->first();
+                }
+                
+                if (!$user) {
+                    // Log unmatched records for debugging
+                    Log::warning("Import Attendance: No user found for device_user_id: {$deviceUserId}");
+                    $skippedCount++;
+                    continue; // Skip if user not found
+                }
+                
+                // Parse the timestamp
+                $timestamp = Carbon::parse($record['timestamp']);
+                $recordDate = $timestamp->format('Y-m-d');
+                $actualCheckInTime = $timestamp->format('H:i:s');
+                $expectedCheckInTime = $user->check_in_time;
+                
+                // Calculate late minutes - check_in_time in users table is COMPANY SET TIME
+                $lateMinutes = 0;
+                $earlyMinutes = 0;
+                $status = 'present';
+                $isCheckOut = false;
+                
+                if ($expectedCheckInTime) {
+                    $companySetCheckInTime = Carbon::parse($recordDate . ' ' . $expectedCheckInTime);
+                    $actualTime = Carbon::parse($recordDate . ' ' . $actualCheckInTime);
+                    
+                    // Determine if this is likely a check-out based on time
+                    $expectedCheckOut = $user->check_out_time ? Carbon::parse($recordDate . ' ' . $user->check_out_time) : null;
+                    
+                    if ($expectedCheckOut && $actualTime->greaterThan($expectedCheckOut->copy()->subHours(2))) {
+                        // This is likely a check-out
+                        $isCheckOut = true;
+                        if ($actualTime->lessThan($expectedCheckOut)) {
+                            $earlyMinutes = $expectedCheckOut->diffInMinutes($actualTime);
+                            $status = $earlyMinutes > 15 ? 'early_departure' : 'present';
+                        }
+                    } else {
+                        // This is likely a check-in - compare with COMPANY SET TIME
+                        // Ignore seconds - compare only at minute level
+                        $companySetCheckInTimeNoSeconds = $companySetCheckInTime->copy()->startOfMinute();
+                        $actualTimeNoSeconds = $actualTime->copy()->startOfMinute();
+                        
+                        if ($actualTimeNoSeconds->greaterThan($companySetCheckInTimeNoSeconds)) {
+                            // User checked in AFTER company set time (ignoring seconds) = LATE
+                            $calculatedLateMinutes = $actualTimeNoSeconds->diffInMinutes($companySetCheckInTimeNoSeconds);
+                            
+                            // Apply late calculation rules:
+                            // - If late < 30 minutes: store exact late minutes
+                            // - If late >= 30 minutes and < 60 minutes: store 60 minutes (1 hour)
+                            // - If late >= 60 minutes: store exact late minutes
+                            if ($calculatedLateMinutes < 30) {
+                                $lateMinutes = (int)$calculatedLateMinutes; // Store exact time
+                            } elseif ($calculatedLateMinutes >= 30 && $calculatedLateMinutes < 60) {
+                                $lateMinutes = 60; // Mark as 1 hour
+                            } else {
+                                $lateMinutes = (int)$calculatedLateMinutes; // Store exact time for 1 hour or more
+                            }
+                            
+                            $status = 'late'; // Any late arrival is marked as late
+                        } else {
+                            // User checked in ON TIME or EARLY (same minute or earlier, ignoring seconds) = PRESENT
+                            $status = 'present';
+                        }
+                    }
+                }
+                
+                // Check if attendance record already exists for this date
+                $existingRecord = AttendanceRecord::where('user_id', $user->id)
+                    ->where('attendance_date', $recordDate)
+                    ->first();
+                
+                if ($existingRecord) {
+                    // Update existing record
+                    $updateData = [
+                        'device_uid' => $deviceUserId,
+                    ];
+                    
+                    if ($isCheckOut) {
+                        // Update check-out time
+                        $updateData['check_out_time'] = $actualCheckInTime;
+                        $updateData['early_minutes'] = $earlyMinutes;
+                        $updateData['status'] = $status;
+                        
+                        // Calculate hours worked if both times exist
+                        if ($existingRecord->check_in_time) {
+                            $checkIn = Carbon::parse($recordDate . ' ' . $existingRecord->check_in_time);
+                            $checkOut = Carbon::parse($recordDate . ' ' . $actualCheckInTime);
+                            $hoursWorked = $checkOut->diffInMinutes($checkIn) / 60;
+                            $updateData['hours_worked'] = round($hoursWorked, 2);
+                        }
+                    } else {
+                        // For check-in, always update with the latest/earliest time
+                        // Update check-in time if it's earlier or doesn't exist
+                        if ($existingRecord->check_in_time === null || $actualCheckInTime < $existingRecord->check_in_time) {
+                            $updateData['check_in_time'] = $actualCheckInTime;
+                            $updateData['late_minutes'] = $lateMinutes;
+                            $updateData['status'] = $status;
+                        } else {
+                            // Even if we don't update check-in time (because existing is earlier),
+                            // we should recalculate late_minutes based on the EARLIEST check-in time
+                            // Use the existing check-in time to recalculate late minutes
+                            $existingCheckInTime = $existingRecord->check_in_time;
+                            $existingCheckInTimeObj = Carbon::parse($recordDate . ' ' . $existingCheckInTime);
+                            $companySetCheckInTime = Carbon::parse($recordDate . ' ' . $expectedCheckInTime);
+                            
+                            $companySetCheckInTimeNoSeconds = $companySetCheckInTime->copy()->startOfMinute();
+                            $existingCheckInTimeNoSeconds = $existingCheckInTimeObj->copy()->startOfMinute();
+                            
+                            if ($existingCheckInTimeNoSeconds->greaterThan($companySetCheckInTimeNoSeconds)) {
+                                $calculatedLateMinutes = $existingCheckInTimeNoSeconds->diffInMinutes($companySetCheckInTimeNoSeconds);
+                                
+                                // Apply late calculation rules:
+                                // - If late < 30 minutes: store exact late minutes
+                                // - If late >= 30 minutes and < 60 minutes: store 60 minutes (1 hour)
+                                // - If late >= 60 minutes: store exact late minutes
+                                if ($calculatedLateMinutes < 30) {
+                                    $recalculatedLateMinutes = (int)$calculatedLateMinutes;
+                                } elseif ($calculatedLateMinutes >= 30 && $calculatedLateMinutes < 60) {
+                                    $recalculatedLateMinutes = 60;
+                                } else {
+                                    $recalculatedLateMinutes = (int)$calculatedLateMinutes;
+                                }
+                                
+                                $updateData['late_minutes'] = $recalculatedLateMinutes;
+                                $updateData['status'] = 'late';
+                            } else {
+                                $updateData['late_minutes'] = 0;
+                                $updateData['status'] = 'present';
+                            }
+                        }
+                    }
+                    
+                    // Always update the record (even if just device_uid changes)
+                    $result = $existingRecord->update($updateData);
+                    if ($result) {
+                        $savedCount++;
+                        // Refresh the model to get updated values
+                        $existingRecord->refresh();
+                        Log::info("Import Attendance: Successfully updated record for user {$user->id} on {$recordDate}", [
+                            'update_data' => $updateData,
+                            'record_id' => $existingRecord->id,
+                            'check_in_time' => $existingRecord->check_in_time,
+                            'check_out_time' => $existingRecord->check_out_time,
+                            'status' => $existingRecord->status
+                        ]);
+                    } else {
+                        Log::error("Import Attendance: Failed to update record for user {$user->id} on {$recordDate}", [
+                            'update_data' => $updateData,
+                            'record_id' => $existingRecord->id
+                        ]);
+                    }
+            } else {
+                // Create new attendance record
+                $recordData = [
+                    'user_id' => $user->id,
+                    'attendance_date' => $recordDate,
+                    'device_uid' => $deviceUserId,
+                    'status' => $status,
+                ];
+                
+                if ($isCheckOut) {
+                    $recordData['check_out_time'] = $actualCheckInTime;
+                    $recordData['early_minutes'] = $earlyMinutes;
+                } else {
+                    $recordData['check_in_time'] = $actualCheckInTime;
+                    $recordData['late_minutes'] = $lateMinutes;
+                }
+                
+                $newRecord = AttendanceRecord::create($recordData);
+                $savedCount++;
+                Log::debug("Import Attendance: Created record for user {$user->id} on {$recordDate}", [
+                    'record_id' => $newRecord->id,
+                    'record_data' => $recordData
+                ]);
+            }
+            } catch (\Exception $e) {
+                $errorCount++;
+                Log::error("Import Attendance: Error saving record #{$index}", [
+                    'device_user_id' => $deviceUserId ?? 'unknown',
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                continue;
+            }
+        }
+        
+        if ($skippedCount > 0) {
+            Log::warning("Import Attendance: Skipped {$skippedCount} record(s) due to missing users");
+        }
+        if ($errorCount > 0) {
+            Log::error("Import Attendance: Failed to save {$errorCount} record(s) due to errors");
+        }
+        
+        return $savedCount;
     }
     
     /**
