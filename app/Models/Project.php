@@ -39,6 +39,22 @@ class Project extends Model
     }
 
     /**
+     * Get the leads for the project.
+     */
+    public function leads(): HasMany
+    {
+        return $this->hasMany(Lead::class);
+    }
+
+    /**
+     * Get the statuses for the project.
+     */
+    public function statuses(): HasMany
+    {
+        return $this->hasMany(Status::class);
+    }
+
+    /**
      * Get the completed tasks count.
      */
     public function getCompletedTasksCountAttribute(): int
