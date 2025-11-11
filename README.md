@@ -1,19 +1,51 @@
 # Task Management System
 
-A complete Laravel 10 and Livewire 3 task management system with role-based access control, email notifications, and responsive design.
+A comprehensive enterprise-level Task Management System built with Laravel 10 and Livewire 3. The system integrates task management, human resources, attendance tracking, salary management, and real-time communication capabilities in a single, unified platform.
 
-## Features
+## 📋 Documentation
 
-- **Authentication System**: Login and registration with role-based access control
-- **Role-Based Permissions**: Super Admin, Admin, Manager, and Employee roles
-- **Project Management**: Create and manage projects
-- **Task Management**: Create, assign, and track tasks with status updates
-- **Team Management**: Assign employees to managers
-- **Email Notifications**: Automatic notifications for task assignments
-- **File Attachments**: Upload and manage task attachments
-- **Activity Logging**: Track all user actions
-- **Responsive Design**: Bootstrap 5 with light/dark theme toggle
-- **Real-time Updates**: Livewire components for dynamic interactions
+For comprehensive documentation, please refer to:
+- **[Documentation Index](DOCUMENTATION_INDEX.md)** - Master index of all documentation
+- **[Project Overview](PROJECT_OVERVIEW.md)** - Executive summary and system capabilities
+- **[Features Summary](FEATURES_SUMMARY.md)** - Quick reference of all features
+- **[Features & Modules List](FEATURES_MODULES_LIST.md)** - Detailed feature documentation
+- **[Deep Technical Analysis](DEEP_ANALYSIS.md)** - In-depth technical documentation
+- **[Monthly System Report](MONTHLY_SYSTEM_REPORT.md)** - System capabilities report
+- **[Multiple Assignees Feature](MULTIPLE_ASSIGNEES_FEATURE.md)** - Feature-specific documentation
+
+## ✨ Key Features
+
+### Core Modules (22 Total)
+
+- **Authentication & Authorization**: Login, registration, role-based access control
+- **User Management**: Complete user lifecycle management with permissions
+- **Project Management**: Create and manage projects with progress tracking
+- **Task Management**: Advanced task management with multiple assignees, recurring tasks, time tracking
+- **Team Management**: Manager-employee relationships and team hierarchy
+- **Role & Permission Management**: Hierarchical RBAC system
+- **Chat & Messaging**: Real-time communication with channels and private messages
+- **Attendance Management**: Daily tracking with biometric device integration (Zkteco)
+- **Salary Management**: Automatic salary calculations with bonuses and deductions
+- **Email Notifications**: Automated notifications with role-based templates
+- **File & Attachments**: Upload, download, and preview functionality
+- **Activity Logging**: Complete audit trail of user actions
+- **Dashboard**: Role-based system overview and statistics
+- **Settings & Theme**: System configuration and light/dark theme toggle
+- **Recurring Task Automation**: Automatic task generation (daily, weekly, monthly)
+- **Probation Management**: Automated probation to permanent conversion
+- **And more...**
+
+### Advanced Features
+
+- ✅ **Multiple Assignees**: Assign same task to multiple employees
+- ✅ **Recurring Tasks**: Daily, weekly, monthly, or until stopped
+- ✅ **Time Tracking**: Estimated vs actual hours with variance analysis
+- ✅ **Biometric Integration**: Automatic attendance fetching from Zkteco devices
+- ✅ **Salary Calculations**: Automatic calculations with grace periods and penalties
+- ✅ **Real-time Chat**: Channel-based and private messaging with typing indicators
+- ✅ **Email Notifications**: 10+ email types with role-based templates
+- ✅ **File Management**: Upload, download, preview (PDF, images, videos)
+- ✅ **Responsive Design**: Bootstrap 5 with light/dark theme toggle
 
 ## Technology Stack
 
@@ -254,6 +286,22 @@ resources/views/
 
 This project is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
 
+## 📚 Additional Documentation
+
+- **[Documentation Index](DOCUMENTATION_INDEX.md)** - Complete documentation navigation
+- **[Project Overview](PROJECT_OVERVIEW.md)** - Executive summary and system capabilities
+- **[Features Summary](FEATURES_SUMMARY.md)** - Quick feature reference
+- **[Features & Modules List](FEATURES_MODULES_LIST.md)** - Detailed feature documentation
+- **[Deep Technical Analysis](DEEP_ANALYSIS.md)** - Technical deep dive
+- **[Monthly System Report](MONTHLY_SYSTEM_REPORT.md)** - System capabilities report
+- **[Multiple Assignees Feature](MULTIPLE_ASSIGNEES_FEATURE.md)** - Feature documentation
+
 ## Support
 
 For support and questions, please create an issue in the project repository or contact the development team.
+
+---
+
+**System Version**: Laravel 10 + Livewire 3  
+**Status**: ✅ Production Ready  
+**Total Modules**: 22 Major Modules
