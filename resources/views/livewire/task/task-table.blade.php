@@ -30,11 +30,11 @@
                     <div class="input-group">
                         <span class="input-group-text"><i class="bi bi-search"></i></span>
                         <input type="text" class="form-control" placeholder="Search tasks..."
-                            wire:model.live="search">
+                            wire:model.debounce.500ms="search">
                     </div>
                 </div>
                 <div class="col-6 col-md-2">
-                    <select class="form-select" wire:model.live="projectFilter">
+                    <select class="form-select" wire:model.debounce.300ms="projectFilter">
                         <option value="">All Projects</option>
                         @foreach($this->projects as $project)
                             <option value="{{ $project->id }}">{{ $project->title }}</option>
@@ -42,7 +42,7 @@
                     </select>
                 </div>
                 <div class="col-6 col-md-2">
-                    <select class="form-select" wire:model.live="statusFilter">
+                    <select class="form-select" wire:model.debounce.300ms="statusFilter">
                         <option value="">All Status</option>
                         @foreach($this->statuses as $status)
                             <option value="{{ $status->id }}">{{ $status->name }}</option>
@@ -50,7 +50,7 @@
                     </select>
                 </div>
                 <div class="col-6 col-md-2">
-                    <select class="form-select" wire:model.live="categoryFilter">
+                    <select class="form-select" wire:model.debounce.300ms="categoryFilter">
                         <option value="">All Categories</option>
                         @foreach($this->categories as $category)
                             <option value="{{ $category->id }}">{{ $category->name }}</option>
@@ -58,7 +58,7 @@
                     </select>
                 </div>
                 <div class="col-12 col-md-2">
-                    <select class="form-select" wire:model.live="assigneeFilter">
+                    <select class="form-select" wire:model.debounce.300ms="assigneeFilter">
                         <option value="">All Assignees</option>
                         @foreach($this->users as $user)
                             <option value="{{ $user->id }}">{{ $user->name }}</option>
@@ -113,7 +113,13 @@
         </div>
 
         <!-- Mobile Task Cards (Hidden on Desktop) -->
-        <div class="mobile-task-cards">
+        <div class="mobile-task-cards position-relative">
+            <div wire:loading wire:target="search,projectFilter,statusFilter,categoryFilter,assigneeFilter" class="position-absolute w-100 text-center py-3" style="z-index: 10; background: rgba(255,255,255,0.9); top: 0; left: 0;">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+            <div wire:loading.remove wire:target="search,projectFilter,statusFilter,categoryFilter,assigneeFilter"></div>
             @foreach($this->tasks as $task)
                 <div class="mobile-task-item" wire:key="mobile-task-{{ $task->id }}">
                     <div class="mobile-task-header">
@@ -246,7 +252,7 @@
                 </div>
             @endforeach
 
-            @if ($this->tasks->count() == 0)
+            @if ($this->tasks->count() == 0 && !$this->tasks->hasMorePages())
                 <div class="text-center py-4">
                     <div class="text-muted">
                         <i class="bi bi-inbox fs-1 d-block mb-3"></i>
@@ -331,7 +337,9 @@
         </div>
 
         <!-- Task Table -->
-        <div class="table-responsive">
+        <div class="table-responsive position-relative">
+            
+            <div wire:loading.remove wire:target="search,projectFilter,statusFilter,categoryFilter,assigneeFilter"></div>
             <table id="tasksTable" class="table table-hover mb-0">
                 <thead class="table-dark">
                     <tr>
@@ -356,7 +364,7 @@
                 <tbody>
                     @if($this->tasks->count() == 0)
                         <tr>
-                            <td colspan="11" class="text-center py-4">
+                            <td colspan="14" class="text-center py-4">
                                 <div class="text-muted">
                                     <i class="bi bi-inbox fs-1 d-block mb-3"></i>
                                     <h5>No tasks found</h5>
@@ -533,7 +541,7 @@
                                 </td>
                                 <td class="d-none d-xl-table-cell">
                                     @if ($task->assignees->count() > 0)
-                                        <div class="assignees-compact d-flex align-items-center">
+                                        <div class="assignees-compact d-flex align-items-center flex-wrap">
                                             @php
                                                 $assignees = $task->assignees;
                                                 $firstAssignee = $assignees->first();
@@ -541,46 +549,53 @@
                                             @endphp
                                             
                                             <!-- First Assignee -->
-                                            <div class="assignee-item d-flex align-items-center">
-                                                <div class="avatar-sm bg-gradient-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
-                                                    {{ substr($firstAssignee->name, 0, 1) }}
+                                            <div class="assignee-item d-flex align-items-center me-2">
+                                                <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width:32px;height:32px;font-size:12px;min-width:32px;">
+                                                    {{ strtoupper(substr($firstAssignee->name, 0, 1)) }}
                                                 </div>
                                                 <div class="assignee-info">
-                                                    <div class="fw-semibold">{{ $firstAssignee->name }}</div>
+                                                    <div class="fw-semibold" style="font-size:0.875rem;line-height:1.2;">{{ $firstAssignee->name }}</div>
                                                     @if ($firstAssignee->role)
-                                                        <small class="text-muted">{{ $firstAssignee->role->name }}</small>
+                                                        <small class="text-muted" style="font-size:0.75rem;">{{ $firstAssignee->role->name }}</small>
                                                     @endif
                                                 </div>
                                             </div>
                                             
                                             <!-- Additional Assignees Indicator -->
                                             @if($additionalCount > 0)
-                                                <div class="additional-assignees ms-2">
-                                                    <button type="button" 
-                                                            class="btn btn-sm p-1"
-                                                            data-bs-toggle="popover" 
-                                                            data-bs-trigger="hover"
-                                                            data-bs-placement="top"
-                                                            data-bs-html="true"
-                                                            data-bs-content="
-                                                                @foreach($assignees->skip(1) as $assignee)
-                                                                    <div class='d-flex align-items-center mb-1'>
-                                                                        <div class='avatar-xs bg-gradient-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2'>
-                                                                            {{ substr($assignee->name, 0, 1) }}
-                                                                        </div>
-                                                                        <div>
-                                                                            <div class='fw-semibold'>{{ $assignee->name }}</div>
-                                                                            @if($assignee->role)
-                                                                                <small class='text-muted'>{{ $assignee->role->name }}</small>
-                                                                            @endif
-                                                                        </div>
+                                                <div class="additional-assignees ms-1">
+                                                    <span class="badge bg-primary assignee-more-badge d-inline-flex align-items-center" 
+                                                          data-bs-toggle="tooltip" 
+                                                          data-bs-html="true"
+                                                          data-bs-placement="top"
+                                                          data-bs-container="body"
+                                                          id="assignee-tooltip-{{ $task->id }}"
+                                                          style="cursor:pointer;padding:0.35rem 0.5rem;">
+                                                        <i class="bi bi-plus-circle me-1"></i>
+                                                        <span>{{ $additionalCount }}</span>
+                                                    </span>
+                                                    
+                                                    <!-- Hidden tooltip content -->
+                                                    <div class="d-none" id="assignee-tooltip-content-{{ $task->id }}">
+                                                        <div class="text-start p-2" style="min-width:200px;">
+                                                            <div class="fw-semibold mb-2" style="font-size:0.875rem;border-bottom:1px solid var(--border-color);padding-bottom:0.5rem;">
+                                                                Additional Assignees ({{ $additionalCount }})
+                                                            </div>
+                                                            @foreach($assignees->skip(1) as $assignee)
+                                                                <div class="d-flex align-items-center mb-2">
+                                                                    <div class="avatar-xs bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width:28px;height:28px;font-size:11px;min-width:28px;">
+                                                                        {{ strtoupper(substr($assignee->name, 0, 1)) }}
                                                                     </div>
-                                                                @endforeach
-                                                            "
-                                                            title="Additional Assignees">
-                                                        
-                                                        <span class="badge bg-primary ms-1"><i class="bi bi-plus"></i> {{ $additionalCount }}</span>
-                                                    </button>
+                                                                    <div class="flex-grow-1">
+                                                                        <div class="fw-semibold" style="font-size:0.875rem;line-height:1.2;">{{ $assignee->name }}</div>
+                                                                        @if($assignee->role)
+                                                                            <small class="text-muted" style="font-size:0.75rem;">{{ $assignee->role->name }}</small>
+                                                                        @endif
+                                                                    </div>
+                                                                </div>
+                                                            @endforeach
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             @endif
                                         </div>
@@ -875,16 +890,20 @@
             </table>
         </div>
 
+        <!-- Pagination -->
+        <div class="d-flex justify-content-center mt-3">
+            {{ $this->tasks->links() }}
+        </div>
+
         <!-- Mobile Card Layout -->
 
 
-        <!-- DataTables will handle pagination -->
     </div>
                 <!-- Admin Review Modal - Simple and Working -->
                 @if ($showAdminReviewModal)
-                <div wire:ignore.self class="modal fade show d-block" tabindex="-1"
-                    role="dialog" style="@if ($showAdminReviewModal) background: rgba(0,0,0,0.5); z-index: 1055; @endif">
-                    <div class="modal-dialog modal-lg modal-dialog-centered" role="document" style="z-index: 1056;">
+                <div wire:ignore.self wire:transition id="adminReviewModal" class="modal fade show d-block modal-fast-close" tabindex="-1"
+                    role="dialog" style="background: rgba(0,0,0,0.5); z-index: 1055; transition: opacity 0.15s ease-out;">
+                    <div class="modal-dialog modal-lg modal-dialog-centered" role="document" style="z-index: 1056; transition: transform 0.15s ease-out;">
                         <div class="modal-content admin-review-modal-content">
     
                         <!-- Header -->
@@ -899,7 +918,7 @@
                                 @endif
                             </h5>
                             <button type="button" class="btn-close btn-close-white"
-                                wire:click="closeAdminReviewModal"></button>
+                                onclick="closeModalFast('adminReviewModal'); @this.call('closeAdminReviewModal')"></button>
                         </div>
     
                             <!-- Body -->
@@ -1001,7 +1020,7 @@
     
                         <!-- Footer -->
                         <div class="modal-footer" style="background-color: var(--bg-secondary); border-top: 1px solid var(--border-color);">
-                            <button type="button" class="btn btn-secondary" wire:click="closeAdminReviewModal">
+                            <button type="button" class="btn btn-secondary" onclick="closeModalFast('adminReviewModal'); @this.call('closeAdminReviewModal')">
                                 <i class="bi bi-x-circle me-2"></i>Cancel
                             </button>
                             @if($adminReviewAction === 'approve')
@@ -1045,6 +1064,58 @@
     </div>
 
     <script>
+        // Fast modal close function - instantly hides modal visually, then lets Livewire update
+        function closeModalFast(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                // Add closing class to prevent blinking
+                modal.classList.add('modal-closing');
+                
+                // Force hide immediately
+                modal.style.setProperty('opacity', '0', 'important');
+                modal.style.setProperty('pointer-events', 'none', 'important');
+                modal.style.setProperty('visibility', 'hidden', 'important');
+                
+                const dialog = modal.querySelector('.modal-dialog');
+                if (dialog) {
+                    dialog.style.setProperty('transform', 'scale(0.95)', 'important');
+                }
+                
+                // Prevent modal from showing again during Livewire update
+                const observer = new MutationObserver(function(mutations) {
+                    if (modal && modal.classList.contains('modal-closing')) {
+                        modal.style.setProperty('display', 'none', 'important');
+                        modal.style.setProperty('opacity', '0', 'important');
+                        modal.style.setProperty('visibility', 'hidden', 'important');
+                    }
+                });
+                
+                observer.observe(modal, {
+                    attributes: true,
+                    attributeFilter: ['style', 'class'],
+                    childList: false,
+                    subtree: false
+                });
+                
+                // Also watch for any style changes on parent
+                if (modal.parentElement) {
+                    observer.observe(modal.parentElement, {
+                        attributes: true,
+                        attributeFilter: ['style', 'class'],
+                        childList: true
+                    });
+                }
+                
+                // Clean up observer after modal is fully closed
+                setTimeout(() => {
+                    observer.disconnect();
+                    if (modal) {
+                        modal.classList.remove('modal-closing');
+                    }
+                }, 500);
+            }
+        }
+
         let taskIdToDelete = null;
 
         function confirmDelete(taskId) {
@@ -1063,6 +1134,11 @@
 
         // Fix dropdown positioning to appear above all rows
         document.addEventListener('DOMContentLoaded', function() {
+            // Store click target in window for access in hide event
+            window.lastClickTarget = null;
+            document.addEventListener('click', function(e) {
+                window.lastClickTarget = e.target;
+            }, true);
             // Initialize all dropdowns with proper positioning
             function initializeDropdowns() {
                 document.querySelectorAll('.dropdown-toggle').forEach(toggle => {
@@ -1153,19 +1229,125 @@
                 menu.style.zIndex = '1050';
             }
 
-            // Handle Bootstrap dropdown events
-            document.addEventListener('show.bs.dropdown', function(e) {
-                const dropdownMenu = e.target.querySelector('.dropdown-menu');
-                if (dropdownMenu && e.target.closest('.task-table-container')) {
-                    // Set maximum z-index
-                    dropdownMenu.style.zIndex = '99999';
-                    dropdownMenu.style.position = 'absolute';
+            // Handle Bootstrap dropdown events - Fix positioning for table dropdowns
+            document.addEventListener('shown.bs.dropdown', function(e) {
+                const dropdownToggle = e.target;
+                const dropdown = dropdownToggle.closest('.dropdown');
+                const dropdownMenu = dropdown?.querySelector('.dropdown-menu');
+                
+                if (dropdownMenu && dropdownToggle.closest('table') && dropdownMenu.classList.contains('show')) {
+                    // Get the button position
+                    const buttonRect = dropdownToggle.getBoundingClientRect();
                     
-                    // Ensure it appears above all table rows
-                    setTimeout(() => {
-                        dropdownMenu.style.zIndex = '99999';
-                        dropdownMenu.style.position = 'absolute';
-                    }, 10);
+                    // Override Bootstrap's positioning with fixed position
+                    dropdownMenu.style.position = 'fixed';
+                    dropdownMenu.style.zIndex = '99999';
+                    dropdownMenu.style.top = (buttonRect.bottom + 4) + 'px';
+                    dropdownMenu.style.left = buttonRect.left + 'px';
+                    dropdownMenu.style.transform = 'none';
+                    dropdownMenu.style.marginTop = '0';
+                    dropdownMenu.style.marginLeft = '0';
+                    dropdownMenu.style.right = 'auto';
+                    dropdownMenu.style.bottom = 'auto';
+                    
+                    // Store reference for scroll updates
+                    dropdownMenu._toggleButton = dropdownToggle;
+                    dropdownMenu._isTableDropdown = true;
+                    
+                    // Prevent dropdown from closing when clicking inside
+                    dropdownMenu.addEventListener('click', function(menuEvent) {
+                        menuEvent.stopPropagation();
+                    }, true);
+                    
+                    // Handle dropdown item clicks - close after Livewire processes
+                    dropdownMenu.querySelectorAll('.dropdown-item').forEach(item => {
+                        item.addEventListener('click', function(itemEvent) {
+                            // Let Livewire handle the click, then close dropdown
+                            setTimeout(() => {
+                                const instance = bootstrap.Dropdown.getInstance(dropdownToggle);
+                                if (instance && dropdownMenu.classList.contains('show')) {
+                                    instance.hide();
+                                }
+                            }, 200);
+                        }, true);
+                    });
+                }
+            });
+
+            // Update position on scroll
+            let scrollTimeout;
+            document.addEventListener('scroll', function() {
+                clearTimeout(scrollTimeout);
+                scrollTimeout = setTimeout(() => {
+                    document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+                        if (menu._toggleButton) {
+                            const buttonRect = menu._toggleButton.getBoundingClientRect();
+                            menu.style.top = (buttonRect.bottom + 4) + 'px';
+                            menu.style.left = buttonRect.left + 'px';
+                        }
+                    });
+                }, 10);
+            }, true);
+
+            // Handle clicks outside table dropdowns to close them (with delay to avoid conflicts)
+            let clickTimeout;
+            document.addEventListener('click', function(clickEvent) {
+                clearTimeout(clickTimeout);
+                clickTimeout = setTimeout(() => {
+                    const target = clickEvent.target;
+                    const openDropdowns = document.querySelectorAll('.dropdown-menu.show');
+                    
+                    openDropdowns.forEach(dropdownMenu => {
+                        const dropdown = dropdownMenu.closest('.dropdown');
+                        const dropdownToggle = dropdown?.querySelector('[data-bs-toggle="dropdown"]');
+                        
+                        if (dropdownToggle && dropdownToggle.closest('table')) {
+                            // If click is outside dropdown, close it
+                            if (!dropdownMenu.contains(target) && !dropdownToggle.contains(target) && !dropdown.contains(target)) {
+                                const instance = bootstrap.Dropdown.getInstance(dropdownToggle);
+                                if (instance && dropdownMenu.classList.contains('show')) {
+                                    instance.hide();
+                                }
+                            }
+                        }
+                    });
+                }, 50);
+            }, true);
+
+            // Prevent Bootstrap from auto-closing table dropdowns prematurely
+            document.addEventListener('hide.bs.dropdown', function(e) {
+                const dropdownToggle = e.target;
+                const dropdown = dropdownToggle.closest('.dropdown');
+                const dropdownMenu = dropdown?.querySelector('.dropdown-menu');
+                
+                // For table dropdowns, prevent auto-close - only close on explicit outside click
+                if (dropdownMenu && dropdownToggle.closest('table')) {
+                    // Get the last click target
+                    const clickTarget = window.lastClickTarget;
+                    
+                    // If click was inside dropdown, prevent closing
+                    if (clickTarget && (dropdownMenu.contains(clickTarget) || dropdownToggle.contains(clickTarget) || dropdown.contains(clickTarget))) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        e.stopImmediatePropagation();
+                        return false;
+                    }
+                }
+            }, true);
+
+            // Clean up on dropdown hide (only for non-table dropdowns or actual hide)
+            document.addEventListener('hidden.bs.dropdown', function(e) {
+                const dropdownMenu = e.target.closest('.dropdown')?.querySelector('.dropdown-menu');
+                if (dropdownMenu) {
+                    // Stop position updates
+                    dropdownMenu._positionUpdate = null;
+                    dropdownMenu._toggleButton = null;
+                    dropdownMenu._isTableDropdown = false;
+                    // Reset positioning
+                    dropdownMenu.style.position = '';
+                    dropdownMenu.style.top = '';
+                    dropdownMenu.style.left = '';
+                    dropdownMenu.style.transform = '';
                 }
             });
         });
@@ -1173,6 +1355,41 @@
     </script>
 
     <style>
+        /* Modal closing styles - prevent blinking */
+        .modal-fast-close {
+            transition: opacity 0.2s ease-out !important;
+        }
+        
+        .modal-fast-close.modal-closing {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            visibility: hidden !important;
+        }
+        
+        .modal-fast-close .modal-dialog {
+            transition: transform 0.2s ease-out !important;
+        }
+        
+        .modal-fast-close.modal-closing .modal-dialog {
+            transform: scale(0.95) !important;
+        }
+        
+        /* Prevent modal from showing during Livewire updates when closing */
+        .modal-closing {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+        }
+        
+        /* Smooth modal transitions */
+        .modal-fast-close {
+            will-change: opacity;
+        }
+        
+        .modal-fast-close .modal-dialog {
+            will-change: transform;
+        }
+        
         .avatar-sm {
             width: 24px;
             height: 24px;
@@ -1304,16 +1521,11 @@
             z-index: 1000;
         }
 
+        /* Ensure dropdowns show properly in tables */
         .table-responsive {
-            overflow: visible !important;
-        }
-
-        .task-table {
-            overflow: visible !important;
-        }
-
-        .task-table .table {
-            overflow: visible !important;
+            overflow-x: auto !important;
+            overflow-y: visible !important;
+            position: relative !important;
         }
 
         .table-responsive td {
@@ -1323,44 +1535,127 @@
 
         .table-responsive tr {
             overflow: visible !important;
+            position: relative !important;
         }
 
-        /* Force all containers to allow dropdown overflow */
-        .task-table,
-        .task-table *,
-        .table-responsive,
-        .table-responsive * {
+        .table-responsive table {
             overflow: visible !important;
         }
 
-        /* Exception for horizontal scrolling */
-        .table-responsive {
-            overflow-x: auto !important;
-            overflow-y: visible !important;
+        .table-responsive .table {
+            overflow: visible !important;
         }
 
         /* Dropdown positioning for table edges - Specific fixes */
         .dropdown-menu {
             position: absolute !important;
-            z-index: 1050 !important;
+            z-index: 9999 !important;
             display: none;
             min-width: 160px;
             padding: 0.5rem 0;
             margin: 0;
-            background-color: #fff;
-            border: 1px solid rgba(0, 0, 0, .15);
+            background: var(--bg-primary) !important;
+            border: 1px solid var(--border-color) !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
             border-radius: 0.375rem;
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.175);
+        }
+
+        .dropdown-item {
+            color: var(--text-primary) !important;
+        }
+
+        .dropdown-item:hover {
+            background: var(--bg-tertiary) !important;
+            color: var(--text-primary) !important;
+        }
+
+        /* Assignee hover badge styling */
+        .assignee-more-badge {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.75rem;
+            border-radius: 4px;
+        }
+
+        .assignee-more-badge:hover {
+            transform: scale(1.05);
+            opacity: 0.9;
+            background-color: var(--primary-color) !important;
+        }
+
+        /* Assignee item styling */
+        .assignee-item {
+            min-width: 0;
+        }
+
+        .assignee-info {
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .assignee-info .fw-semibold {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 120px;
+        }
+
+        /* Tooltip styling for assignees */
+        .tooltip-inner {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            max-width: 300px;
+            text-align: left;
+        }
+
+        .tooltip.bs-tooltip-top .tooltip-arrow::before {
+            border-top-color: var(--border-color);
+        }
+
+        .tooltip.bs-tooltip-top .tooltip-arrow::after {
+            border-top-color: var(--bg-primary);
         }
 
         .dropdown-menu.show {
             display: block !important;
-            position: absolute !important;
-            z-index: 1050 !important;
+            z-index: 9999 !important;
+            visibility: visible !important;
+            opacity: 1 !important;
         }
 
-        /* Force dropdown positioning */
-        .dropdown-menu[data-bs-popper] {
+        /* Ensure table dropdowns can show properly */
+        .table td .dropdown-menu.show {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            z-index: 99999 !important;
+            pointer-events: auto !important;
+        }
+
+        /* Prevent dropdown from being hidden */
+        .table td .dropdown-menu.show[style*="display: none"] {
+            display: block !important;
+        }
+
+        /* Keep dropdown visible */
+        .table td .dropdown-menu.show {
+            animation: none !important;
+        }
+
+        /* Ensure dropdown items are clickable */
+        .table td .dropdown-item {
+            pointer-events: auto !important;
+            cursor: pointer;
+        }
+
+        /* Default dropdown positioning (for non-table dropdowns) */
+        .dropdown-menu:not(.table td .dropdown-menu) {
+            position: absolute !important;
+        }
+
+        /* Force dropdown positioning for non-table dropdowns */
+        .dropdown-menu[data-bs-popper]:not(.table td .dropdown-menu) {
             top: 100% !important;
             left: 0 !important;
             margin-top: 0.125rem !important;
@@ -1375,13 +1670,22 @@
         }
 
         /* Ensure dropdowns are not clipped */
+        .table td {
+            overflow: visible !important;
+            position: relative !important;
+        }
+
+        .table td .dropdown {
+            position: static !important;
+        }
+
+        /* Table dropdowns - only override position after Bootstrap shows it */
         .table td .dropdown-menu {
-            position: absolute !important;
-            z-index: 1050 !important;
-            top: 100% !important;
-            left: 0 !important;
-            right: auto !important;
-            transform: none !important;
+            /* Don't interfere with Bootstrap's display logic */
+        }
+        
+        .table td .dropdown-menu.show {
+            z-index: 99999 !important;
         }
 
 
@@ -1408,6 +1712,17 @@
             border-radius: 0 0 0.5rem 0.5rem;
             width: 100%;
             display: block;
+            position: relative !important;
+        }
+
+        /* Ensure table cells allow dropdown overflow */
+        .task-table .table td {
+            overflow: visible !important;
+            position: relative !important;
+        }
+
+        .task-table .table tr {
+            overflow: visible !important;
         }
 
         .task-table .table {
@@ -1578,9 +1893,13 @@
                 drawCallback: function() {
                     // Re-initialize dropdown positioning after table redraw
                     setTimeout(() => {
+                        // Re-initialize tooltips
+                        initializeTooltips();
+                        
+                        // Fix dropdown z-index
                         const dropdowns = document.querySelectorAll('.dropdown-menu');
                         dropdowns.forEach(dropdown => {
-                            dropdown.style.zIndex = '1050';
+                            dropdown.style.zIndex = '9999';
                             dropdown.style.position = 'absolute';
                         });
 
@@ -1778,15 +2097,15 @@
 
     <!-- Notes Modal -->
     @if ($showNotesModal)
-        <div class="modal fade show" style="display: block;" tabindex="-1" role="dialog">
-            <div class="modal-dialog modal-xl" role="document">
+        <div wire:ignore.self wire:transition id="notesModal" class="modal fade show modal-fast-close" style="display: block; transition: opacity 0.15s ease-out;" tabindex="-1" role="dialog">
+            <div class="modal-dialog modal-xl" role="document" style="transition: transform 0.15s ease-out;">
                 <div class="modal-content shadow-lg border-0">
                     <div class="modal-header bg-gradient-primary text-white border-0">
                         <h5 class="modal-title fw-bold">
                             <i class="bi bi-sticky me-2"></i>{{ $notesModalTitle }}
                         </h5>
                         <button type="button" class="btn-close btn-close-white"
-                            wire:click="closeNotesModal"></button>
+                            onclick="closeModalFast('notesModal'); @this.call('closeNotesModal')"></button>
                     </div>
                     <div class="modal-body p-4">
                         @if ($notesModalMode === 'commit')
@@ -2237,7 +2556,7 @@
                     <div class="modal-footer bg-light border-0">
                         @if ($notesModalMode === 'commit')
                             <button type="button" class="btn btn-outline-secondary btn-lg"
-                                wire:click="closeNotesModal">
+                                onclick="closeModalFast('notesModal'); @this.call('closeNotesModal')">
                                 <i class="bi bi-x-circle me-2"></i>Cancel
                             </button>
                             <button type="button" class="btn btn-success btn-lg" wire:click="commitNotes">
@@ -2245,7 +2564,7 @@
                             </button>
                         @else
                             <button type="button" class="btn btn-outline-secondary btn-lg"
-                                wire:click="closeNotesModal">
+                                onclick="closeModalFast('notesModal'); @this.call('closeNotesModal')">
                                 <i class="bi bi-x-circle me-2"></i>Close
                             </button>
                             @if ($this->canEditNotes())
@@ -2588,14 +2907,14 @@
 
     <!-- Employee Selection Modal -->
     @if($showEmployeeModal)
-        <div wire:ignore.self class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5); z-index: 1060;">
-            <div class="modal-dialog modal-lg">
+        <div wire:ignore.self wire:transition id="employeeModal" class="modal fade show d-block modal-fast-close" tabindex="-1" style="background-color: rgba(0,0,0,0.5); z-index: 1060; transition: opacity 0.15s ease-out;">
+            <div class="modal-dialog modal-lg" style="transition: transform 0.15s ease-out;">
                 <div class="modal-content">
                     <div class="modal-header bg-primary text-white">
                         <h5 class="modal-title fw-bold">
                             <i class="bi bi-people me-2"></i>Select Assignees
                         </h5>
-                        <button type="button" class="btn-close btn-close-white" wire:click="closeEmployeeModal"></button>
+                        <button type="button" class="btn-close btn-close-white" onclick="closeModalFast('employeeModal'); @this.call('closeEmployeeModal')"></button>
                     </div>
                     
                     <div class="modal-body">
@@ -2691,7 +3010,7 @@
                     </div>
                     
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" wire:click="closeEmployeeModal">
+                        <button type="button" class="btn btn-secondary" onclick="closeModalFast('employeeModal'); @this.call('closeEmployeeModal')">
                             <i class="bi bi-x-circle me-2"></i>Done
                         </button>
                     </div>
@@ -2702,14 +3021,19 @@
 
     <!-- Task Creation Modal -->
     @if($showTaskModal)
-        <div wire:ignore.self class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5); z-index: 1055;">
-            <div class="modal-dialog modal-xl">
+        <div wire:ignore.self 
+             wire:transition
+             id="taskModal"
+             class="modal fade show d-block modal-fast-close" 
+             tabindex="-1" 
+             style="background-color: rgba(0,0,0,0.5); z-index: 1055; transition: opacity 0.15s ease-out;">
+            <div class="modal-dialog modal-xl" style="transition: transform 0.15s ease-out;">
                 <div class="modal-content">
                     <div class="modal-header bg-primary text-white">
                         <h5 class="modal-title fw-bold">
                             <i class="bi bi-plus-circle me-2"></i>Create New Task
                         </h5>
-                        <button type="button" class="btn-close btn-close-white" wire:click="closeTaskModal"></button>
+                        <button type="button" class="btn-close btn-close-white" onclick="closeModalFast('taskModal'); @this.call('closeTaskModal')"></button>
                     </div>
                     
                     <!-- Flash Messages -->
@@ -2928,7 +3252,7 @@
                     </div>
                     
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" wire:click="closeTaskModal">
+                        <button type="button" class="btn btn-secondary" onclick="closeModalFast('taskModal'); @this.call('closeTaskModal')">
                             <i class="bi bi-x-circle me-2"></i>Cancel
                         </button>
                         <button type="button" class="btn btn-primary" wire:click="createTaskFromModal">
@@ -2942,14 +3266,14 @@
 
     <!-- Project Creation Modal -->
     @if($showProjectCreateModal)
-        <div wire:ignore.self class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0,0,0,0.7); z-index: 1060; position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: auto;">
-            <div class="modal-dialog modal-dialog-centered modal-lg" style="z-index: 1061; position: relative;">
+        <div wire:ignore.self wire:transition id="projectCreateModal" class="modal fade show d-block modal-fast-close" tabindex="-1" role="dialog" style="background-color: rgba(0,0,0,0.7); z-index: 1060; position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: auto; transition: opacity 0.15s ease-out;">
+            <div class="modal-dialog modal-dialog-centered modal-lg" style="z-index: 1061; position: relative; transition: transform 0.15s ease-out;">
                 <div class="modal-content" style="z-index: 1062;">
                     <div class="modal-header bg-primary text-white">
                         <h5 class="modal-title fw-bold">
                             <i class="bi bi-folder-plus me-2"></i>Create New Project
                         </h5>
-                        <button type="button" class="btn-close btn-close-white" wire:click="closeProjectCreateModal"></button>
+                        <button type="button" class="btn-close btn-close-white" onclick="closeModalFast('projectCreateModal'); @this.call('closeProjectCreateModal')"></button>
                     </div>
                     
                     <!-- Flash Messages -->
@@ -3017,14 +3341,14 @@
 
     <!-- Category Creation Modal -->
     @if($showCategoryCreateModal)
-        <div wire:ignore.self class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0,0,0,0.7); z-index: 1060; position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: auto;">
-            <div class="modal-dialog modal-dialog-centered modal-lg" style="z-index: 1061; position: relative;">
+        <div wire:ignore.self wire:transition id="categoryCreateModal" class="modal fade show d-block modal-fast-close" tabindex="-1" role="dialog" style="background-color: rgba(0,0,0,0.7); z-index: 1060; position: fixed; top: 0; left: 0; width: 100%; height: 100%; overflow: auto; transition: opacity 0.15s ease-out;">
+            <div class="modal-dialog modal-dialog-centered modal-lg" style="z-index: 1061; position: relative; transition: transform 0.15s ease-out;">
                 <div class="modal-content" style="z-index: 1062;">
                     <div class="modal-header bg-primary text-white">
                         <h5 class="modal-title fw-bold">
                             <i class="bi bi-tag-plus me-2"></i>Create New Category
                         </h5>
-                        <button type="button" class="btn-close btn-close-white" wire:click="closeCategoryCreateModal"></button>
+                        <button type="button" class="btn-close btn-close-white" onclick="closeModalFast('categoryCreateModal'); @this.call('closeCategoryCreateModal')"></button>
                     </div>
                     
                     <!-- Flash Messages -->
@@ -3128,14 +3452,14 @@
 
     <!-- Task Edit Modal -->
     @if($showEditModal)
-        <div wire:ignore.self class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5); z-index: 1055;">
-            <div class="modal-dialog modal-xl">
+        <div wire:ignore.self wire:transition id="editModal" class="modal fade show d-block modal-fast-close" tabindex="-1" style="background-color: rgba(0,0,0,0.5); z-index: 1055; transition: opacity 0.15s ease-out;">
+            <div class="modal-dialog modal-xl" style="transition: transform 0.15s ease-out;">
                 <div class="modal-content">
                     <div class="modal-header bg-warning text-dark">
                         <h5 class="modal-title fw-bold">
                             <i class="bi bi-pencil-circle me-2"></i>Edit Task
                         </h5>
-                        <button type="button" class="btn-close" wire:click="closeEditModal"></button>
+                        <button type="button" class="btn-close" onclick="closeModalFast('editModal'); @this.call('closeEditModal')"></button>
                     </div>
                     
                     <!-- Flash Messages -->
@@ -3524,14 +3848,14 @@
 
     <!-- Task Clone Modal -->
     @if($showCloneModal)
-        <div wire:ignore.self class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5); z-index: 1055;">
-            <div class="modal-dialog">
+        <div wire:ignore.self wire:transition id="cloneModal" class="modal fade show d-block modal-fast-close" tabindex="-1" style="background-color: rgba(0,0,0,0.5); z-index: 1055; transition: opacity 0.15s ease-out;">
+            <div class="modal-dialog" style="transition: transform 0.15s ease-out;">
                 <div class="modal-content">
                     <div class="modal-header bg-info text-white">
                         <h5 class="modal-title fw-bold">
                             <i class="bi bi-files me-2"></i>Clone Task
                         </h5>
-                        <button type="button" class="btn-close btn-close-white" wire:click="closeCloneModal"></button>
+                        <button type="button" class="btn-close btn-close-white" onclick="closeModalFast('cloneModal'); @this.call('closeCloneModal')"></button>
                     </div>
                     
                     <div class="modal-body">
@@ -3636,10 +3960,38 @@
             }
         });
 
-        // Initialize new tooltips
-        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.map(function(tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
+        // Initialize new tooltips including assignee badges
+        const tooltipElements = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        tooltipElements.forEach(element => {
+            // Check if tooltip already exists
+            const existingTooltip = bootstrap.Tooltip.getInstance(element);
+            if (existingTooltip) {
+                existingTooltip.dispose();
+            }
+            
+            // Special handling for assignee tooltips
+            if (element.classList.contains('assignee-more-badge') && element.id) {
+                const taskId = element.id.replace('assignee-tooltip-', '');
+                const tooltipContent = document.getElementById('assignee-tooltip-content-' + taskId);
+                
+                if (tooltipContent) {
+                    const content = tooltipContent.innerHTML;
+                    new bootstrap.Tooltip(element, {
+                        html: true,
+                        placement: 'top',
+                        container: 'body',
+                        title: content,
+                        sanitize: false,
+                        trigger: 'hover focus'
+                    });
+                }
+            } else {
+                new bootstrap.Tooltip(element, {
+                    html: element.hasAttribute('data-bs-html'),
+                    placement: element.getAttribute('data-bs-placement') || 'top',
+                    container: 'body'
+                });
+            }
         });
 
         // console.log('Initialized tooltips for', tooltipTriggerList.length, 'elements');
@@ -3748,6 +4100,13 @@
             component,
             el
         }) => {
+            // Prevent modals from showing if they are in closing state
+            document.querySelectorAll('.modal-closing').forEach(modal => {
+                modal.style.setProperty('display', 'none', 'important');
+                modal.style.setProperty('opacity', '0', 'important');
+                modal.style.setProperty('visibility', 'hidden', 'important');
+            });
+            
             // console.log('Morph updated, checking for Select2');
             setTimeout(window.initializeSelect2, 200);
             setTimeout(initializeTooltips, 200);
