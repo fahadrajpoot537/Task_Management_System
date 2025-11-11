@@ -2030,6 +2030,11 @@ use Illuminate\Support\Facades\Storage;
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('statuses.*') ? 'active' : '' }}" href="{{ route('statuses.index') }}" title="Project Status">
+                                <i class="bi bi-tags"></i>
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('tasks.*') ? 'active' : '' }}" href="{{ route('tasks.index') }}" title="Tasks">
                                 <i class="bi bi-list-task"></i>
                             </a>
@@ -2048,6 +2053,11 @@ use Illuminate\Support\Facades\Storage;
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('salary.*') ? 'active' : '' }}" href="{{ route('salary.management') }}" title="Salary Management">
                                 <i class="bi bi-currency-dollar"></i>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('leads.*') ? 'active' : '' }}" href="{{ route('leads.index') }}" title="Leads">
+                                <i class="bi bi-person-lines-fill"></i>
                             </a>
                         </li>
                         <li class="nav-item">
@@ -2128,7 +2138,11 @@ use Illuminate\Support\Facades\Storage;
                 @endif
 
                 <!-- Page Content -->
-                {{ $slot }}
+                @hasSection('content')
+                    @yield('content')
+                @else
+                    {{ $slot }}
+                @endif
             </main>
         </div>
     </div>
@@ -2310,6 +2324,7 @@ use Illuminate\Support\Facades\Storage;
         });
     </script>
     
+    @stack('scripts')
     @livewireScripts
 </body>
 </html>
