@@ -243,7 +243,7 @@ class TaskTable extends Component
         $this->validate([
             'newTaskTitle' => 'required|string|max:255',
             'newTaskDescription' => 'nullable|string',
-            'newTaskProjectId' => 'nullable|exists:projects,id',
+            'newTaskProjectId' => 'required|exists:projects,id',
             'newTaskAssigneeId' => 'nullable|exists:users,id',
             'newTaskAssigneeIds' => 'nullable|array',
             'newTaskAssigneeIds.*' => 'exists:users,id',
@@ -254,6 +254,8 @@ class TaskTable extends Component
             'newTaskNotes' => 'nullable|string',
             'newTaskNature' => 'required|in:daily,weekly,monthly,until_stop',
         ], [
+            'newTaskProjectId.required' => 'The project field is required.',
+            'newTaskProjectId.exists' => 'The selected project does not exist.',
             'newTaskAssigneeIds.*.exists' => 'One or more selected users do not exist.',
             'newTaskAssigneeId.exists' => 'The selected assignee does not exist.',
         ]);
@@ -278,7 +280,7 @@ class TaskTable extends Component
         $task = Task::create([
             'title' => $this->newTaskTitle,
             'description' => $this->newTaskDescription,
-            'project_id' => $this->newTaskProjectId ?: null,
+            'project_id' => $this->newTaskProjectId,
             'assigned_to_user_id' => $primaryAssigneeId,
             'priority_id' => $this->newTaskPriority,
             'category_id' => $this->newTaskCategory,
@@ -322,7 +324,7 @@ class TaskTable extends Component
         $this->validate([
             'newTaskTitle' => 'required|string|max:255',
             'newTaskDescription' => 'nullable|string',
-            'newTaskProjectId' => 'nullable|exists:projects,id',
+            'newTaskProjectId' => 'required|exists:projects,id',
             'newTaskAssigneeId' => 'nullable|exists:users,id',
             'newTaskAssigneeIds' => 'nullable|array',
             'newTaskAssigneeIds.*' => 'exists:users,id',
@@ -333,6 +335,8 @@ class TaskTable extends Component
             'newTaskNotes' => 'nullable|string',
             'newTaskNature' => 'required|in:daily,weekly,monthly,until_stop',
         ], [
+            'newTaskProjectId.required' => 'The project field is required.',
+            'newTaskProjectId.exists' => 'The selected project does not exist.',
             'newTaskAssigneeIds.*.exists' => 'One or more selected users do not exist.',
             'newTaskAssigneeId.exists' => 'The selected assignee does not exist.',
         ]);
@@ -355,7 +359,7 @@ class TaskTable extends Component
         $task->update([
             'title' => $this->newTaskTitle,
             'description' => $this->newTaskDescription,
-            'project_id' => $this->newTaskProjectId ?: null,
+            'project_id' => $this->newTaskProjectId,
             'assigned_to_user_id' => $primaryAssigneeId,
             'priority_id' => $this->newTaskPriority,
             'category_id' => $this->newTaskCategory,
@@ -766,6 +770,7 @@ class TaskTable extends Component
         Log::createLog(auth()->id(), 'create_custom_status', "Created custom status: {$status->name}");
 
         session()->flash('success', 'Custom status created successfully!');
+        $this->clearCache();
         $this->resetCustomStatusForm();
     }
 
@@ -792,6 +797,7 @@ class TaskTable extends Component
         Log::createLog(auth()->id(), 'create_custom_priority', "Created custom priority: {$priority->name}");
 
         session()->flash('success', 'Custom priority created successfully!');
+        $this->clearCache();
         $this->resetCustomPriorityForm();
     }
 
@@ -820,6 +826,7 @@ class TaskTable extends Component
         Log::createLog(auth()->id(), 'create_custom_category', "Created custom category: {$category->name}");
 
         session()->flash('success', 'Custom category created successfully!');
+        $this->clearCache();
         $this->resetCustomCategoryForm();
     }
 
@@ -849,10 +856,13 @@ class TaskTable extends Component
     {
         $user = auth()->user();
         
-        $query = Task::with(['project', 'assignedTo', 'assignedBy', 'assignees', 'status', 'priority', 'category', 'noteComments.user'])
+        // Optimize eager loading - remove noteComments.user as it's heavy and only needed in modal
+        $query = Task::with(['project:id,title', 'assignedTo:id,name', 'assignedBy:id,name', 'assignees:id,name', 'status:id,name,color', 'priority:id,name,color', 'category:id,name,icon,color'])
             ->when($this->search, function ($query) {
-                $query->where('title', 'like', '%' . $this->search . '%')
+                $query->where(function ($q) {
+                    $q->where('title', 'like', '%' . $this->search . '%')
                       ->orWhere('description', 'like', '%' . $this->search . '%');
+                });
             })
             ->when($this->projectFilter, function ($query) {
                 $query->where('project_id', $this->projectFilter);
@@ -889,43 +899,71 @@ class TaskTable extends Component
             });
         }
 
-        return $query->orderBy('created_at', 'desc')->get();
+        // Use pagination instead of get() for better performance
+        return $query->orderBy('created_at', 'desc')->paginate(15);
     }
+
+    // Cache dropdown data to avoid repeated queries
+    protected $cachedProjects = null;
+    protected $cachedUsers = null;
+    protected $cachedStatuses = null;
+    protected $cachedPriorities = null;
+    protected $cachedCategories = null;
 
     public function getProjectsProperty()
     {
-        return Project::orderBy('title')->get();
+        if ($this->cachedProjects === null) {
+            $this->cachedProjects = Project::select('id', 'title')->orderBy('title')->get();
+        }
+        return $this->cachedProjects;
     }
 
     public function getUsersProperty()
     {
-        $user = auth()->user();
-        
-        if ($user->isSuperAdmin()) {
-            return User::orderBy('name')->get();
-        } elseif ($user->isAdmin()) {
-            return User::orderBy('name')->get();
-        } elseif ($user->isManager()) {
-            // Managers can see ALL users (employees, other managers, admins)
-            return User::orderBy('name')->get();
-        } else {
-            return collect([$user]);
+        if ($this->cachedUsers === null) {
+            $user = auth()->user();
+            
+            if ($user->isSuperAdmin() || $user->isAdmin() || $user->isManager()) {
+                $this->cachedUsers = User::select('id', 'name')->orderBy('name')->get();
+            } else {
+                $this->cachedUsers = collect([$user]);
+            }
         }
+        return $this->cachedUsers;
     }
 
     public function getStatusesProperty()
     {
-        return TaskStatus::orderBy('name')->get();
+        if ($this->cachedStatuses === null) {
+            $this->cachedStatuses = TaskStatus::select('id', 'name', 'color')->orderBy('name')->get();
+        }
+        return $this->cachedStatuses;
     }
 
     public function getPrioritiesProperty()
     {
-        return TaskPriority::orderBy('name')->get();
+        if ($this->cachedPriorities === null) {
+            $this->cachedPriorities = TaskPriority::select('id', 'name', 'color')->orderBy('name')->get();
+        }
+        return $this->cachedPriorities;
     }
 
     public function getCategoriesProperty()
     {
-        return TaskCategory::orderBy('name')->get();
+        if ($this->cachedCategories === null) {
+            $this->cachedCategories = TaskCategory::select('id', 'name', 'icon', 'color')->orderBy('name')->get();
+        }
+        return $this->cachedCategories;
+    }
+
+    // Clear cache when needed (e.g., after creating new items)
+    public function clearCache()
+    {
+        $this->cachedProjects = null;
+        $this->cachedUsers = null;
+        $this->cachedStatuses = null;
+        $this->cachedPriorities = null;
+        $this->cachedCategories = null;
     }
 
     public function getTaskComments()
@@ -1135,7 +1173,7 @@ class TaskTable extends Component
         $this->validate([
             'modalTaskTitle' => 'required|string|max:255',
             'modalTaskDescription' => 'nullable|string',
-            'modalTaskProjectId' => 'nullable|exists:projects,id',
+            'modalTaskProjectId' => 'required|exists:projects,id',
             'modalTaskAssigneeIds' => 'required|array|min:1',
             'modalTaskAssigneeIds.*' => 'exists:users,id',
             'modalTaskPriority' => 'required|exists:task_priorities,id',
@@ -1147,6 +1185,9 @@ class TaskTable extends Component
             'modalTaskNature' => 'required|in:one_time,recurring',
             'modalTaskRecurrenceFrequency' => 'required_if:modalTaskNature,recurring|in:daily,weekly,monthly',
             'modalTaskAttachments.*' => 'nullable|file|max:10240',
+        ], [
+            'modalTaskProjectId.required' => 'The project field is required.',
+            'modalTaskProjectId.exists' => 'The selected project does not exist.',
         ]);
 
         try {
@@ -1268,7 +1309,7 @@ class TaskTable extends Component
         $this->validate([
             'editModalTaskTitle' => 'required|string|max:255',
             'editModalTaskDescription' => 'nullable|string',
-            'editModalTaskProjectId' => 'nullable|exists:projects,id',
+            'editModalTaskProjectId' => 'required|exists:projects,id',
             'editModalTaskAssigneeIds' => 'required|array|min:1',
             'editModalTaskAssigneeIds.*' => 'exists:users,id',
             'editModalTaskPriority' => 'required|exists:task_priorities,id',
@@ -1279,6 +1320,9 @@ class TaskTable extends Component
             'editModalTaskRecurrenceFrequency' => 'required_if:editModalTaskNature,recurring|in:daily,weekly,monthly',
             'editModalTaskReminderTime' => 'nullable',
             'editModalTaskAttachments.*' => 'nullable|file|max:10240',
+        ], [
+            'editModalTaskProjectId.required' => 'The project field is required.',
+            'editModalTaskProjectId.exists' => 'The selected project does not exist.',
         ]);
 
         try {
@@ -1310,7 +1354,7 @@ class TaskTable extends Component
             
             $task = Task::findOrFail($this->editModalTaskId);
             $task->update([
-                'project_id' => $this->editModalTaskProjectId ?: null,
+                'project_id' => $this->editModalTaskProjectId,
                 'title' => $this->editModalTaskTitle,
                 'description' => $this->editModalTaskDescription,
                 'assigned_to_user_id' => $primaryAssigneeId,
@@ -1479,7 +1523,8 @@ class TaskTable extends Component
             // Close the modal
             $this->closeProjectCreateModal();
             
-            // Dispatch event to refresh projects list
+            // Clear cache and dispatch event to refresh projects list
+            $this->clearCache();
             $this->dispatch('project-created');
             
             session()->flash('success', 'Project created successfully! The project has been selected in the task form.');
@@ -1539,7 +1584,8 @@ class TaskTable extends Component
             // Close the modal
             $this->closeCategoryCreateModal();
             
-            // Dispatch event to refresh categories list
+            // Clear cache and dispatch event to refresh categories list
+            $this->clearCache();
             $this->dispatch('category-created');
             
             session()->flash('success', 'Category created successfully! The category has been selected in the task form.');
