@@ -55,6 +55,19 @@ Route::middleware('auth')->group(function () {
     Route::get('/projects/create', ProjectCreate::class)->name('projects.create');
     Route::get('/projects/{projectId}', \App\Livewire\Project\ProjectDetails::class)->name('projects.details');
 
+    // Leads
+    Route::resource('leads', \App\Http\Controllers\LeadController::class);
+    Route::get('/leads/{id}/edit', [\App\Http\Controllers\LeadController::class, 'edit'])->name('leads.edit');
+    Route::get('/leads/project/{projectId}/statuses', [\App\Http\Controllers\LeadController::class, 'getStatusesByProject'])->name('leads.statuses');
+    
+    // Statuses (Project Statuses)
+    Route::resource('statuses', \App\Http\Controllers\StatusController::class);
+    Route::get('/statuses/{id}/edit', [\App\Http\Controllers\StatusController::class, 'edit'])->name('statuses.edit');
+    
+    // Activities
+    Route::resource('activities', \App\Http\Controllers\ActivityController::class)->except(['index', 'create']);
+    Route::get('/activities/{id}/edit', [\App\Http\Controllers\ActivityController::class, 'edit'])->name('activities.edit');
+
     // User Profile
     Route::get('/profile', \App\Livewire\User\ProfileEdit::class)->name('profile.edit');
 
