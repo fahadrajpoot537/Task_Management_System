@@ -56,17 +56,27 @@ Route::middleware('auth')->group(function () {
     Route::get('/projects/{projectId}', \App\Livewire\Project\ProjectDetails::class)->name('projects.details');
 
     // Leads
+    // Specific routes must come before resource routes to avoid conflicts
+    Route::get('/leads/export', [\App\Http\Controllers\LeadController::class, 'exportLeads'])->name('leads.export');
+    Route::post('/leads/import', [\App\Http\Controllers\LeadController::class, 'importLeads'])->name('leads.import');
+    Route::get('/leads/project/{projectId}/statuses', [\App\Http\Controllers\LeadController::class, 'getStatusesByProject'])->name('leads.statuses');
+    Route::get('/leads/lead-types', [\App\Http\Controllers\LeadController::class, 'getLeadTypes'])->name('leads.lead-types');
+    Route::get('/leads/{leadId}/activities/export', [\App\Http\Controllers\LeadController::class, 'exportActivities'])->name('leads.activities.export');
     Route::resource('leads', \App\Http\Controllers\LeadController::class);
     Route::get('/leads/{id}/edit', [\App\Http\Controllers\LeadController::class, 'edit'])->name('leads.edit');
-    Route::get('/leads/project/{projectId}/statuses', [\App\Http\Controllers\LeadController::class, 'getStatusesByProject'])->name('leads.statuses');
     
     // Statuses (Project Statuses)
     Route::resource('statuses', \App\Http\Controllers\StatusController::class);
     Route::get('/statuses/{id}/edit', [\App\Http\Controllers\StatusController::class, 'edit'])->name('statuses.edit');
     
+    // Lead Types
+    Route::resource('lead-types', \App\Http\Controllers\LeadTypeController::class);
+    Route::get('/lead-types/{id}/edit', [\App\Http\Controllers\LeadTypeController::class, 'edit'])->name('lead-types.edit');
+    
     // Activities
     Route::resource('activities', \App\Http\Controllers\ActivityController::class)->except(['index', 'create']);
     Route::get('/activities/{id}/edit', [\App\Http\Controllers\ActivityController::class, 'edit'])->name('activities.edit');
+    Route::post('/activities/import', [\App\Http\Controllers\ActivityController::class, 'importActivities'])->name('activities.import');
 
     // User Profile
     Route::get('/profile', \App\Livewire\User\ProfileEdit::class)->name('profile.edit');

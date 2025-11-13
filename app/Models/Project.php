@@ -17,6 +17,7 @@ class Project extends Model
      * @var array<int, string>
      */
     protected $fillable = [
+        'flg_group_id',
         'title',
         'description',
         'created_by_user_id',

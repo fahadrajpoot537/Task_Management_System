@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Activity;
+use App\Models\Lead;
+use App\Models\User;
 use App\Models\Log;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log as LogFacade;
 
 class ActivityController extends Controller
 {
@@ -154,8 +157,8 @@ class ActivityController extends Controller
             ]);
         }
 
-        // For Email type, return the view page
-        if ($activity->type === 'Email') {
+        // For Email, Dropbox Reply Email, or Dropbox Email type, return the view page
+        if ($activity->type === 'Email' || $activity->type === 'Dropbox Reply Email' || $activity->type === 'Dropbox Email') {
             return view('activities.view-email', compact('activity'));
         }
 
@@ -357,6 +360,508 @@ class ActivityController extends Controller
         return response()->json([
             'success' => true,
             'activity' => $activity
+        ]);
+    }
+
+    /**
+     * Import activities from CSV/Excel
+     * Activities file should have Reference column to match with lead's flg_reference
+     */
+    public function importActivities(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'file' => 'required|mimes:csv,txt,xlsx,xls|max:10240',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $file = $request->file('file');
+        $extension = $file->getClientOriginalExtension();
+        
+        // Handle Excel files
+        if (in_array($extension, ['xlsx', 'xls'])) {
+            // For Excel files, we'll use a simple CSV conversion approach
+            // You may want to use PhpSpreadsheet for better Excel support
+            return response()->json([
+                'success' => false,
+                'message' => 'Excel files are not yet supported. Please convert to CSV format.'
+            ], 422);
+        }
+        
+        // Read CSV file - use PHP's built-in CSV parser which handles quoted fields
+        $data = [];
+        $fileHandle = fopen($file->getRealPath(), 'r');
+        
+        // Read CSV with proper handling of quoted multi-line fields
+        while (($row = fgetcsv($fileHandle, 0, ',', '"', '\\')) !== false) {
+            if ($row !== null) {
+                $data[] = $row;
+            }
+        }
+        fclose($fileHandle);
+        
+        // Remove BOM if present
+        if (!empty($data[0][0])) {
+            $data[0][0] = preg_replace('/\x{EF}\x{BB}\x{BF}/', '', $data[0][0]);
+        }
+        
+        $headers = array_shift($data); // Remove header row
+        $headers = array_map('trim', $headers);
+        $imported = 0;
+        $errors = [];
+        $processedRows = []; // Track processed rows to avoid duplicates in same import
+        
+        // Log headers for debugging (first import only)
+        LogFacade::info('Activity Import - CSV Headers:', $headers);
+
+        foreach ($data as $index => $row) {
+            // Skip empty rows
+            if (empty(array_filter($row))) {
+                continue;
+            }
+            
+            // Pad row to match headers length if needed
+            while (count($row) < count($headers)) {
+                $row[] = '';
+            }
+            
+            // Trim row values
+            $row = array_map('trim', $row);
+            
+            $rowData = array_combine($headers, $row);
+            
+            // Debug: Log first few rows for troubleshooting
+            if ($index < 3) {
+                LogFacade::info("Activity Import - Row " . ($index + 2) . " data:", $rowData);
+            }
+            
+            // Create a unique key for this row to detect duplicates in the same CSV
+            $reference = !empty($rowData['Reference']) ? trim($rowData['Reference']) : '';
+            $activityType = !empty($rowData['ActivityType']) ? trim($rowData['ActivityType']) : '';
+            $activityDateTime = !empty($rowData['ActivityDateTime']) ? trim($rowData['ActivityDateTime']) : '';
+            $rowKey = md5($reference . '|' . $activityType . '|' . $activityDateTime);
+            
+            // Check if we've already processed this exact row in this import
+            if (isset($processedRows[$rowKey])) {
+                $errors[] = "Row " . ($index + 2) . ": Duplicate row in CSV file (same Reference, Type, and DateTime as row " . ($processedRows[$rowKey] + 2) . ") - skipping";
+                continue;
+            }
+            $processedRows[$rowKey] = $index;
+            
+            // Check if this looks like a continuation row (no Reference but has other data)
+            $hasReference = !empty($rowData['Reference']) && trim($rowData['Reference']) !== '';
+            $hasActivityType = !empty($rowData['ActivityType']) && trim($rowData['ActivityType']) !== '';
+            
+            // If no Reference and no ActivityType, this is likely a continuation row - skip it
+            if (!$hasReference && !$hasActivityType) {
+                // Check if it has any meaningful data
+                $hasAnyData = false;
+                foreach ($rowData as $key => $value) {
+                    if (!empty(trim($value)) && strlen(trim($value)) > 3) {
+                        $hasAnyData = true;
+                        break;
+                    }
+                }
+                if (!$hasAnyData) {
+                    continue; // Skip completely empty rows
+                }
+                // If it has data but no Reference/Type, it's likely a continuation - skip
+                $errors[] = "Row " . ($index + 2) . ": Appears to be a continuation row (no Reference or ActivityType) - skipping";
+                continue;
+            }
+            
+            // Find or create lead by Reference (flg_reference)
+            $lead = null;
+            $reference = !empty($rowData['Reference']) ? trim($rowData['Reference']) : null;
+            
+            // Skip if Reference is empty or looks like invalid data
+            if (empty($reference) || 
+                strlen($reference) > 100 || 
+                strpos($reference, "\n") !== false ||
+                strpos($reference, "\r") !== false ||
+                // Skip if it looks like it's picking up text from other columns
+                stripos($reference, 'Telephone:') !== false ||
+                stripos($reference, 'Email:') !== false ||
+                stripos($reference, 'Dear ') !== false ||
+                stripos($reference, 'Yours ') !== false ||
+                stripos($reference, 'This is a') !== false ||
+                stripos($reference, 'You can') !== false ||
+                stripos($reference, 'Add templates') !== false ||
+                stripos($reference, 'Letters can') !== false ||
+                stripos($reference, 'This feature') !== false ||
+                // Skip if it's just whitespace or common text
+                trim($reference) === '' ||
+                $reference === 'Test Test' ||
+                preg_match('/^\d{1,2}[a-z]{2}\s+Nov\s+\d{4}$/i', $reference) // Matches "7th Nov 2025"
+            ) {
+                $errors[] = "Row " . ($index + 2) . ": Invalid or empty Reference value: '" . substr($reference, 0, 50) . "'";
+                continue;
+            }
+            
+            if ($reference) {
+                // First try to find by flg_reference
+                $lead = Lead::where('flg_reference', $reference)->first();
+                
+                // If not found by flg_reference, try by ID
+                if (!$lead && is_numeric($reference)) {
+                    $lead = Lead::find($reference);
+                }
+                
+                // If still not found, create a new lead
+                if (!$lead) {
+                    // Try to get lead information from the row if available
+                    $leadName = !empty($rowData['Name']) ? trim($rowData['Name']) : '';
+                    $leadCompany = !empty($rowData['Company']) ? trim($rowData['Company']) : null;
+                    
+                    // Parse name into first_name and last_name
+                    $firstName = 'Unknown';
+                    $lastName = null;
+                    if (!empty($leadName)) {
+                        $nameParts = explode(' ', $leadName, 2);
+                        $firstName = $nameParts[0];
+                        $lastName = isset($nameParts[1]) ? $nameParts[1] : null;
+                    }
+                    
+                    // Get project - try LeadGroupID or LeadGroup from row, or use a default
+                    $projectId = null;
+                    if (!empty($rowData['LeadGroupID'])) {
+                        $project = \App\Models\Project::where('flg_group_id', $rowData['LeadGroupID'])->first();
+                        if ($project) {
+                            $projectId = $project->id;
+                        } else {
+                            // Create project if it doesn't exist
+                            $projectTitle = !empty($rowData['LeadGroup']) ? $rowData['LeadGroup'] : ('Project ' . $rowData['LeadGroupID']);
+                            $project = \App\Models\Project::create([
+                                'flg_group_id' => $rowData['LeadGroupID'],
+                                'title' => $projectTitle,
+                                'description' => null,
+                                'created_by_user_id' => auth()->id(),
+                            ]);
+                            $projectId = $project->id;
+                        }
+                    } elseif (!empty($rowData['LeadGroup'])) {
+                        $project = \App\Models\Project::where('title', $rowData['LeadGroup'])->first();
+                        if ($project) {
+                            $projectId = $project->id;
+                        } else {
+                            // Create project if it doesn't exist
+                            $project = \App\Models\Project::create([
+                                'flg_group_id' => null,
+                                'title' => $rowData['LeadGroup'],
+                                'description' => null,
+                                'created_by_user_id' => auth()->id(),
+                            ]);
+                            $projectId = $project->id;
+                        }
+                    } else {
+                        // Try to get project from first existing lead or create a default
+                        $defaultProject = \App\Models\Project::first();
+                        if (!$defaultProject) {
+                            $defaultProject = \App\Models\Project::create([
+                                'flg_group_id' => null,
+                                'title' => 'Default Project',
+                                'description' => 'Auto-created for imported leads',
+                                'created_by_user_id' => auth()->id(),
+                            ]);
+                        }
+                        $projectId = $defaultProject->id;
+                    }
+                    
+                    // Handle received date
+                    $receivedDate = null;
+                    if (!empty($rowData['ReceivedDateTime'])) {
+                        try {
+                            $receivedDateObj = \Carbon\Carbon::createFromFormat('d/m/Y H:i', $rowData['ReceivedDateTime']);
+                            $receivedDate = $receivedDateObj->format('Y-m-d');
+                        } catch (\Exception $e) {
+                            try {
+                                $receivedDateObj = \Carbon\Carbon::createFromFormat('d/m/Y', $rowData['ReceivedDateTime']);
+                                $receivedDate = $receivedDateObj->format('Y-m-d');
+                            } catch (\Exception $e2) {
+                                // Use current date as fallback
+                                $receivedDate = now()->format('Y-m-d');
+                            }
+                        }
+                    } else {
+                        $receivedDate = now()->format('Y-m-d');
+                    }
+                    
+                    // Create the lead
+                    try {
+                        $lead = Lead::create([
+                            'flg_reference' => $reference,
+                            'sub_reference' => !empty($rowData['SubReference']) ? trim($rowData['SubReference']) : null,
+                            'project_id' => $projectId,
+                            'first_name' => $firstName,
+                            'last_name' => $lastName,
+                            'company' => $leadCompany,
+                            'received_date' => $receivedDate,
+                            'added_by' => auth()->id(),
+                        ]);
+                    } catch (\Exception $e) {
+                        $errors[] = "Row " . ($index + 2) . ": Failed to create lead - " . $e->getMessage();
+                        continue;
+                    }
+                }
+            } else {
+                $errors[] = "Row " . ($index + 2) . ": Reference is required";
+                continue;
+            }
+            
+            // Map CSV columns to activity fields - try multiple column name variations
+            $activityType = null;
+            // Try different possible column names for ActivityType (case-insensitive search)
+            $typeColumns = ['ActivityType', 'activity_type', 'Activity_Type', 'Type', 'type', 'ActivityTypeName', 'activityType'];
+            
+            // First try exact match
+            foreach ($typeColumns as $colName) {
+                if (isset($rowData[$colName]) && !empty(trim($rowData[$colName]))) {
+                    $activityType = trim($rowData[$colName]);
+                    break;
+                }
+            }
+            
+            // If not found, try case-insensitive search through all columns
+            if (empty($activityType)) {
+                foreach ($rowData as $colName => $colValue) {
+                    $colNameLower = strtolower(trim($colName));
+                    if (in_array($colNameLower, ['activitytype', 'activity_type', 'type']) && !empty(trim($colValue))) {
+                        $activityType = trim($colValue);
+                        break;
+                    }
+                }
+            }
+            
+            $activityData = [
+                'lead_id' => $lead->id,
+                'type' => $activityType,
+                'field_1' => !empty($rowData['ActivityField1']) ? trim($rowData['ActivityField1']) : (!empty($rowData['field_1']) ? trim($rowData['field_1']) : null),
+                'field_2' => !empty($rowData['ActivityField2']) ? trim($rowData['ActivityField2']) : (!empty($rowData['field_2']) ? trim($rowData['field_2']) : null),
+                'email' => !empty($rowData['ActivityEmail']) ? trim($rowData['ActivityEmail']) : (!empty($rowData['email']) ? trim($rowData['email']) : null),
+                'bcc' => !empty($rowData['ActivityBcc']) ? trim($rowData['ActivityBcc']) : (!empty($rowData['bcc']) ? trim($rowData['bcc']) : null),
+                'cc' => !empty($rowData['ActivityCc']) ? trim($rowData['ActivityCc']) : (!empty($rowData['cc']) ? trim($rowData['cc']) : null),
+                'phone' => !empty($rowData['ActivityPhone']) ? trim($rowData['ActivityPhone']) : (!empty($rowData['phone']) ? trim($rowData['phone']) : null),
+                'created_by' => auth()->id(),
+            ];
+            
+            // Handle date (ActivityDateTime) - try multiple column name variations
+            $activityDateValue = null;
+            $dateColumns = ['ActivityDateTime', 'activity_date_time', 'Activity_DateTime', 'Date', 'date', 'ActivityDate'];
+            foreach ($dateColumns as $colName) {
+                if (!empty($rowData[$colName]) && trim($rowData[$colName]) !== '' && trim($rowData[$colName]) !== '0000-00-00 00:00:00') {
+                    $activityDateValue = trim($rowData[$colName]);
+                    break;
+                }
+            }
+            
+            $activityData['date'] = null;
+            if ($activityDateValue) {
+                try {
+                    // Try d/m/Y H:i format first
+                    $activityDate = \Carbon\Carbon::createFromFormat('d/m/Y H:i', $activityDateValue);
+                    $activityData['date'] = $activityDate->format('Y-m-d');
+                } catch (\Exception $e) {
+                    try {
+                        // Try d/m/Y format
+                        $activityDate = \Carbon\Carbon::createFromFormat('d/m/Y', $activityDateValue);
+                        $activityData['date'] = $activityDate->format('Y-m-d');
+                    } catch (\Exception $e2) {
+                        try {
+                            // Try Y-m-d H:i:s format
+                            $activityDate = \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', $activityDateValue);
+                            $activityData['date'] = $activityDate->format('Y-m-d');
+                        } catch (\Exception $e3) {
+                            try {
+                                // Try Y-m-d format
+                                $activityDate = \Carbon\Carbon::createFromFormat('Y-m-d', $activityDateValue);
+                                $activityData['date'] = $activityDate->format('Y-m-d');
+                            } catch (\Exception $e4) {
+                                try {
+                                    // Try Carbon parse as last resort
+                                    $activityDate = \Carbon\Carbon::parse($activityDateValue);
+                                    if ($activityDate->year > 1900 && $activityDate->year < 2100) {
+                                        $activityData['date'] = $activityDate->format('Y-m-d');
+                                    }
+                                } catch (\Exception $e5) {
+                                    // Invalid date, will use default
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Use current date as fallback if date parsing failed
+            if (empty($activityData['date'])) {
+                $activityData['date'] = now()->format('Y-m-d');
+            }
+            
+            // Handle due date (ActivityDueDateTime)
+            if (!empty($rowData['ActivityDueDateTime']) && $rowData['ActivityDueDateTime'] !== '0000-00-00 00:00:00') {
+                try {
+                    $dueDate = \Carbon\Carbon::createFromFormat('d/m/Y H:i', $rowData['ActivityDueDateTime']);
+                    $activityData['due_date'] = $dueDate->format('Y-m-d');
+                } catch (\Exception $e) {
+                    try {
+                        $dueDate = \Carbon\Carbon::createFromFormat('d/m/Y', $rowData['ActivityDueDateTime']);
+                        $activityData['due_date'] = $dueDate->format('Y-m-d');
+                    } catch (\Exception $e2) {
+                        try {
+                            $dueDate = \Carbon\Carbon::parse($rowData['ActivityDueDateTime']);
+                            $activityData['due_date'] = $dueDate->format('Y-m-d');
+                        } catch (\Exception $e3) {
+                            // Invalid date, skip
+                        }
+                    }
+                }
+            }
+            
+            // Handle end date (ActivityEndDateTime)
+            if (!empty($rowData['ActivityEndDateTime']) && $rowData['ActivityEndDateTime'] !== '0000-00-00 00:00:00') {
+                try {
+                    $endDate = \Carbon\Carbon::createFromFormat('d/m/Y H:i', $rowData['ActivityEndDateTime']);
+                    $activityData['end_date'] = $endDate->format('Y-m-d');
+                } catch (\Exception $e) {
+                    try {
+                        $endDate = \Carbon\Carbon::createFromFormat('d/m/Y', $rowData['ActivityEndDateTime']);
+                        $activityData['end_date'] = $endDate->format('Y-m-d');
+                    } catch (\Exception $e2) {
+                        try {
+                            $endDate = \Carbon\Carbon::parse($rowData['ActivityEndDateTime']);
+                            $activityData['end_date'] = $endDate->format('Y-m-d');
+                        } catch (\Exception $e3) {
+                            // Invalid date, skip
+                        }
+                    }
+                }
+            }
+            
+            // Handle actioned (ActivityActioned)
+            if (!empty($rowData['ActivityActioned'])) {
+                $actionedValue = strtolower(trim($rowData['ActivityActioned']));
+                $activityData['actioned'] = in_array($actionedValue, ['yes', '1', 'true', 'y']);
+            }
+            
+            // Handle priority (ActivityPriority)
+            if (!empty($rowData['ActivityPriority'])) {
+                $priorityValue = strtolower(trim($rowData['ActivityPriority']));
+                if (!in_array($priorityValue, ['yes', 'no', '1', '0', 'true', 'false', ''])) {
+                    $activityData['priority'] = $rowData['ActivityPriority'];
+                }
+            }
+            
+            // Handle ActivityCreatedUser
+            if (!empty($rowData['ActivityCreatedUser'])) {
+                $createdUser = User::where('name', $rowData['ActivityCreatedUser'])->first();
+                if ($createdUser) {
+                    $activityData['created_by'] = $createdUser->id;
+                }
+            }
+            
+            // Handle ActivityAssignedUser
+            if (!empty($rowData['ActivityAssignedUser'])) {
+                $assignedUser = User::where('name', $rowData['ActivityAssignedUser'])->first();
+                if ($assignedUser) {
+                    $activityData['assigned_to'] = $assignedUser->id;
+                }
+            }
+            
+            // Validate required fields
+            if (empty($activityData['type']) || trim($activityData['type']) === '') {
+                // Skip rows without ActivityType - they're likely data rows, not activity rows
+                $errors[] = "Row " . ($index + 2) . ": Activity Type is required (skipping row)";
+                continue;
+            }
+            
+            // Ensure date is valid (not negative year)
+            if (empty($activityData['date']) || strpos($activityData['date'], '-0001') !== false) {
+                $activityData['date'] = now()->format('Y-m-d');
+            }
+            
+            // Check for duplicate activities
+            $isDuplicate = false;
+            
+            // First check by ActivityID if provided
+            if (!empty($rowData['ActivityID'])) {
+                $existingActivity = Activity::find($rowData['ActivityID']);
+                if ($existingActivity) {
+                    $errors[] = "Row " . ($index + 2) . ": Activity with ID '{$rowData['ActivityID']}' already exists";
+                    continue;
+                }
+            }
+            
+            // Check for duplicate based on lead_id + type + date + key fields
+            // This prevents importing the same activity multiple times
+            $duplicateCheck = Activity::where('lead_id', $activityData['lead_id'])
+                ->where('type', $activityData['type'])
+                ->where('date', $activityData['date']);
+            
+            // Add field_1 to duplicate check if it exists and is meaningful
+            if (!empty($activityData['field_1']) && strlen(trim($activityData['field_1'])) > 3) {
+                $duplicateCheck->where('field_1', $activityData['field_1']);
+            }
+            
+            // Add field_2 to duplicate check if it exists and is meaningful
+            if (!empty($activityData['field_2']) && strlen(trim($activityData['field_2'])) > 3) {
+                $duplicateCheck->where('field_2', $activityData['field_2']);
+            }
+            
+            // If we have field_1 or field_2, check for exact match
+            // Otherwise, check for activities created in last 10 minutes (to catch same import run)
+            if (empty($activityData['field_1']) && empty($activityData['field_2'])) {
+                $duplicateCheck->where('created_at', '>=', now()->subMinutes(10));
+            }
+            
+            $existingActivity = $duplicateCheck->first();
+            
+            if ($existingActivity) {
+                $errors[] = "Row " . ($index + 2) . ": Duplicate activity detected (same lead, type '{$activityData['type']}', date '{$activityData['date']}') - Activity ID: {$existingActivity->id}";
+                continue;
+            }
+
+            try {
+                Activity::create($activityData);
+                $imported++;
+            } catch (\Exception $e) {
+                $errors[] = "Row " . ($index + 2) . ": " . $e->getMessage();
+            }
+        }
+
+        // Log the action
+        if ($imported > 0) {
+            Log::createLog(auth()->id(), 'import_activities', "Imported {$imported} activities from CSV");
+        }
+
+        // If there are errors or no activities imported, return error response
+        if (count($errors) > 0 || $imported === 0) {
+            $errorMessage = "Import failed. ";
+            if ($imported === 0) {
+                $errorMessage .= "No activities were imported. ";
+            } else {
+                $errorMessage .= "Only {$imported} activity(ies) imported. ";
+            }
+            if (count($errors) > 0) {
+                $errorMessage .= count($errors) . " error(s) occurred.";
+            }
+            
+            return response()->json([
+                'success' => false,
+                'message' => $errorMessage,
+                'imported' => $imported,
+                'errors' => $errors
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Successfully imported {$imported} activity(ies).",
+            'imported' => $imported,
+            'errors' => $errors
         ]);
     }
 }

@@ -44,12 +44,21 @@
         <div class="card mb-3">
             <div class="card-body py-2">
                 <div class="d-flex flex-wrap align-items-center gap-2">
-                    <span class="badge bg-secondary">Open 0 Hours</span>
-                    <span class="badge bg-{{ $lead->status ? ($lead->status->color ?? 'primary') : 'primary' }}">{{ $lead->status ? $lead->status->name : 'New' }}</span>
-                    <span class="badge bg-success">Valid</span>
-                    <span class="badge bg-info">Cont</span>
-                    <span class="badge bg-warning">Qual</span>
-                    <span class="badge bg-success">Conv</span>
+                    <span class="badge bg-secondary">Open {{ $lead->received_date->diffInHours(now()) }} Hours</span>
+                    @if($lead->status)
+                        <span class="badge bg-{{ $lead->status->color ?? 'primary' }}">{{ $lead->status->name }}</span>
+                    @else
+                        <span class="badge bg-primary">New</span>
+                    @endif
+                    
+                    @if($lead->project && $lead->project->statuses)
+                        @foreach($lead->project->statuses->sortBy('order') as $projectStatus)
+                            <span class="badge bg-{{ $projectStatus->color ?? 'secondary' }} 
+                                {{ $lead->status && $lead->status->id === $projectStatus->id ? 'border border-dark border-2' : '' }}">
+                                {{ $projectStatus->name }}
+                            </span>
+                        @endforeach
+                    @endif
                 </div>
             </div>
         </div>
@@ -173,35 +182,97 @@
                                 </ul>
                             </div>
 
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle"
-                                    data-bs-toggle="dropdown">
+                            <div class="btn-group position-relative">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="leadTypeDropdownBtn">
                                     Type
+                                    @if($lead->leadType)
+                                        <span class="badge bg-primary ms-1">{{ $lead->leadType->name }}</span>
+                                    @endif
+                                    <i class="bi bi-chevron-down ms-1"></i>
                                 </button>
-                                <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" href="#">Type 1</a></li>
-                                    <li><a class="dropdown-item" href="#">Type 2</a></li>
-                                </ul>
+                                <!-- Custom Lead Type Popup Menu -->
+                                <div class="user-popup" id="leadTypePopup" style="display: none;">
+                                    <div class="user-popup-content">
+                                        <div class="user-popup-header">
+                                            <span>Select Lead Type</span>
+                                            <button type="button" class="btn-close-popup" onclick="closeLeadTypePopup()">
+                                                <i class="bi bi-x"></i>
+                                            </button>
+                                        </div>
+                                        <div class="user-popup-search">
+                                            <input type="text" id="leadTypeSearchInput" class="form-control form-control-sm" placeholder="Search lead types...">
+                                        </div>
+                                        <div class="user-popup-body" id="leadTypePopupBody">
+                                            <div class="text-center py-3">
+                                                <div class="spinner-border spinner-border-sm" role="status">
+                                                    <span class="visually-hidden">Loading...</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle"
-                                    data-bs-toggle="dropdown" id="statusDropdownBtn">
+                            <div class="btn-group position-relative">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="statusDropdownBtn">
                                     Status
+                                    @if($lead->status)
+                                        <span class="badge bg-primary ms-1">{{ $lead->status->name }}</span>
+                                    @endif
+                                    <i class="bi bi-chevron-down ms-1"></i>
                                 </button>
-                                <ul class="dropdown-menu" id="statusDropdownMenu">
-                                    <li><a class="dropdown-item" href="#" onclick="return false;">Loading...</a></li>
-                                </ul>
+                                <!-- Custom Status Popup Menu -->
+                                <div class="user-popup" id="statusPopup" style="display: none;">
+                                    <div class="user-popup-content">
+                                        <div class="user-popup-header">
+                                            <span>Select Status</span>
+                                            <button type="button" class="btn-close-popup" onclick="closeStatusPopup()">
+                                                <i class="bi bi-x"></i>
+                                            </button>
+                                        </div>
+                                        <div class="user-popup-search">
+                                            <input type="text" id="statusSearchInput" class="form-control form-control-sm" placeholder="Search statuses...">
+                                        </div>
+                                        <div class="user-popup-body" id="statusPopupBody">
+                                            <div class="text-center py-3">
+                                                <div class="spinner-border spinner-border-sm" role="status">
+                                                    <span class="visually-hidden">Loading...</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle"
-                                    data-bs-toggle="dropdown">
+                            <div class="btn-group position-relative">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="userDropdownBtn">
                                     User
+                                    @if($lead->addedBy)
+                                        <span class="badge bg-primary ms-1">{{ $lead->addedBy->name }}</span>
+                                    @endif
+                                    <i class="bi bi-chevron-down ms-1"></i>
                                 </button>
-                                <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" href="#">Assign User</a></li>
-                                </ul>
+                                <!-- Custom User Popup Menu -->
+                                <div class="user-popup" id="userPopup" style="display: none;">
+                                    <div class="user-popup-content">
+                                        <div class="user-popup-header">
+                                            <span>Select User</span>
+                                            <button type="button" class="btn-close-popup" onclick="closeUserPopup()">
+                                                <i class="bi bi-x"></i>
+                                            </button>
+                                        </div>
+                                        <div class="user-popup-search">
+                                            <input type="text" id="userSearchInput" class="form-control form-control-sm" placeholder="Search users...">
+                                        </div>
+                                        <div class="user-popup-body" id="userPopupBody">
+                                            <div class="text-center py-3">
+                                                <div class="spinner-border spinner-border-sm" role="status">
+                                                    <span class="visually-hidden">Loading...</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <button class="btn btn-sm btn-danger" onclick="deleteLead({{ $lead->id }})">
@@ -218,9 +289,17 @@
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h6 class="mb-0">Activities</h6>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="toggleFilters()">
-                            <i class="bi bi-funnel me-1"></i>Filters
-                        </button>
+                        <div class="d-flex gap-2">
+                            <a href="{{ route('leads.activities.export', $lead->id) }}" class="btn btn-sm btn-success">
+                                <i class="bi bi-download me-1"></i>Export
+                            </a>
+                            <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#importActivitiesModal">
+                                <i class="bi bi-upload me-1"></i>Import
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="toggleFilters()">
+                                <i class="bi bi-funnel me-1"></i>Filters
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div id="activitiesList">
@@ -262,7 +341,7 @@
                                                     </td>
                                                     <td>{{ $activity->createdBy ? $activity->createdBy->name : '-' }}</td>
                                                     <td>
-                                                        @if($activity->type === 'Email')
+                                                        @if($activity->type === 'Email' || $activity->type === 'Dropbox Reply Email' || $activity->type === 'Dropbox Email')
                                                             <a href="{{ route('activities.show', $activity->id) }}" class="btn btn-sm btn-info" title="View Email">
                                                                 <i class="bi bi-eye"></i>
                                                             </a>
@@ -901,7 +980,7 @@
         }
         
         .card.mb-3 {
-            z-index: 1 !important;
+            z-index: 1000 !important;
         }
 
         /* Document Upload Drag and Drop Styles */
@@ -1029,9 +1108,245 @@
         .document-delete-btn:hover {
             background-color: #dc2626;
         }
+        
+        /* Enhanced Select2 Lead Type Styling */
+        .lead-type-select + .select2-container {
+            min-width: 200px;
+        }
+        
+        .lead-type-select + .select2-container .select2-selection {
+            border: 1px solid #ced4da;
+            border-radius: 0.375rem;
+            height: 31px;
+            padding: 0;
+            background-color: #fff;
+            transition: all 0.2s ease;
+        }
+        
+        .lead-type-select + .select2-container .select2-selection:hover {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.1);
+        }
+        
+        .lead-type-select + .select2-container .select2-selection:focus,
+        .lead-type-select + .select2-container.select2-container--focus .select2-selection {
+            border-color: #86b7fe;
+            outline: 0;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+        
+        .lead-type-select + .select2-container .select2-selection__rendered {
+            padding-left: 8px;
+            padding-right: 20px;
+            line-height: 29px;
+            color: #212529;
+            font-size: 0.875rem;
+        }
+        
+        .lead-type-select + .select2-container .select2-selection__arrow {
+            height: 29px;
+            right: 8px;
+        }
+        
+        .lead-type-select + .select2-container .select2-selection__arrow b {
+            border-color: #6c757d transparent transparent transparent;
+            border-width: 5px 4px 0 4px;
+            margin-top: -2px;
+        }
+        
+        /* Select2 Dropdown Styling */
+        .select2-dropdown {
+            border: 1px solid #ced4da;
+            border-radius: 0.375rem;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            margin-top: 2px;
+        }
+        
+        .select2-search--dropdown {
+            padding: 8px;
+        }
+        
+        .select2-search--dropdown .select2-search__field {
+            border: 1px solid #ced4da;
+            border-radius: 0.375rem;
+            padding: 6px 12px;
+            font-size: 0.875rem;
+            outline: none;
+        }
+        
+        .select2-search--dropdown .select2-search__field:focus {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+        
+        .select2-results__option {
+            padding: 8px 12px;
+            font-size: 0.875rem;
+            transition: background-color 0.15s ease;
+        }
+        
+        .select2-results__option--highlighted {
+            background-color: #0d6efd;
+            color: white;
+        }
+        
+        .select2-results__option[aria-selected="true"] {
+            background-color: #e7f1ff;
+            color: #0d6efd;
+            font-weight: 500;
+        }
+        
+        .select2-results__option[aria-selected="true"].select2-results__option--highlighted {
+            background-color: #0d6efd;
+            color: white;
+        }
+        
+        /* Badge styling for selected lead type */
+        .lead-type-select + .select2-container .select2-selection__rendered .badge {
+            margin-left: 4px;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+        }
+        
+        /* Custom User Popup */
+        .user-popup {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            margin-top: 5px;
+            z-index: 999999;
+            min-width: 250px;
+            display: none;
+        }
+        
+        .user-popup-content {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+        }
+        
+        .user-popup-header {
+            padding: 10px 15px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .btn-close-popup {
+            background: none;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            font-size: 18px;
+            color: #6c757d;
+            line-height: 1;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        
+        .btn-close-popup:hover {
+            background-color: #e9ecef;
+            color: #212529;
+        }
+        
+        .user-popup-search {
+            padding: 10px 15px;
+            border-bottom: 1px solid #dee2e6;
+            background: #fff;
+        }
+        
+        .user-popup-search input {
+            width: 100%;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            padding: 6px 10px;
+            font-size: 0.875rem;
+        }
+        
+        .user-popup-search input:focus {
+            border-color: #86b7fe;
+            outline: 0;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+        
+        .user-popup-body {
+            max-height: 300px;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        
+        .user-popup-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f1f1;
+            transition: background-color 0.2s;
+            display: block;
+            text-decoration: none;
+            color: #212529;
+        }
+        
+        .user-popup-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .user-popup-item.active {
+            background-color: #0d6efd;
+            color: white;
+        }
+        
+        .user-popup-item.active:hover {
+            background-color: #0b5ed7;
+        }
+        
+        .user-popup-item.none {
+            font-style: italic;
+            color: #6c757d;
+        }
+        
+        .user-popup-item.hidden {
+            display: none;
+        }
+        
+        /* Scrollbar styling */
+        .user-popup-body::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .user-popup-body::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        .user-popup-body::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        
+        .user-popup-body::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
     </style>
 
+    @section('styles')
+        <!-- Select2 CSS -->
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+        <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+    @endsection
+    
     @push('scripts')
+        <!-- Select2 JS -->
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <script>
             // Ensure jQuery is loaded
@@ -1680,10 +1995,10 @@
                                 </div>
                                 <div class="document-file-actions">
                                     <button type="button" class="document-preview-btn" onclick="previewDocumentFile(${index})">
-                                        <i class="bi bi-eye"></i> Preview
+                                        <i class="bi bi-eye"></i> 
                                     </button>
                                     <button type="button" class="document-delete-btn" onclick="removeDocumentFile(${index})">
-                                        <i class="bi bi-trash"></i> Delete
+                                        <i class="bi bi-trash"></i> 
                                     </button>
                                 </div>
                             </div>
@@ -2249,7 +2564,7 @@
 
                     // Determine action buttons based on activity type
                     let actionButtons = '';
-                    if (activity.type === 'Email') {
+                    if (activity.type === 'Email' || activity.type === 'Dropbox Reply Email' || activity.type === 'Dropbox Email') {
                         actionButtons = `
                             <a href="/activities/${activity.id}" class="btn btn-sm btn-info" title="View Email">
                                 <i class="bi bi-eye"></i>
@@ -2324,7 +2639,7 @@
             function loadStatusesForProject() {
                 const projectId = {{ $lead->project_id }};
                 if (!projectId) {
-                    $('#statusDropdownMenu').html('<li><a class="dropdown-item" href="#" onclick="return false;">No Project Selected</a></li>');
+                    $('#statusPopupBody').html('<div class="text-center py-3 text-muted">No Project Selected</div>');
                     return;
                 }
                 
@@ -2335,20 +2650,60 @@
                         if (response.success && response.statuses.length > 0) {
                             let menuItems = '';
                             response.statuses.forEach(function(status) {
-                                menuItems += `<li><a class="dropdown-item" href="javascript:void(0);" onclick="updateStatus(${status.id}); return false;">${status.name}</a></li>`;
+                                const isSelected = {{ $lead->status_id ?? 'null' }} == status.id;
+                                menuItems += `<a href="javascript:void(0);" class="user-popup-item ${isSelected ? 'active' : ''}" data-status-id="${status.id}" onclick="updateStatus(${status.id}); return false;">${status.name}</a>`;
                             });
-                            $('#statusDropdownMenu').html(menuItems);
+                            $('#statusPopupBody').html(menuItems);
                         } else {
-                            $('#statusDropdownMenu').html('<li><a class="dropdown-item" href="#" onclick="return false;">No Statuses Available</a></li>');
+                            $('#statusPopupBody').html('<div class="text-center py-3 text-muted">No Statuses Available</div>');
                         }
                     },
                     error: function() {
-                        $('#statusDropdownMenu').html('<li><a class="dropdown-item" href="#" onclick="return false;">Error Loading Statuses</a></li>');
+                        $('#statusPopupBody').html('<div class="text-center py-3 text-muted">Error Loading Statuses</div>');
+                    }
+                });
+            }
+            
+            function openStatusPopup() {
+                const $popup = $('#statusPopup');
+                
+                // Load statuses if not loaded
+                if ($('#statusPopupBody').html().trim() === '' || $('#statusPopupBody').find('.spinner-border').length > 0) {
+                    loadStatusesForProject();
+                }
+                
+                // Show popup (it will stick to button since it's absolutely positioned relative to btn-group)
+                $popup.css('display', 'block');
+                
+                // Focus on search input
+                setTimeout(function() {
+                    $('#statusSearchInput').focus();
+                }, 100);
+            }
+            
+            function closeStatusPopup() {
+                $('#statusPopup').css('display', 'none');
+                $('#statusSearchInput').val('');
+                filterStatuses('');
+            }
+            
+            function filterStatuses(searchTerm) {
+                const searchLower = searchTerm.toLowerCase().trim();
+                $('#statusPopupBody .user-popup-item').each(function() {
+                    const $item = $(this);
+                    const text = $item.text().toLowerCase();
+                    if (text.includes(searchLower)) {
+                        $item.removeClass('hidden');
+                    } else {
+                        $item.addClass('hidden');
                     }
                 });
             }
             
             function updateStatus(statusId) {
+                // Close the popup first
+                closeStatusPopup();
+                
                 $.ajax({
                     url: `/leads/{{ $lead->id }}`,
                     method: 'PUT',
@@ -2376,9 +2731,258 @@
                 });
             }
             
-            // Load statuses when page loads
+            function loadLeadTypes() {
+                $.ajax({
+                    url: `/leads/lead-types`,
+                    method: 'GET',
+                    success: function(response) {
+                        if (response.success && response.lead_types.length > 0) {
+                            let menuItems = '';
+                            // Add option to remove lead type
+                            menuItems += `<a href="javascript:void(0);" class="user-popup-item none" onclick="updateLeadType(null); return false;"><em>None</em></a>`;
+                            
+                            // Add all lead types
+                            response.lead_types.forEach(function(leadType) {
+                                const isSelected = {{ $lead->lead_type_id ?? 'null' }} == leadType.id;
+                                menuItems += `<a href="javascript:void(0);" class="user-popup-item ${isSelected ? 'active' : ''}" data-lead-type-id="${leadType.id}" onclick="updateLeadType(${leadType.id}); return false;">${leadType.name}</a>`;
+                            });
+                            
+                            $('#leadTypePopupBody').html(menuItems);
+                        } else {
+                            $('#leadTypePopupBody').html('<div class="text-center py-3 text-muted">No Lead Types Available</div>');
+                        }
+                    },
+                    error: function() {
+                        $('#leadTypePopupBody').html('<div class="text-center py-3 text-muted">Error Loading Lead Types</div>');
+                    }
+                });
+            }
+            
+            function openLeadTypePopup() {
+                const $popup = $('#leadTypePopup');
+                
+                // Load lead types if not loaded
+                if ($('#leadTypePopupBody').html().trim() === '' || $('#leadTypePopupBody').find('.spinner-border').length > 0) {
+                    loadLeadTypes();
+                }
+                
+                // Show popup (it will stick to button since it's absolutely positioned relative to btn-group)
+                $popup.css('display', 'block');
+                
+                // Focus on search input
+                setTimeout(function() {
+                    $('#leadTypeSearchInput').focus();
+                }, 100);
+            }
+            
+            function closeLeadTypePopup() {
+                $('#leadTypePopup').css('display', 'none');
+                $('#leadTypeSearchInput').val('');
+                filterLeadTypes('');
+            }
+            
+            function filterLeadTypes(searchTerm) {
+                const searchLower = searchTerm.toLowerCase().trim();
+                $('#leadTypePopupBody .user-popup-item').each(function() {
+                    const $item = $(this);
+                    const text = $item.text().toLowerCase();
+                    if (text.includes(searchLower)) {
+                        $item.removeClass('hidden');
+                    } else {
+                        $item.addClass('hidden');
+                    }
+                });
+            }
+            
+            function updateLeadType(leadTypeId) {
+                // Close the popup first
+                closeLeadTypePopup();
+                
+                $.ajax({
+                    url: `/leads/{{ $lead->id }}`,
+                    method: 'PUT',
+                    data: {
+                        _method: 'PUT',
+                        lead_type_id: leadTypeId || null,
+                        project_id: {{ $lead->project_id }},
+                        first_name: '{{ $lead->first_name }}'
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Success',
+                                text: 'Lead type updated successfully.',
+                                timer: 2000,
+                                showConfirmButton: false
+                            });
+                            location.reload();
+                        }
+                    },
+                    error: function() {
+                        Swal.fire('Error!', 'Failed to update lead type.', 'error');
+                    }
+                });
+            }
+            
+            function loadUsers() {
+                // Use users from page (already loaded)
+                @if(isset($users) && $users->count() > 0)
+                    let menuItems = '';
+                    // Add option to remove user
+                    menuItems += `<a href="javascript:void(0);" class="user-popup-item none" onclick="updateUser(null); return false;"><em>None</em></a>`;
+                    @foreach($users as $user)
+                        const isSelected{{ $user->id }} = {{ $lead->added_by ?? 'null' }} == {{ $user->id }};
+                        menuItems += `<a href="javascript:void(0);" class="user-popup-item ${isSelected{{ $user->id }} ? 'active' : ''}" data-user-id="{{ $user->id }}" onclick="updateUser({{ $user->id }}); return false;">{{ $user->name }}</a>`;
+                    @endforeach
+                    
+                    $('#userPopupBody').html(menuItems);
+                @else
+                    $('#userPopupBody').html('<div class="text-center py-3 text-muted">No Users Available</div>');
+                @endif
+            }
+            
+            function openUserPopup() {
+                const $popup = $('#userPopup');
+                
+                // Load users if not loaded
+                if ($('#userPopupBody').html().trim() === '' || $('#userPopupBody').find('.spinner-border').length > 0) {
+                    loadUsers();
+                }
+                
+                // Show popup (it will stick to button since it's absolutely positioned relative to btn-group)
+                $popup.css('display', 'block');
+                
+                // Focus on search input
+                setTimeout(function() {
+                    $('#userSearchInput').focus();
+                }, 100);
+            }
+            
+            function closeUserPopup() {
+                $('#userPopup').css('display', 'none');
+                $('#userSearchInput').val('');
+                filterUsers('');
+            }
+            
+            function positionUserPopup() {
+                // Popup is absolutely positioned relative to .btn-group
+                // No need for complex positioning - it will stick with the button automatically
+                // Just ensure it's visible
+            }
+            
+            function filterUsers(searchTerm) {
+                const searchLower = searchTerm.toLowerCase().trim();
+                $('.user-popup-item').each(function() {
+                    const $item = $(this);
+                    const text = $item.text().toLowerCase();
+                    if (text.includes(searchLower)) {
+                        $item.removeClass('hidden');
+                    } else {
+                        $item.addClass('hidden');
+                    }
+                });
+            }
+            
+            function updateUser(userId) {
+                // Close the popup first
+                closeUserPopup();
+                
+                $.ajax({
+                    url: `/leads/{{ $lead->id }}`,
+                    method: 'PUT',
+                    data: {
+                        _method: 'PUT',
+                        added_by: userId || null,
+                        project_id: {{ $lead->project_id }},
+                        first_name: '{{ $lead->first_name }}'
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Success',
+                                text: 'User assigned successfully.',
+                                timer: 2000,
+                                showConfirmButton: false
+                            });
+                            location.reload();
+                        }
+                    },
+                    error: function() {
+                        Swal.fire('Error!', 'Failed to assign user.', 'error');
+                    }
+                });
+            }
+            
+            // Load statuses and lead types when page loads
             $(document).ready(function() {
-                loadStatusesForProject();
+                // Open status popup on button click
+                $('#statusDropdownBtn').on('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if ($('#statusPopup').css('display') === 'none') {
+                        openStatusPopup();
+                    } else {
+                        closeStatusPopup();
+                    }
+                });
+                
+                // Open lead type popup on button click
+                $('#leadTypeDropdownBtn').on('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if ($('#leadTypePopup').css('display') === 'none') {
+                        openLeadTypePopup();
+                    } else {
+                        closeLeadTypePopup();
+                    }
+                });
+                
+                // Open user popup on button click
+                $('#userDropdownBtn').on('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if ($('#userPopup').css('display') === 'none') {
+                        openUserPopup();
+                    } else {
+                        closeUserPopup();
+                    }
+                });
+                
+                // Handle search input for statuses (use event delegation since input is inside popup)
+                $(document).on('input', '#statusSearchInput', function() {
+                    const searchTerm = $(this).val();
+                    filterStatuses(searchTerm);
+                });
+                
+                // Handle search input for lead types (use event delegation since input is inside popup)
+                $(document).on('input', '#leadTypeSearchInput', function() {
+                    const searchTerm = $(this).val();
+                    filterLeadTypes(searchTerm);
+                });
+                
+                // Handle search input for users (use event delegation since input is inside popup)
+                $(document).on('input', '#userSearchInput', function() {
+                    const searchTerm = $(this).val();
+                    filterUsers(searchTerm);
+                });
+                
+                // Close popups when clicking outside
+                $(document).on('click', function(e) {
+                    if (!$(e.target).closest('#statusDropdownBtn').length && 
+                        !$(e.target).closest('#statusPopup').length) {
+                        closeStatusPopup();
+                    }
+                    if (!$(e.target).closest('#leadTypeDropdownBtn').length && 
+                        !$(e.target).closest('#leadTypePopup').length) {
+                        closeLeadTypePopup();
+                    }
+                    if (!$(e.target).closest('#userDropdownBtn').length && 
+                        !$(e.target).closest('#userPopup').length) {
+                        closeUserPopup();
+                    }
+                });
             });
 
             function copyLead(id) {
@@ -2695,6 +3299,123 @@
                     'pointer-events': 'auto',
                     'cursor': 'pointer',
                     'z-index': 'auto'
+                });
+            });
+        </script>
+
+        <!-- Import Activities Modal -->
+        <div class="modal fade" id="importActivitiesModal" tabindex="-1" aria-labelledby="importActivitiesModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="importActivitiesModalLabel">Import Activities from CSV</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form id="importActivitiesForm">
+                        <div class="modal-body">
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <strong>Instructions:</strong>
+                                <ul class="mb-0 mt-2">
+                                    <li>CSV file must have a <strong>Reference</strong> column matching the lead's Reference (flg_reference)</li>
+                                    <li>Required fields: <strong>Reference</strong>, <strong>ActivityType</strong>, <strong>ActivityDateTime</strong></li>
+                                    <li>Activities will be linked to leads based on the Reference column</li>
+                                    <li>Date format: <strong>ActivityDateTime</strong> should be in d/m/Y H:i format (e.g., 07/11/2025 07:55)</li>
+                                    <li>If <strong>ActivityID</strong> is provided and already exists, that row will be skipped</li>
+                                </ul>
+                            </div>
+                            <div class="mb-3">
+                                <label for="importActivitiesFile" class="form-label">Select CSV File <span class="text-danger">*</span></label>
+                                <input type="file" class="form-control" id="importActivitiesFile" name="file" accept=".csv,.txt" required>
+                                <small class="text-muted">Maximum file size: 10MB</small>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-upload me-2"></i>Import Activities
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Handle import activities form submission
+            $('#importActivitiesForm').on('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(this);
+                const fileInput = $('#importActivitiesFile')[0];
+                
+                if (!fileInput.files.length) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Please select a CSV file to import.'
+                    });
+                    return;
+                }
+                
+                formData.append('file', fileInput.files[0]);
+                
+                $.ajax({
+                    url: '/activities/import',
+                    method: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Import Successful',
+                                html: response.message.replace(/\n/g, '<br>'),
+                                confirmButtonText: 'OK'
+                            });
+                            
+                            bootstrap.Modal.getInstance(document.getElementById('importActivitiesModal')).hide();
+                            $('#importActivitiesForm')[0].reset();
+                            loadActivities(); // Reload activities list
+                        } else {
+                            // Handle error response (success: false)
+                            let message = response.message || 'Import failed.';
+                            if (response.errors && response.errors.length > 0) {
+                                message += '<br><br><strong>Errors:</strong><br>' + response.errors.join('<br>');
+                            }
+                            
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Import Failed',
+                                html: message,
+                                confirmButtonText: 'OK'
+                            });
+                        }
+                    },
+                    error: function(xhr) {
+                        let errorMessage = 'Failed to import activities. Please try again.';
+                        if (xhr.responseJSON) {
+                            if (xhr.responseJSON.message) {
+                                errorMessage = xhr.responseJSON.message;
+                                if (xhr.responseJSON.errors && xhr.responseJSON.errors.length > 0) {
+                                    errorMessage += '\n\nErrors:\n' + xhr.responseJSON.errors.join('\n');
+                                }
+                            } else if (xhr.responseJSON.errors) {
+                                errorMessage = Object.values(xhr.responseJSON.errors).flat().join('\n');
+                            }
+                        }
+                        
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Import Failed',
+                            html: errorMessage.replace(/\n/g, '<br>'),
+                            confirmButtonText: 'OK'
+                        });
+                    }
                 });
             });
         </script>
