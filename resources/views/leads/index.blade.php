@@ -16,6 +16,15 @@
                     <button type="button" class="btn btn-light btn-lg px-4 py-2" data-bs-toggle="modal" data-bs-target="#leadModal" onclick="openCreateModal()">
                         <i class="bi bi-plus-circle me-2"></i>Create Lead
                     </button>
+                    <button type="button" class="btn btn-success btn-lg px-4 py-2" onclick="exportLeads()">
+                        <i class="bi bi-download me-2"></i>Export
+                    </button>
+                    <button type="button" class="btn btn-info btn-lg px-4 py-2" data-bs-toggle="modal" data-bs-target="#importLeadModal">
+                        <i class="bi bi-upload me-2"></i>Import Leads
+                    </button>
+                    <button type="button" class="btn btn-warning btn-lg px-4 py-2" data-bs-toggle="modal" data-bs-target="#importActivitiesModal">
+                        <i class="bi bi-upload me-2"></i>Import Activities
+                    </button>
                 </div>
             </div>
         </div>
@@ -59,9 +68,9 @@
     </div>
 
     <!-- Leads Table -->
-    <div class="card">
-        <div class="card-body">
-            <div class="table-responsive">
+    <div class="card p-0">
+        <div class="card-body p-0">
+            <div>
                 <table class="table table-hover" id="leadsTable">
                     <thead>
                         <tr>
@@ -95,6 +104,85 @@
                     <ul class="pagination mb-0" id="paginationLinks"></ul>
                 </nav>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Import Lead Modal -->
+<div class="modal fade" id="importLeadModal" tabindex="-1" aria-labelledby="importLeadModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="importLeadModalLabel">Import Leads from CSV</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="importLeadForm">
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Instructions:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>CSV file must match the export format with all column headers</li>
+                            <li>Required fields: <strong>FirstName</strong>, <strong>LeadGroup</strong> or <strong>LeadGroupID</strong></li>
+                            <li><strong>LeadGroup</strong>: Project name (must match exactly) or <strong>LeadGroupID</strong>: Project ID</li>
+                            <li><strong>Status</strong>: Optional - must match a status name for the selected project</li>
+                            <li><strong>Reference</strong>: If provided and matches existing lead, it will update that lead</li>
+                            <li>Date format: <strong>ReceivedDateTime</strong> should be in d/m/Y H:i format (e.g., 06/11/2025 16:23)</li>
+                            <li>Date of Birth: Use <strong>DOBDay</strong>, <strong>DOBMonth</strong>, <strong>DOBYear</strong> columns</li>
+                        </ul>
+                    </div>
+                    <div class="mb-3">
+                        <label for="importFile" class="form-label">Select CSV File <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control" id="importFile" name="file" accept=".csv,.txt" required>
+                        <small class="text-muted">Maximum file size: 10MB</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-upload me-2"></i>Import Leads
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Import Activities Modal -->
+<div class="modal fade" id="importActivitiesModal" tabindex="-1" aria-labelledby="importActivitiesModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="importActivitiesModalLabel">Import Activities from CSV</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="importActivitiesForm">
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Instructions:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>CSV file must have a <strong>Reference</strong> column matching the lead's Reference (flg_reference)</li>
+                            <li>Required fields: <strong>Reference</strong>, <strong>ActivityType</strong>, <strong>ActivityDateTime</strong></li>
+                            <li>Activities will be linked to leads based on the Reference column</li>
+                            <li>Date format: <strong>ActivityDateTime</strong> should be in d/m/Y H:i format (e.g., 07/11/2025 07:55)</li>
+                            <li>If <strong>ActivityID</strong> is provided and already exists, that row will be skipped</li>
+                            <li>Duplicate activities (same Reference, Type, and DateTime) will be skipped</li>
+                        </ul>
+                    </div>
+                    <div class="mb-3">
+                        <label for="importActivitiesFile" class="form-label">Select CSV File <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control" id="importActivitiesFile" name="file" accept=".csv,.txt" required>
+                        <small class="text-muted">Maximum file size: 10MB</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-upload me-2"></i>Import Activities
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -289,6 +377,163 @@ $(document).ready(function() {
     $('#leadForm').on('submit', function(e) {
         e.preventDefault();
         saveLead();
+    });
+    
+    // Handle import form submission
+    $('#importLeadForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const fileInput = $('#importFile')[0];
+        
+        if (!fileInput.files.length) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Please select a CSV file to import.'
+            });
+            return;
+        }
+        
+        formData.append('file', fileInput.files[0]);
+        
+        $.ajax({
+            url: '/leads/import',
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Import Successful',
+                        html: response.message.replace(/\n/g, '<br>'),
+                        confirmButtonText: 'OK'
+                    });
+                    
+                    bootstrap.Modal.getInstance(document.getElementById('importLeadModal')).hide();
+                    $('#importLeadForm')[0].reset();
+                    loadLeads();
+                } else {
+                    // Handle error response (success: false)
+                    let message = response.message || 'Import failed.';
+                    if (response.errors && response.errors.length > 0) {
+                        message += '<br><br><strong>Errors:</strong><br>' + response.errors.join('<br>');
+                    }
+                    
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Import Failed',
+                        html: message,
+                        confirmButtonText: 'OK'
+                    });
+                }
+            },
+            error: function(xhr) {
+                let errorMessage = 'Failed to import leads. Please try again.';
+                if (xhr.responseJSON) {
+                    if (xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                        if (xhr.responseJSON.errors && xhr.responseJSON.errors.length > 0) {
+                            errorMessage += '\n\nErrors:\n' + xhr.responseJSON.errors.join('\n');
+                        }
+                    } else if (xhr.responseJSON.errors) {
+                        errorMessage = Object.values(xhr.responseJSON.errors).flat().join('\n');
+                    }
+                }
+                
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Import Failed',
+                    html: errorMessage.replace(/\n/g, '<br>'),
+                    confirmButtonText: 'OK'
+                });
+            }
+        });
+    });
+    
+    // Handle import activities form submission
+    $('#importActivitiesForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const fileInput = $('#importActivitiesFile')[0];
+        
+        if (!fileInput.files.length) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Please select a CSV file to import.'
+            });
+            return;
+        }
+        
+        formData.append('file', fileInput.files[0]);
+        
+        $.ajax({
+            url: '/activities/import',
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Import Successful',
+                        html: response.message.replace(/\n/g, '<br>'),
+                        confirmButtonText: 'OK'
+                    });
+                    
+                    bootstrap.Modal.getInstance(document.getElementById('importActivitiesModal')).hide();
+                    $('#importActivitiesForm')[0].reset();
+                } else {
+                    let errorMessage = 'Failed to import activities. Please try again.';
+                    if (response.message) {
+                        errorMessage = response.message;
+                    }
+                    if (response.errors && response.errors.length > 0) {
+                        errorMessage += '<br><br><strong>Errors:</strong><ul>';
+                        response.errors.forEach(error => {
+                            errorMessage += '<li>' + error + '</li>';
+                        });
+                        errorMessage += '</ul>';
+                    }
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Import Failed',
+                        html: errorMessage,
+                        confirmButtonText: 'OK'
+                    });
+                }
+            },
+            error: function(xhr) {
+                let errorMessage = 'Failed to import activities. Please try again.';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
+                if (xhr.responseJSON && xhr.responseJSON.errors && xhr.responseJSON.errors.length > 0) {
+                    errorMessage += '<br><br><strong>Errors:</strong><ul>';
+                    xhr.responseJSON.errors.forEach(error => {
+                        errorMessage += '<li>' + error + '</li>';
+                    });
+                    errorMessage += '</ul>';
+                }
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Import Failed',
+                    html: errorMessage,
+                    confirmButtonText: 'OK'
+                });
+            }
+        });
     });
 });
 
@@ -662,6 +907,28 @@ $('#confirmDeleteBtn').on('click', function() {
         });
     }
 });
+
+// Export leads function - make it globally accessible
+window.exportLeads = function() {
+    // Get current search and filter parameters
+    const search = $('#searchInput').val() || '';
+    const projectId = $('#projectFilter').val() || '';
+    
+    // Build export URL with parameters
+    let exportUrl = '/leads/export?';
+    if (search) {
+        exportUrl += 'search=' + encodeURIComponent(search) + '&';
+    }
+    if (projectId) {
+        exportUrl += 'project_id=' + projectId + '&';
+    }
+    
+    // Remove trailing &
+    exportUrl = exportUrl.replace(/&$/, '');
+    
+    // Trigger download
+    window.location.href = exportUrl;
+};
 </script>
 @endpush
 @endsection

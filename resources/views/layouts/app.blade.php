@@ -1466,6 +1466,11 @@ use Illuminate\Support\Facades\Storage;
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('lead-types.*') ? 'active' : '' }}" href="{{ route('lead-types.index') }}" title="Lead Types">
+                                <i class="bi bi-tags-fill"></i>
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('tasks.*') ? 'active' : '' }}" href="{{ route('tasks.index') }}" title="Tasks">
                                 <i class="bi bi-list-task"></i>
                             </a>
