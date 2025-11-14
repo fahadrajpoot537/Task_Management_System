@@ -31,7 +31,8 @@ class LeadController extends Controller
                   ->orWhere('email', 'like', "%{$search}%")
                   ->orWhere('phone', 'like', "%{$search}%")
                   ->orWhere('company', 'like', "%{$search}%")
-                  ->orWhere('title', 'like', "%{$search}%");
+                  ->orWhere('title', 'like', "%{$search}%")
+                  ->orWhere('flg_reference', 'like', "%{$search}%");
             });
         }
 
@@ -285,7 +286,8 @@ class LeadController extends Controller
                   ->orWhere('email', 'like', "%{$search}%")
                   ->orWhere('phone', 'like', "%{$search}%")
                   ->orWhere('company', 'like', "%{$search}%")
-                  ->orWhere('title', 'like', "%{$search}%");
+                  ->orWhere('title', 'like', "%{$search}%")
+                  ->orWhere('flg_reference', 'like', "%{$search}%");
             });
         }
 

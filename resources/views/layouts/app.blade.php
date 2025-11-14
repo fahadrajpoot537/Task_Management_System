@@ -30,6 +30,10 @@ use Illuminate\Support\Facades\Storage;
     
     <!-- Custom CSS - Minimal Design -->
     <style>
+        .bg-secondary {
+  --bs-bg-opacity: 1;
+  background-color: rgb(182, 185, 187) !important;
+}
         :root {
             --primary-color: #2563eb;
             --success-color: #10b981;
