@@ -48,7 +48,7 @@ Route::post('/logout', function () {
 Route::middleware('auth')->group(function () {
     // Dashboard
     Route::get('/', Dashboard::class)->name('dashboard');
-    // Route::get('/dashboard', Dashboard::class)->name('dashboard');
+    Route::get('/dashboard', Dashboard::class)->name('dashboard');
 
     // Projects
     Route::get('/projects', ProjectIndex::class)->name('projects.index');
