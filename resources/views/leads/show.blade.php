@@ -305,10 +305,10 @@
                             </button>
                         </div>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body p-0">
                         <div id="activitiesList">
                             @if ($lead->activities && $lead->activities->count() > 0)
-                                <div class="table-responsive">
+                                <div>
                                     <table class="table table-hover">
                                         <thead>
                                             <tr>

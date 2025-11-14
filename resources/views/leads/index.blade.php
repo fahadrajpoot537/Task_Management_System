@@ -75,6 +75,7 @@
                     <thead>
                         <tr>
                             <th>ID</th>
+                            <th>Reference</th>
                             <th>Name</th>
                             <th>Company</th>
                             <th>Email</th>
@@ -88,7 +89,7 @@
                     </thead>
                     <tbody id="leadsTableBody">
                         <tr>
-                            <td colspan="10" class="text-center">
+                            <td colspan="11" class="text-center">
                                 <div class="spinner-border text-primary" role="status">
                                     <span class="visually-hidden">Loading...</span>
                                 </div>
@@ -577,7 +578,7 @@ function renderLeads(leads) {
     if (leads.length === 0) {
         tbody.append(`
             <tr>
-                <td colspan="10" class="text-center py-4">
+                <td colspan="11" class="text-center py-4">
                     <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
                     <p class="text-muted mt-2">No leads found</p>
                 </td>
@@ -590,6 +591,7 @@ function renderLeads(leads) {
         const row = `
             <tr>
                 <td>${lead.id}</td>
+                <td>${lead.flg_reference || '-'}</td>
                 <td>${lead.first_name} ${lead.last_name || ''}</td>
                 <td>${lead.company || '-'}</td>
                 <td>${lead.email || '-'}</td>
