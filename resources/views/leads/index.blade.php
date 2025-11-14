@@ -68,9 +68,9 @@
     </div>
 
     <!-- Leads Table -->
-    <div class="card">
-        <div class="card-body">
-            <div class="table-responsive">
+    <div class="card p-0">
+        <div class="card-body p-0">
+            <div>
                 <table class="table table-hover" id="leadsTable">
                     <thead>
                         <tr>

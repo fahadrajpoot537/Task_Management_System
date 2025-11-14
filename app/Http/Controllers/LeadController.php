@@ -163,6 +163,7 @@ class LeadController extends Controller
             'status_id' => 'nullable|exists:statuses,id',
             'lead_type_id' => 'nullable|exists:lead_types,id',
             'added_by' => 'nullable|exists:users,id',
+            'user_name' => 'nullable|string|max:100',
         ]);
 
         if ($validator->fails()) {
@@ -172,7 +173,26 @@ class LeadController extends Controller
             ], 422);
         }
 
-        $lead->update($request->all());
+        $data = $request->all();
+        
+        // If added_by is being set, ensure user_name is also set
+        // If added_by is null, clear user_name as well
+        if (isset($data['added_by'])) {
+            if ($data['added_by']) {
+                // If user_name is not provided, fetch it from the user
+                if (empty($data['user_name'])) {
+                    $user = \App\Models\User::find($data['added_by']);
+                    if ($user) {
+                        $data['user_name'] = $user->name;
+                    }
+                }
+            } else {
+                // Clear user_name when added_by is null
+                $data['user_name'] = null;
+            }
+        }
+
+        $lead->update($data);
 
         // Log the action
         Log::createLog(auth()->id(), 'update_lead', "Updated lead: {$lead->first_name} {$lead->last_name}");
