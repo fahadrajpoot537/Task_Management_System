@@ -1,5 +1,70 @@
 @extends('layouts.app')
 
+@section('styles')
+<style>
+    .email-content-wrapper {
+        position: relative;
+    }
+    
+    .email-content-inner img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 4px;
+        margin: 1rem 0;
+    }
+    
+    .email-content-inner table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1rem 0;
+    }
+    
+    .email-content-inner table td,
+    .email-content-inner table th {
+        padding: 0.5rem;
+        border: 1px solid #e0e0e0;
+    }
+    
+    .email-content-inner a {
+        color: #0d6efd;
+        text-decoration: none;
+    }
+    
+    .email-content-inner a:hover {
+        text-decoration: underline;
+    }
+    
+    .email-content-inner p {
+        margin-bottom: 1rem;
+    }
+    
+    .email-content-inner h1,
+    .email-content-inner h2,
+    .email-content-inner h3,
+    .email-content-inner h4,
+    .email-content-inner h5,
+    .email-content-inner h6 {
+        margin-top: 1.5rem;
+        margin-bottom: 1rem;
+        font-weight: 600;
+    }
+    
+    .email-content-inner ul,
+    .email-content-inner ol {
+        margin: 1rem 0;
+        padding-left: 2rem;
+    }
+    
+    .email-content-inner blockquote {
+        border-left: 4px solid #0d6efd;
+        padding-left: 1rem;
+        margin: 1rem 0;
+        color: #6c757d;
+        font-style: italic;
+    }
+</style>
+@endsection
+
 @section('content')
     <div class="container-fluid py-4">
         <!-- Header -->
@@ -134,15 +199,41 @@
         </div>
 
         <!-- Email Body Section -->
-        <div class="card">
+        <div class="card shadow-sm">
             <div class="card-body">
-                <strong class="text-dark d-block mb-3" style="font-weight: 600;">Email Body:</strong>
-                <div class="border rounded p-3" style="min-height: 200px; background-color: #f8f9fa;">
-                    @if($activity->field_2)
-                        {!! $activity->field_2 !!}
-                    @else
-                        <p class="text-muted">No content available</p>
-                    @endif
+                <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-envelope-fill text-primary me-2" style="font-size: 1.2rem;"></i>
+                    <strong class="text-dark" style="font-weight: 600; font-size: 1.1rem;">Email Body</strong>
+                </div>
+                <div class="email-content-wrapper" style="
+                    border: 1px solid #e0e0e0;
+                    border-radius: 8px;
+                    background: #ffffff;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                    overflow: hidden;
+                    min-height: 300px;
+                ">
+                    <div class="email-content-inner" style="
+                        padding: 2rem;
+                        max-width: 100%;
+                        overflow-x: auto;
+                    ">
+                        @if($activity->field_2)
+                            <div style="
+                                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                                line-height: 1.6;
+                                color: #333;
+                                word-wrap: break-word;
+                            ">
+                                {!! $activity->field_2 !!}
+                            </div>
+                        @else
+                            <div class="text-center py-5">
+                                <i class="bi bi-inbox text-muted" style="font-size: 3rem; opacity: 0.3;"></i>
+                                <p class="text-muted mt-3 mb-0" style="font-size: 1rem;">No content available</p>
+                            </div>
+                        @endif
+                    </div>
                 </div>
             </div>
         </div>

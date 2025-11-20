@@ -42,8 +42,8 @@ class LeadController extends Controller
         }
 
         // Sorting
-        $sortField = $request->get('sort_field', 'created_at');
-        $sortDirection = $request->get('sort_direction', 'desc');
+        $sortField = $request->get('sort_field', 'id');
+        $sortDirection = $request->get('sort_direction', 'asc');
         $query->orderBy($sortField, $sortDirection);
 
         // Pagination
@@ -702,7 +702,7 @@ class LeadController extends Controller
     public function importLeads(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'file' => 'required|mimes:csv,txt|max:10240',
+            'file' => 'required|mimes:csv,txt',
         ]);
 
         if ($validator->fails()) {
