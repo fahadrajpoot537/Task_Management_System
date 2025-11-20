@@ -109,7 +109,7 @@
 
     <!-- Users Table -->
     <div class="card">
-        <div class="card-body">
+        <div class="card-body" wire:key="users-table">
             @if($this->users->count() > 0)
                 <div class="table-responsive">
                     <table class="table table-hover">
@@ -186,6 +186,7 @@
                        <!-- Pagination -->
                 <div class="d-flex justify-content-center mt-4">
                     {{ $this->users->links('pagination::bootstrap-5') }}
+
                 </div>
                 </div>
 

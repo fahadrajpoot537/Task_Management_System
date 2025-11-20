@@ -52,6 +52,7 @@
                 </div>
                 <div class="col-md-3">
                     <select class="form-select" id="sortField">
+                        <option value="id" selected>Sort by ID</option>
                         <option value="created_at">Sort by Date</option>
                         <option value="first_name">Sort by Name</option>
                         <option value="company">Sort by Company</option>
@@ -60,7 +61,7 @@
                 <div class="col-md-2">
                     <select class="form-select" id="sortDirection">
                         <option value="desc">Newest First</option>
-                        <option value="asc">Oldest First</option>
+                        <option value="asc" selected>Oldest First</option>
                     </select>
                 </div>
             </div>
@@ -601,15 +602,17 @@ function renderLeads(leads) {
                 <td>${lead.received_date ? new Date(lead.received_date).toLocaleDateString() : '-'}</td>
                 <td>${(lead.added_by && lead.added_by.name) ? lead.added_by.name : '-'}</td>
                 <td>
-                    <a href="/leads/${lead.id}" class="btn btn-sm btn-info me-1" title="View Details">
-                        <i class="bi bi-eye"></i>
-                    </a>
-                    <button class="btn btn-sm btn-primary me-1" onclick="editLead(${lead.id})" title="Edit">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick="confirmDelete(${lead.id})" title="Delete">
-                        <i class="bi bi-trash"></i>
-                    </button>
+                    <div class="btn-group" role="group">
+                        <a href="/leads/${lead.id}" class="btn btn-sm btn-outline-info" title="View Details">
+                            <i class="bi bi-eye-fill"></i>
+                        </a>
+                        <button class="btn btn-sm btn-outline-primary" onclick="editLead(${lead.id})" title="Edit">
+                            <i class="bi bi-pencil-fill"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="confirmDelete(${lead.id})" title="Delete">
+                            <i class="bi bi-trash-fill"></i>
+                        </button>
+                    </div>
                 </td>
             </tr>
         `;
@@ -618,23 +621,70 @@ function renderLeads(leads) {
 }
 
 function renderPagination(pagination) {
-    const info = `Showing ${((pagination.current_page - 1) * pagination.per_page) + 1} to ${Math.min(pagination.current_page * pagination.per_page, pagination.total)} of ${pagination.total} leads`;
+    const start = ((pagination.current_page - 1) * pagination.per_page) + 1;
+    const end = Math.min(pagination.current_page * pagination.per_page, pagination.total);
+    const info = `Showing ${start} to ${end} of ${pagination.total} leads`;
     $('#paginationInfo').text(info);
     
     const paginationLinks = $('#paginationLinks');
     paginationLinks.empty();
     
-    // Previous button
-    const prevDisabled = pagination.current_page === 1 ? 'disabled' : '';
-    paginationLinks.append(`
-        <li class="page-item ${prevDisabled}">
-            <a class="page-link" href="#" onclick="changePage(${pagination.current_page - 1}); return false;">Previous</a>
-        </li>
-    `);
+    if (pagination.last_page <= 1) {
+        // No pagination needed if only one page
+        return;
+    }
     
-    // Page numbers
-    for (let i = 1; i <= pagination.last_page; i++) {
-        const active = i === pagination.current_page ? 'active' : '';
+    const currentPage = pagination.current_page;
+    const lastPage = pagination.last_page;
+    const showPages = 5; // Number of page numbers to show around current page
+    
+    // Previous button
+    if (currentPage > 1) {
+        paginationLinks.append(`
+            <li class="page-item">
+                <a class="page-link" href="#" onclick="changePage(${currentPage - 1}); return false;" aria-label="Previous">
+                    <span aria-hidden="true">&laquo; Previous</span>
+                </a>
+            </li>
+        `);
+    } else {
+        paginationLinks.append(`
+            <li class="page-item disabled">
+                <span class="page-link" aria-label="Previous">
+                    <span aria-hidden="true">&laquo; Previous</span>
+                </span>
+            </li>
+        `);
+    }
+    
+    // Calculate which page numbers to show
+    let startPage = Math.max(1, currentPage - Math.floor(showPages / 2));
+    let endPage = Math.min(lastPage, startPage + showPages - 1);
+    
+    // Adjust if we're near the end
+    if (endPage - startPage < showPages - 1) {
+        startPage = Math.max(1, endPage - showPages + 1);
+    }
+    
+    // First page
+    if (startPage > 1) {
+        paginationLinks.append(`
+            <li class="page-item">
+                <a class="page-link" href="#" onclick="changePage(1); return false;">1</a>
+            </li>
+        `);
+        if (startPage > 2) {
+            paginationLinks.append(`
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+            `);
+        }
+    }
+    
+    // Page numbers around current page
+    for (let i = startPage; i <= endPage; i++) {
+        const active = i === currentPage ? 'active' : '';
         paginationLinks.append(`
             <li class="page-item ${active}">
                 <a class="page-link" href="#" onclick="changePage(${i}); return false;">${i}</a>
@@ -642,13 +692,40 @@ function renderPagination(pagination) {
         `);
     }
     
+    // Last page
+    if (endPage < lastPage) {
+        if (endPage < lastPage - 1) {
+            paginationLinks.append(`
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+            `);
+        }
+        paginationLinks.append(`
+            <li class="page-item">
+                <a class="page-link" href="#" onclick="changePage(${lastPage}); return false;">${lastPage}</a>
+            </li>
+        `);
+    }
+    
     // Next button
-    const nextDisabled = pagination.current_page === pagination.last_page ? 'disabled' : '';
-    paginationLinks.append(`
-        <li class="page-item ${nextDisabled}">
-            <a class="page-link" href="#" onclick="changePage(${pagination.current_page + 1}); return false;">Next</a>
-        </li>
-    `);
+    if (currentPage < lastPage) {
+        paginationLinks.append(`
+            <li class="page-item">
+                <a class="page-link" href="#" onclick="changePage(${currentPage + 1}); return false;" aria-label="Next">
+                    <span aria-hidden="true">Next &raquo;</span>
+                </a>
+            </li>
+        `);
+    } else {
+        paginationLinks.append(`
+            <li class="page-item disabled">
+                <span class="page-link" aria-label="Next">
+                    <span aria-hidden="true">Next &raquo;</span>
+                </span>
+            </li>
+        `);
+    }
 }
 
 function changePage(page) {

@@ -44,7 +44,9 @@
         <div class="card mb-3">
             <div class="card-body py-2">
                 <div class="d-flex flex-wrap align-items-center gap-2">
-                    <span class="badge bg-secondary">Open {{ $lead->received_date->diffInHours(now()) }} Hours</span>
+                    @if ($lead->received_date || $lead->created_at)
+                        <span class="badge bg-secondary">Open {{ ($lead->received_date ?? $lead->created_at)->diffInHours(now()) }} Hours</span>
+                    @endif
                     @if ($lead->status)
                         <span class="badge bg-{{ $lead->status->color ?? 'primary' }}">{{ $lead->status->name }}</span>
                     @else
@@ -104,7 +106,7 @@
                                 <div class="mb-3">
                                     <label class="text-muted small">Lead Group & Type:</label>
                                     <div>
-                                        {{ $lead->project ? $lead->project->title . ' > ' . $lead->leadType->name : 'General > General' }}
+                                        {{ ($lead->project ? $lead->project->title : 'General') . ' > ' . ($lead->leadType ? $lead->leadType->name : 'General') }}
                                     </div>
                                 </div>
                                 <div class="mb-3">
