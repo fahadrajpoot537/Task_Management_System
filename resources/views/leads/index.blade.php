@@ -7,16 +7,18 @@
         <div class="card-header bg-gradient-primary text-white">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h2 class="mb-2 text-white fw-bold">
+                    <h4 class="mb-2 text-white fw-bold">
                         <i class="bi bi-person-lines-fill me-3"></i>Lead Management
-                    </h2>
-                    <p class="mb-0 text-white-50 fs-6">Create, manage, and track your leads efficiently</p>
+                    </h4>
+                    <p class="mb-0  fs-6">Create, manage, and track your leads efficiently</p>
                 </div>
-                <div class="d-flex gap-3">
+                <div class="d-flex gap-2">
+                    @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('create_lead'))
                     <button type="button" class="btn btn-light btn-lg px-4 py-2" data-bs-toggle="modal" data-bs-target="#leadModal" onclick="openCreateModal()">
                         <i class="bi bi-plus-circle me-2"></i>Create Lead
                     </button>
-                    <button type="button" class="btn btn-success btn-lg px-4 py-2" onclick="exportLeads()">
+                    @endif
+                    {{-- <button type="button" class="btn btn-success btn-lg px-4 py-2" onclick="exportLeads()">
                         <i class="bi bi-download me-2"></i>Export
                     </button>
                     <button type="button" class="btn btn-info btn-lg px-4 py-2" data-bs-toggle="modal" data-bs-target="#importLeadModal">
@@ -24,7 +26,7 @@
                     </button>
                     <button type="button" class="btn btn-warning btn-lg px-4 py-2" data-bs-toggle="modal" data-bs-target="#importActivitiesModal">
                         <i class="bi bi-upload me-2"></i>Import Activities
-                    </button>
+                    </button> --}}
                 </div>
             </div>
         </div>
@@ -214,7 +216,7 @@
                         </div>
                         <div class="col-12">
                             <label for="status_id" class="form-label">Status</label>
-                            <select class="form-select" id="status_id" name="status_id">
+                            <select class="form-select" id="status_id" name="status_id" data-search="true">
                                 <option value="">Select Status</option>
                             </select>
                             <div class="invalid-feedback"></div>
@@ -305,6 +307,10 @@
                             </div>
                             <input type="hidden" id="date_of_birth" name="date_of_birth">
                         </div>
+                        <div class="col-12">
+                            <label for="note" class="form-label">Note:</label>
+                            <textarea class="form-control" id="note" name="note" rows="3" placeholder="Enter any additional notes about this lead..."></textarea>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -337,6 +343,11 @@
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
 let currentPage = 1;
 let leadIdToDelete = null;
@@ -367,6 +378,35 @@ $(document).ready(function() {
     $('#projectFilter, #sortField, #sortDirection').on('change', function() {
         currentPage = 1;
         loadLeads();
+    });
+    
+    // Initialize Select2 on project and status dropdowns when modal is shown
+    $('#leadModal').on('shown.bs.modal', function() {
+        // Destroy existing Select2 if it exists for project
+        if ($('#project_id').hasClass('select2-hidden-accessible')) {
+            $('#project_id').select2('destroy');
+        }
+        // Initialize Select2 for project dropdown
+        $('#project_id').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'Select Project',
+            allowClear: false,
+            width: '100%',
+            dropdownParent: $('#leadModal')
+        });
+        
+        // Destroy existing Select2 if it exists for status
+        if ($('#status_id').hasClass('select2-hidden-accessible')) {
+            $('#status_id').select2('destroy');
+        }
+        // Initialize Select2 for status dropdown
+        $('#status_id').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'Select Status',
+            allowClear: true,
+            width: '100%',
+            dropdownParent: $('#leadModal')
+        });
     });
     
     // Load statuses when project changes
@@ -572,6 +612,10 @@ function loadLeads() {
     });
 }
 
+// Permission flags from server
+const canEditLead = @json(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('edit_lead'));
+const canDeleteLead = @json(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('delete_lead'));
+
 function renderLeads(leads) {
     const tbody = $('#leadsTableBody');
     tbody.empty();
@@ -589,6 +633,25 @@ function renderLeads(leads) {
     }
     
     leads.forEach(lead => {
+        let actionButtons = `
+            <a href="/leads/${lead.id}" class="btn btn-sm btn-outline-info" title="View Details">
+                <i class="bi bi-eye-fill"></i>
+            </a>`;
+        
+        if (canEditLead) {
+            actionButtons += `
+            <button class="btn btn-sm btn-outline-primary" onclick="editLead(${lead.id})" title="Edit">
+                <i class="bi bi-pencil-fill"></i>
+            </button>`;
+        }
+        
+        if (canDeleteLead) {
+            actionButtons += `
+            <button class="btn btn-sm btn-outline-danger" onclick="confirmDelete(${lead.id})" title="Delete">
+                <i class="bi bi-trash-fill"></i>
+            </button>`;
+        }
+        
         const row = `
             <tr>
                 <td>${lead.id}</td>
@@ -603,15 +666,7 @@ function renderLeads(leads) {
                 <td>${(lead.added_by && lead.added_by.name) ? lead.added_by.name : '-'}</td>
                 <td>
                     <div class="btn-group" role="group">
-                        <a href="/leads/${lead.id}" class="btn btn-sm btn-outline-info" title="View Details">
-                            <i class="bi bi-eye-fill"></i>
-                        </a>
-                        <button class="btn btn-sm btn-outline-primary" onclick="editLead(${lead.id})" title="Edit">
-                            <i class="bi bi-pencil-fill"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="confirmDelete(${lead.id})" title="Delete">
-                            <i class="bi bi-trash-fill"></i>
-                        </button>
+                        ${actionButtons}
                     </div>
                 </td>
             </tr>
@@ -736,6 +791,7 @@ function changePage(page) {
 function loadStatusesByProject(projectId, selectedStatusId = null) {
     if (!projectId) {
         $('#status_id').html('<option value="">Select Status</option>');
+        $('#status_id').trigger('change.select2');
         return;
     }
     
@@ -750,10 +806,12 @@ function loadStatusesByProject(projectId, selectedStatusId = null) {
                     options += `<option value="${status.id}" ${selected}>${status.name}</option>`;
                 });
                 $('#status_id').html(options);
+                $('#status_id').trigger('change.select2');
             }
         },
         error: function() {
             $('#status_id').html('<option value="">Select Status</option>');
+            $('#status_id').trigger('change.select2');
         }
     });
 }
@@ -765,7 +823,10 @@ function openCreateModal() {
     $('#leadId').val('');
     $('#address').val('');
     $('#date_of_birth').val('');
+    $('#note').val('');
+    $('#project_id').val('').trigger('change.select2');
     $('#status_id').html('<option value="">Select Status</option>');
+    $('#status_id').trigger('change.select2');
     // Clear address lines and DOB fields
     $('#address_line1').val('');
     $('#address_line2').val('');
@@ -787,7 +848,7 @@ function editLead(id) {
                 const lead = response.lead;
                 $('#leadModalLabel').text('Edit Lead');
                 $('#leadId').val(lead.id);
-                $('#project_id').val(lead.project_id);
+                $('#project_id').val(lead.project_id).trigger('change.select2');
                 
                 // Load statuses for the selected project and set the status
                 loadStatusesByProject(lead.project_id, lead.status_id);
@@ -801,6 +862,7 @@ function editLead(id) {
                 $('#company').val(lead.company || '');
                 $('#city').val(lead.city || '');
                 $('#postcode').val(lead.postcode || '');
+                $('#note').val(lead.note || '');
                 
                 // Split address into multiple lines
                 splitAddress(lead.address || '');

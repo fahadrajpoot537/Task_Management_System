@@ -39,20 +39,19 @@ class ProjectIndex extends Component
 
     public function deleteProject($projectId)
     {
-        $project = Project::findOrFail($projectId);
         $user = auth()->user();
         
-        // Check if user can delete this project
-        if ($user->isSuperAdmin() || $user->isAdmin()) {
-            // Super admin and admin can delete any project
-        } elseif ($user->isManager()) {
-            // Managers can only delete projects they created
-            if ($project->created_by_user_id !== $user->id) {
-                session()->flash('error', 'You can only delete projects you created.');
-                return;
-            }
-        } else {
-            // Employees can only delete projects they created
+        // Check permission
+        if (!$user->isSuperAdmin() && !$user->hasPermission('delete_project')) {
+            session()->flash('error', 'You do not have permission to delete projects.');
+            return;
+        }
+
+        $project = Project::findOrFail($projectId);
+        
+        // If user can only view own projects, check ownership
+        $canViewAll = $user->isSuperAdmin() || $user->hasPermission('view_all_projects');
+        if (!$canViewAll) {
             if ($project->created_by_user_id !== $user->id) {
                 session()->flash('error', 'You can only delete projects you created.');
                 return;
@@ -67,9 +66,26 @@ class ProjectIndex extends Component
         session()->flash('success', 'Project deleted successfully.');
     }
 
+    public function mount()
+    {
+        $user = auth()->user();
+        
+        // Check if user has permission to view projects
+        $canViewAll = $user->isSuperAdmin() || $user->hasPermission('view_all_projects');
+        $canViewOwn = $user->isSuperAdmin() || $user->hasPermission('view_own_projects');
+        
+        if (!$canViewAll && !$canViewOwn) {
+            abort(403, 'You do not have permission to view projects.');
+        }
+    }
+
     public function getProjectsProperty()
     {
         $user = auth()->user();
+        
+        // Check permissions
+        $canViewAll = $user->isSuperAdmin() || $user->hasPermission('view_all_projects');
+        $canViewOwn = $user->isSuperAdmin() || $user->hasPermission('view_own_projects');
         
         $query = Project::with(['createdBy', 'tasks'])
             ->when($this->search, function ($query) {
@@ -77,31 +93,11 @@ class ProjectIndex extends Component
                       ->orWhere('description', 'like', '%' . $this->search . '%');
             });
 
-        if ($user->isSuperAdmin() || $user->isAdmin()) {
-            // Super admin and admin can see all projects
-            // No additional filtering needed
-        } elseif ($user->isManager()) {
-            // Managers can see:
-            // 1. Projects they created
-            // 2. Projects where their team members have tasks
-            $teamMemberIds = $user->teamMembers->pluck('id')->push($user->id);
-            
-            $query->where(function ($q) use ($teamMemberIds, $user) {
-                $q->where('created_by_user_id', $user->id) // Projects they created
-                  ->orWhereHas('tasks', function ($taskQuery) use ($teamMemberIds) {
-                      $taskQuery->whereIn('assigned_to_user_id', $teamMemberIds); // Projects with tasks assigned to their team
-                  });
-            });
-        } else {
-            // Employees can see:
-            // 1. Projects they created
-            // 2. Projects where they have tasks assigned
-            $query->where(function ($q) use ($user) {
-                $q->where('created_by_user_id', $user->id) // Projects they created
-                  ->orWhereHas('tasks', function ($taskQuery) use ($user) {
-                      $taskQuery->where('assigned_to_user_id', $user->id); // Projects with tasks assigned to them
-                  });
-            });
+        if ($canViewAll) {
+            // User can view all projects - no filtering needed
+        } elseif ($canViewOwn) {
+            // User can only view projects they created
+            $query->where('created_by_user_id', $user->id);
         }
 
         return $query->orderBy($this->sortField, $this->sortDirection)

@@ -48,10 +48,27 @@ class EmailNotificationService
      */
     public function sendTaskAssignedNotification(Task $task)
     {
-        try {
-            $recipients = $this->getTaskAssignedRecipients($task);
-            
-            foreach ($recipients as $recipient) {
+        $recipients = $this->getTaskAssignedRecipients($task);
+        $successfulRecipients = [];
+        $failedRecipients = [];
+        
+        foreach ($recipients as $recipient) {
+            try {
+                // Validate email address before sending
+                if (empty($recipient->email) || !filter_var($recipient->email, FILTER_VALIDATE_EMAIL)) {
+                    Log::warning('Invalid email address for task assigned notification', [
+                        'task_id' => $task->id,
+                        'recipient_id' => $recipient->id,
+                        'recipient_email' => $recipient->email,
+                        'recipient_name' => $recipient->name ?? 'Unknown'
+                    ]);
+                    $failedRecipients[] = [
+                        'email' => $recipient->email,
+                        'error' => 'Invalid email address format'
+                    ];
+                    continue;
+                }
+                
                 // Send different emails based on recipient role
                 if ($recipient->role && $recipient->role->name === 'super_admin') {
                     // SuperAdmin gets manager-style notification about employee assignment
@@ -66,16 +83,38 @@ class EmailNotificationService
                     // Fallback for other roles (admin, etc.)
                     Mail::to($recipient->email)->send(new TaskAssigned($task, 'Task Assignment Notification'));
                 }
+                
+                $successfulRecipients[] = $recipient->email;
+            } catch (\Exception $e) {
+                $failedRecipients[] = [
+                    'email' => $recipient->email ?? 'Unknown',
+                    'error' => $e->getMessage()
+                ];
+                
+                Log::error('Failed to send task assigned email to recipient', [
+                    'task_id' => $task->id,
+                    'recipient_id' => $recipient->id ?? 'Unknown',
+                    'recipient_email' => $recipient->email ?? 'Unknown',
+                    'recipient_name' => $recipient->name ?? 'Unknown',
+                    'error' => $e->getMessage(),
+                    'error_code' => method_exists($e, 'getCode') ? $e->getCode() : null
+                ]);
             }
-            
-            Log::info('Task assigned email sent', [
+        }
+        
+        if (!empty($successfulRecipients)) {
+            Log::info('Task assigned email sent to some recipients', [
                 'task_id' => $task->id,
-                'recipients' => $recipients->pluck('email')->toArray()
+                'successful_recipients' => $successfulRecipients,
+                'failed_count' => count($failedRecipients)
             ]);
-        } catch (\Exception $e) {
-            Log::error('Failed to send task assigned email', [
+        }
+        
+        if (!empty($failedRecipients)) {
+            Log::error('Failed to send task assigned email to some recipients', [
                 'task_id' => $task->id,
-                'error' => $e->getMessage()
+                'failed_recipients' => $failedRecipients,
+                'successful_count' => count($successfulRecipients)
             ]);
         }
     }

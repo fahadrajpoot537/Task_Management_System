@@ -49,3 +49,9 @@ Route::get('/users', function () {
     
     return response()->json($users);
 });
+
+// Email Sync Routes
+Route::prefix('emails')->group(function () {
+    Route::get('/sync', [\App\Http\Controllers\EmailSyncController::class, 'sync'])->name('emails.sync');
+    Route::get('/status', [\App\Http\Controllers\EmailSyncController::class, 'status'])->name('emails.status');
+});

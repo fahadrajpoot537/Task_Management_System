@@ -126,4 +126,24 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | IMAP Configuration for Email Sync
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for fetching emails via IMAP to sync with lead activities.
+    | These settings are used by the EmailSyncService to connect to your email
+    | provider and fetch incoming/outgoing emails.
+    |
+    */
+
+    'imap' => [
+        'host' => env('MAIL_IMAP_HOST', 'imap.gmail.com'),
+        'port' => env('MAIL_IMAP_PORT', 993),
+        'encryption' => env('MAIL_IMAP_ENCRYPTION', 'ssl'), // ssl or tls
+        'username' => env('MAIL_IMAP_USERNAME'),
+        'password' => env('MAIL_IMAP_PASSWORD'),
+        'mailbox' => env('MAIL_IMAP_MAILBOX', 'INBOX'),
+    ],
+
 ];

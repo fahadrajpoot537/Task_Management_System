@@ -1,39 +1,41 @@
 @php
-use Illuminate\Support\Facades\Storage;
+    use Illuminate\Support\Facades\Storage;
 @endphp
 
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="{{ session('theme', 'light') }}">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="description" content="Task Management System - Minimal and Fast">
-    
+
     <title>Task Management System</title>
-    
+
     <!-- Performance optimizations -->
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
-    
+
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <!-- SweetAlert2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
-    
+
     <!-- Using system fonts for better performance -->
     <!-- DataTables CSS -->
     <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css" rel="stylesheet">
-    
+
     <!-- Custom CSS - Minimal Design -->
     <style>
         .bg-secondary {
-  --bs-bg-opacity: 1;
-  background-color: rgb(182, 185, 187) !important;
-}
+            --bs-bg-opacity: 1;
+            background-color: rgb(182, 185, 187) !important;
+        }
+
         :root {
             --primary-color: #2563eb;
             --success-color: #10b981;
@@ -164,32 +166,72 @@ use Illuminate\Support\Facades\Storage;
         }
 
         /* Theme-aware text elements */
-        h1, h2, h3, h4, h5, h6,
-        p, span, div, a, label, li, td, th,
-        .text-primary, .text-secondary, .text-muted,
-        small, strong, em, b, i, u,
-        .card-title, .card-text, .form-label,
-        .badge, .alert, .btn, .nav-link,
-        .dropdown-item, .list-group-item,
-        .modal-title, .modal-body,
-        .table, .table td, .table th,
-        input, textarea, select, option {
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6,
+        p,
+        span,
+        div,
+        a,
+        label,
+        li,
+        td,
+        th,
+        .text-primary,
+        .text-secondary,
+        .text-muted,
+        small,
+        strong,
+        em,
+        b,
+        i,
+        u,
+        .card-title,
+        .card-text,
+        .form-label,
+        .badge,
+        .alert,
+        .btn,
+        .nav-link,
+        .dropdown-item,
+        .list-group-item,
+        .modal-title,
+        .modal-body,
+        .table,
+        .table td,
+        .table th,
+        input,
+        textarea,
+        select,
+        option {
             color: inherit;
         }
 
         /* Headings */
-        h1, h2, h3, h4, h5, h6 {
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
             color: var(--text-primary) !important;
             font-weight: 600;
         }
 
         /* Paragraphs and text */
-        p, span, div, li {
+        p,
+        span,
+        div,
+        li {
             color: var(--text-primary);
         }
 
         /* Labels */
-        label, .form-label {
+        label,
+        .form-label {
             color: var(--text-primary) !important;
         }
 
@@ -229,24 +271,28 @@ use Illuminate\Support\Facades\Storage;
             color: var(--text-primary);
         }
 
-        .card-title, .card-text {
+        .card-title,
+        .card-text {
             color: var(--text-primary);
         }
 
         /* Forms */
-        .form-control, .form-select {
+        .form-control,
+        .form-select {
             background: var(--bg-primary);
             color: var(--text-primary);
             border-color: var(--border-color);
         }
 
-        .form-control:focus, .form-select:focus {
+        .form-control:focus,
+        .form-select:focus {
             background: var(--bg-primary);
             color: var(--text-primary);
             border-color: var(--primary-color);
         }
 
-        .form-control::placeholder, .form-select::placeholder {
+        .form-control::placeholder,
+        .form-select::placeholder {
             color: var(--text-muted);
         }
 
@@ -263,7 +309,8 @@ use Illuminate\Support\Facades\Storage;
             color: var(--text-primary);
         }
 
-        .table td, .table th {
+        .table td,
+        .table th {
             color: var(--text-primary);
             border-color: var(--border-color);
         }
@@ -299,7 +346,8 @@ use Illuminate\Support\Facades\Storage;
             color: var(--text-primary);
         }
 
-        .dropdown-item:hover, .dropdown-item:focus {
+        .dropdown-item:hover,
+        .dropdown-item:focus {
             background: var(--bg-tertiary);
             color: var(--text-primary);
         }
@@ -322,11 +370,11 @@ use Illuminate\Support\Facades\Storage;
             color: var(--text-primary);
         }
 
-        .modal-header {
+        /* .modal-header {
             background: var(--bg-secondary);
             color: var(--text-primary);
             border-color: var(--border-color);
-        }
+        } */
 
         .modal-body {
             color: var(--text-primary);
@@ -357,18 +405,28 @@ use Illuminate\Support\Facades\Storage;
         }
 
         /* Buttons - keep original colors but ensure text is readable */
-        .btn-primary, .btn-success, .btn-danger, .btn-warning, .btn-info {
+        .btn-primary,
+        .btn-success,
+        .btn-danger,
+        .btn-warning,
+        .btn-info {
             color: #ffffff;
         }
 
-        .btn-outline-primary, .btn-outline-success, .btn-outline-danger, 
-        .btn-outline-warning, .btn-outline-info, .btn-outline-secondary {
+        .btn-outline-primary,
+        .btn-outline-success,
+        .btn-outline-danger,
+        .btn-outline-warning,
+        .btn-outline-info,
+        .btn-outline-secondary {
             color: var(--text-primary);
             border-color: var(--border-color);
         }
 
-        .btn-outline-primary:hover, .btn-outline-success:hover, 
-        .btn-outline-danger:hover, .btn-outline-warning:hover, 
+        .btn-outline-primary:hover,
+        .btn-outline-success:hover,
+        .btn-outline-danger:hover,
+        .btn-outline-warning:hover,
         .btn-outline-info:hover {
             color: #ffffff;
         }
@@ -459,7 +517,8 @@ use Illuminate\Support\Facades\Storage;
         }
 
         /* Code and pre */
-        code, pre {
+        code,
+        pre {
             background: var(--bg-secondary);
             color: var(--text-primary);
         }
@@ -471,16 +530,19 @@ use Illuminate\Support\Facades\Storage;
         }
 
         /* Small text */
-        small, .small {
+        small,
+        .small {
             color: var(--text-muted);
         }
 
         /* Strong and emphasis */
-        strong, b {
+        strong,
+        b {
             color: var(--text-primary);
         }
 
-        em, i {
+        em,
+        i {
             color: var(--text-primary);
         }
 
@@ -514,22 +576,33 @@ use Illuminate\Support\Facades\Storage;
         }
 
         /* Ensure all text in containers follows theme */
-        .container, .container-fluid, .row, .col, [class*="col-"] {
+        .container,
+        .container-fluid,
+        .row,
+        .col,
+        [class*="col-"] {
             color: inherit;
         }
 
         /* Custom text classes */
-        .fw-bold, .fw-semibold, .fw-normal, .fw-light {
+        .fw-bold,
+        .fw-semibold,
+        .fw-normal,
+        .fw-light {
             color: var(--text-primary);
         }
 
         /* Ensure icons follow theme (if they have text color) */
-        i, .bi, [class*="icon"] {
+        i,
+        .bi,
+        [class*="icon"] {
             color: inherit;
         }
 
         /* Specific overrides for common text patterns */
-        .text-center, .text-start, .text-end {
+        .text-center,
+        .text-start,
+        .text-end {
             color: var(--text-primary);
         }
 
@@ -722,7 +795,8 @@ use Illuminate\Support\Facades\Storage;
             color: white;
         }
 
-        .form-control, .form-select {
+        .form-control,
+        .form-select {
             border: 1px solid var(--border-color);
             border-radius: 4px;
             padding: 0.5rem 0.75rem;
@@ -731,7 +805,8 @@ use Illuminate\Support\Facades\Storage;
             font-size: 0.875rem;
         }
 
-        .form-control:focus, .form-select:focus {
+        .form-control:focus,
+        .form-select:focus {
             border-color: var(--primary-color);
             box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
             outline: none;
@@ -1009,60 +1084,129 @@ use Illuminate\Support\Facades\Storage;
             }
         }
 
-            /* Mobile Table Responsive */
-            .table-responsive {
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-            }
+        /* Mobile Table Responsive */
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
 
+        .task-table .table {
+            min-width: 100%;
+            margin-bottom: 0;
+        }
+
+        .task-table .table th,
+        .task-table .table td {
+            padding: 0.75rem 0.5rem;
+            font-size: 0.875rem;
+            vertical-align: middle;
+        }
+
+        .task-table .table td {
+            white-space: normal;
+            word-wrap: break-word;
+        }
+
+        .task-table .table th {
+            background-color: var(--bg-tertiary);
+            border-bottom: 2px solid var(--border-color);
+            font-weight: 600;
+        }
+
+        .task-table .table tbody tr:hover {
+            background-color: var(--bg-tertiary);
+        }
+
+        .task-table .table-header {
+            padding: 1.5rem;
+        }
+
+        .task-table .table-header h3 {
+            font-size: 1.25rem;
+        }
+
+        .task-table .table-header .btn {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+
+        /* Mobile Card Layout for Tasks */
+        .mobile-task-card {
+            display: none;
+        }
+
+        .task-table .mobile-task-cards {
+            display: none;
+            padding: 1rem;
+        }
+
+        .mobile-task-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .mobile-task-item:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .mobile-task-header {
+            display: flex;
+            justify-content: between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+        }
+
+        .mobile-task-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+            font-size: 1rem;
+        }
+
+        .mobile-task-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .mobile-task-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .mobile-task-actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+            margin-top: 0.75rem;
+        }
+
+        .mobile-task-notes {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        @media (max-width: 768px) {
             .task-table .table {
-                min-width: 100%;
-                margin-bottom: 0;
-            }
-
-            .task-table .table th,
-            .task-table .table td {
-                padding: 0.75rem 0.5rem;
-                font-size: 0.875rem;
-                vertical-align: middle;
-            }
-
-            .task-table .table td {
-                white-space: normal;
-                word-wrap: break-word;
-            }
-
-            .task-table .table th {
-                background-color: var(--bg-tertiary);
-                border-bottom: 2px solid var(--border-color);
-                font-weight: 600;
-            }
-
-            .task-table .table tbody tr:hover {
-                background-color: var(--bg-tertiary);
-            }
-
-            .task-table .table-header {
-                padding: 1.5rem;
-            }
-
-            .task-table .table-header h3 {
-                font-size: 1.25rem;
-            }
-
-            .task-table .table-header .btn {
-                padding: 0.5rem 1rem;
-                font-size: 0.875rem;
-            }
-
-            /* Mobile Card Layout for Tasks */
-            .mobile-task-card {
                 display: none;
             }
 
             .task-table .mobile-task-cards {
-                display: none;
-                padding: 1rem;
+                display: block;
+            }
+
+            .mobile-task-card {
+                display: block;
             }
 
             .mobile-task-item {
@@ -1073,22 +1217,18 @@ use Illuminate\Support\Facades\Storage;
                 margin-bottom: 1rem;
             }
 
-            .mobile-task-item:hover {
-                background: var(--bg-tertiary);
-            }
-
             .mobile-task-header {
                 display: flex;
-                justify-content: between;
+                justify-content-between;
                 align-items: flex-start;
                 margin-bottom: 0.75rem;
             }
 
             .mobile-task-title {
                 font-weight: 600;
+                font-size: 1rem;
                 color: var(--text-primary);
                 margin-bottom: 0.25rem;
-                font-size: 1rem;
             }
 
             .mobile-task-meta {
@@ -1098,77 +1238,12 @@ use Illuminate\Support\Facades\Storage;
                 margin-bottom: 0.75rem;
             }
 
-            .mobile-task-meta-item {
-                display: flex;
-                align-items: center;
-                gap: 0.25rem;
-                font-size: 0.8rem;
-                color: var(--text-secondary);
-            }
-
             .mobile-task-actions {
                 display: flex;
                 gap: 0.5rem;
                 justify-content: flex-end;
-                margin-top: 0.75rem;
             }
-
-            .mobile-task-notes {
-                font-size: 0.85rem;
-                color: var(--text-secondary);
-                margin-top: 0.5rem;
-                padding-top: 0.5rem;
-                border-top: 1px solid var(--border-color);
-            }
-
-            @media (max-width: 768px) {
-                .task-table .table {
-                    display: none;
-                }
-                
-                .task-table .mobile-task-cards {
-                    display: block;
-                }
-
-                .mobile-task-card {
-                    display: block;
-                }
-
-                .mobile-task-item {
-                    background: var(--bg-secondary);
-                    border: 1px solid var(--border-color);
-                    border-radius: 4px;
-                    padding: 1rem;
-                    margin-bottom: 1rem;
-                }
-
-                .mobile-task-header {
-                    display: flex;
-                    justify-content-between;
-                    align-items: flex-start;
-                    margin-bottom: 0.75rem;
-                }
-
-                .mobile-task-title {
-                    font-weight: 600;
-                    font-size: 1rem;
-                    color: var(--text-primary);
-                    margin-bottom: 0.25rem;
-                }
-
-                .mobile-task-meta {
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 0.5rem;
-                    margin-bottom: 0.75rem;
-                }
-
-                .mobile-task-actions {
-                    display: flex;
-                    gap: 0.5rem;
-                    justify-content: flex-end;
-                }
-            }
+        }
         }
 
         @media (max-width: 576px) {
@@ -1217,7 +1292,8 @@ use Illuminate\Support\Facades\Storage;
                 font-size: 0.8rem;
             }
 
-            .form-control, .form-select {
+            .form-control,
+            .form-select {
                 padding: 0.5rem 0.75rem;
                 font-size: 0.8rem;
             }
@@ -1275,11 +1351,11 @@ use Illuminate\Support\Facades\Storage;
             border-radius: 4px;
         }
 
-        .modal-header {
+        /* .modal-header {
             background: var(--primary-color);
             color: white;
             border-bottom: 1px solid var(--border-color);
-        }
+        } */
 
         .modal-body {
             padding: 1rem;
@@ -1320,9 +1396,9 @@ use Illuminate\Support\Facades\Storage;
         .theme-card,
         .font-card,
         .font-size-card {
-                border: 1px solid var(--border-color);
+            border: 1px solid var(--border-color);
             border-radius: 4px;
-                padding: 1rem;
+            padding: 1rem;
             background: var(--bg-primary);
         }
 
@@ -1369,38 +1445,44 @@ use Illuminate\Support\Facades\Storage;
             height: auto;
         }
 
-        .card, .table {
+        .card,
+        .table {
             contain: layout;
         }
     </style>
-    
+
     @livewireStyles
 </head>
+
 <body>
     <!-- Top Navigation -->
-        <nav class="navbar navbar-expand-lg">
-            <div class="container-fluid">
-                <a style="margin-left: 1rem;" class="navbar-brand" href="{{ route('dashboard') }}">
-                    <i class="bi bi-kanban me-2"></i>
-                    <span class="d-none d-sm-inline">Task Management System</span>
-                </a>
-                
-                <button class="navbar-toggler d-lg-none" type="button" onclick="toggleSidebar()">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-            
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid">
+            <a style="margin-left: 1rem;" class="navbar-brand" href="{{ route('dashboard') }}">
+                <i class="bi bi-kanban me-2"></i>
+                <span class="d-none d-sm-inline">Task Management System</span>
+            </a>
+
+            <button class="navbar-toggler d-lg-none" type="button" onclick="toggleSidebar()">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
                         @livewire('theme-toggle')
                     </li>
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button"
+                            data-bs-toggle="dropdown" aria-expanded="false">
                             <div class="profile-avatar me-2">
-                                @if(auth()->user()->avatar)
-                                    <img src="{{ Storage::url(auth()->user()->avatar) }}" alt="{{ auth()->user()->name }}" class="rounded-circle" width="32" height="32">
+                                @if (auth()->user()->avatar)
+                                    <img src="{{ Storage::url(auth()->user()->avatar) }}"
+                                        alt="{{ auth()->user()->name }}" class="rounded-circle" width="32"
+                                        height="32">
                                 @else
-                                    <div class="avatar-placeholder rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; background: linear-gradient(135deg, var(--blue-500) 0%, var(--blue-600) 100%); color: white; font-weight: 600; font-size: 0.875rem;">
+                                    <div class="avatar-placeholder rounded-circle d-flex align-items-center justify-content-center"
+                                        style="width: 32px; height: 32px; background: linear-gradient(135deg, var(--blue-500) 0%, var(--blue-600) 100%); color: white; font-weight: 600; font-size: 0.875rem;">
                                         {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
                                     </div>
                                 @endif
@@ -1411,10 +1493,13 @@ use Illuminate\Support\Facades\Storage;
                             <li class="dropdown-header">
                                 <div class="d-flex align-items-center">
                                     <div class="profile-avatar me-3">
-                                        @if(auth()->user()->avatar)
-                                            <img src="{{ Storage::url(auth()->user()->avatar) }}" alt="{{ auth()->user()->name }}" class="rounded-circle" width="48" height="48">
+                                        @if (auth()->user()->avatar)
+                                            <img src="{{ Storage::url(auth()->user()->avatar) }}"
+                                                alt="{{ auth()->user()->name }}" class="rounded-circle" width="48"
+                                                height="48">
                                         @else
-                                            <div class="avatar-placeholder rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; background: linear-gradient(135deg, var(--blue-500) 0%, var(--blue-600) 100%); color: white; font-weight: 600; font-size: 1.25rem;">
+                                            <div class="avatar-placeholder rounded-circle d-flex align-items-center justify-content-center"
+                                                style="width: 48px; height: 48px; background: linear-gradient(135deg, var(--blue-500) 0%, var(--blue-600) 100%); color: white; font-weight: 600; font-size: 1.25rem;">
                                                 {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
                                             </div>
                                         @endif
@@ -1422,17 +1507,22 @@ use Illuminate\Support\Facades\Storage;
                                     <div>
                                         <div class="fw-bold text-dark">{{ auth()->user()->name }}</div>
                                         <small class="text-muted">{{ auth()->user()->email }}</small>
-                                        <div class="badge bg-primary mt-1">{{ ucfirst(str_replace('_', ' ', auth()->user()->role->name)) }}</div>
+                                        <div class="badge bg-primary mt-1">
+                                            {{ ucfirst(str_replace('_', ' ', auth()->user()->role->name)) }}</div>
                                     </div>
                                 </div>
                             </li>
-                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
                             <li>
                                 <a class="dropdown-item" href="{{ route('profile.edit') }}">
                                     <i class="bi bi-person-gear me-2"></i>Edit Profile
                                 </a>
                             </li>
-                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
                             <li>
                                 <form method="POST" action="{{ route('logout') }}" class="d-inline w-100">
                                     @csrf
@@ -1455,104 +1545,132 @@ use Illuminate\Support\Facades\Storage;
                 <div class="position-sticky pt-3">
                     <ul class="nav flex-column">
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}" title="Dashboard">
+                            <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"
+                                href="{{ route('dashboard') }}" title="Dashboard">
                                 <i class="bi bi-speedometer2"></i>
                             </a>
                         </li>
+                        @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('view_all_leads') || auth()->user()->hasPermission('view_own_leads'))
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('projects.*') ? 'active' : '' }}" href="{{ route('projects.index') }}" title="Projects">
-                                <i class="bi bi-folder"></i>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('statuses.*') ? 'active' : '' }}" href="{{ route('statuses.index') }}" title="Project Status">
-                                <i class="bi bi-tags"></i>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('lead-types.*') ? 'active' : '' }}" href="{{ route('lead-types.index') }}" title="Lead Types">
-                                <i class="bi bi-tags-fill"></i>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('tasks.*') ? 'active' : '' }}" href="{{ route('tasks.index') }}" title="Tasks">
-                                <i class="bi bi-list-task"></i>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('slack-chat') ? 'active' : '' }}" href="{{ route('slack-chat') }}" title="Slack-like Chat">
-                                <i class="bi bi-chat"></i>
-                            </a>
-                        </li>
-                        
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('attendance.*') ? 'active' : '' }}" href="{{ route('attendance.viewer') }}" title="Attendance Viewer">
-                                <i class="bi bi-clock-history"></i>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('salary.*') ? 'active' : '' }}" href="{{ route('salary.management') }}" title="Salary Management">
-                                <i class="bi bi-currency-dollar"></i>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('leads.*') ? 'active' : '' }}" href="{{ route('leads.index') }}" title="Leads">
-                                <i class="bi bi-person-lines-fill"></i>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('probation.*') ? 'active' : '' }}" href="{{ route('probation.management') }}" title="Probation Management">
-                                <i class="bi bi-hourglass-split"></i>
-                            </a>
-                        </li>
-                        
-                        @if(auth()->user()->isSuperAdmin())
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('permissions.*') ? 'active' : '' }}" href="{{ route('permissions.index') }}" title="Permissions">
-                                <i class="bi bi-shield-check"></i>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('roles.*') ? 'active' : '' }}" href="{{ route('roles.index') }}" title="Roles">
-                                <i class="bi bi-shield-lock"></i>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('teams.*') ? 'active' : '' }}" href="{{ route('teams.index') }}" title="Teams">
-                                <i class="bi bi-people"></i>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('managers.*') ? 'active' : '' }}" href="{{ route('managers.index') }}" title="Managers">
-                                <i class="bi bi-person-badge"></i>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}" href="{{ route('users.index') }}" title="Employees">
-                                <i class="bi bi-person-gear"></i>
-                            </a>
-                        </li>
-                        @elseif(auth()->user()->isAdmin())
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('roles.*') ? 'active' : '' }}" href="{{ route('roles.index') }}" title="Roles">
-                                <i class="bi bi-shield-lock"></i>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}" href="{{ route('users.index') }}" title="Employees">
-                                <i class="bi bi-person-gear"></i>
-                            </a>
-                        </li>
-                        @elseif(auth()->user()->isManager())
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}" href="{{ route('users.index') }}" title="Add Employee">
-                                <i class="bi bi-person-plus"></i>
+                            <a class="nav-link {{ request()->routeIs('leads.*') ? 'active' : '' }}"
+                                href="{{ route('leads.index') }}" title="Leads">
+                                <i class="bi bi-graph-up"></i>
                             </a>
                         </li>
                         @endif
                         
+                        @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('view_lead_types'))
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('settings') ? 'active' : '' }}" href="{{ route('settings') }}" title="Settings">
+                            <a class="nav-link {{ request()->routeIs('lead-types.*') ? 'active' : '' }}"
+                                href="{{ route('lead-types.index') }}" title="Lead Types">
+                                <i class="bi bi-tags-fill"></i>
+                            </a>
+                        </li>
+                        @endif
+                        
+                        @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('view_all_projects') || auth()->user()->hasPermission('view_own_projects'))
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('projects.*') ? 'active' : '' }}"
+                                href="{{ route('projects.index') }}" title="Projects">
+                                <i class="bi bi-folder"></i>
+                            </a>
+                        </li>
+                        @endif
+                        
+                        @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('view_all_statuses') || auth()->user()->hasPermission('view_own_statuses'))
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('statuses.*') ? 'active' : '' }}"
+                                href="{{ route('statuses.index') }}" title="Project Status">
+                                <i class="bi bi-tags"></i>
+                            </a>
+                        </li>
+                        @endif
+                       
+                        @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('view_all_tasks'))
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('tasks.*') ? 'active' : '' }}"
+                                href="{{ route('tasks.index') }}" title="Tasks">
+                                <i class="bi bi-list-task"></i>
+                            </a>
+                        </li>
+                        @endif
+                        
+                        @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('send_message') || auth()->user()->hasPermission('manage_chat'))
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('chat') ? 'active' : '' }}"
+                                href="{{ route('chat') }}" title="Internal Chat">
+                                <i class="bi bi-chat"></i>
+                            </a>
+                        </li>
+                        @endif
+
+                        @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('view_attendance') || auth()->user()->hasPermission('manage_attendance'))
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('attendance.*') ? 'active' : '' }}"
+                                href="{{ route('attendance.viewer') }}" title="Attendance Viewer">
+                                <i class="bi bi-clock-history"></i>
+                            </a>
+                        </li>
+                        @endif
+                        {{-- <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('salary.*') ? 'active' : '' }}"
+                                href="{{ route('salary.management') }}" title="Salary Management">
+                                <i class="bi bi-currency-dollar"></i>
+                            </a>
+                        </li>
+                    
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('probation.*') ? 'active' : '' }}"
+                                href="{{ route('probation.management') }}" title="Probation Management">
+                                <i class="bi bi-hourglass-split"></i>
+                            </a>
+                        </li> --}}
+
+                        @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('manage_permissions'))
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('permissions.*') ? 'active' : '' }}"
+                                href="{{ route('permissions.index') }}" title="Permissions">
+                                <i class="bi bi-shield-check"></i>
+                            </a>
+                        </li>
+                        @endif
+                        
+                        @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('manage_roles'))
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('roles.*') ? 'active' : '' }}"
+                                href="{{ route('roles.index') }}" title="Roles">
+                                <i class="bi bi-shield-lock"></i>
+                            </a>
+                        </li>
+                        @endif
+                        
+                        @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('manage_teams'))
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('teams.*') ? 'active' : '' }}"
+                                href="{{ route('teams.index') }}" title="Teams">
+                                <i class="bi bi-people"></i>
+                            </a>
+                        </li>
+                        @endif
+                        
+                        @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('manage_users'))
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('managers.*') ? 'active' : '' }}"
+                                href="{{ route('managers.index') }}" title="Managers">
+                                <i class="bi bi-person-badge"></i>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}"
+                                href="{{ route('users.index') }}" title="Employees">
+                                <i class="bi bi-person-gear"></i>
+                            </a>
+                        </li>
+                        @endif
+
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('settings') ? 'active' : '' }}"
+                                href="{{ route('settings') }}" title="Settings">
                                 <i class="bi bi-gear"></i>
                             </a>
                         </li>
@@ -1598,7 +1716,7 @@ use Illuminate\Support\Facades\Storage;
     <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
     <!-- jQuery (required for DataTables) -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-    
+
     <!-- Theme Toggle Script -->
     <script>
         // Listen for theme changes from Livewire
@@ -1625,7 +1743,7 @@ use Illuminate\Support\Facades\Storage;
                     'large': '18px',
                     'xlarge': '20px'
                 };
-                
+
                 document.documentElement.style.setProperty('--font-size-base', fontSizes[fontSize]);
                 localStorage.setItem('font_size', fontSize);
             });
@@ -1635,9 +1753,9 @@ use Illuminate\Support\Facades\Storage;
         document.addEventListener('DOMContentLoaded', function() {
             // Use event delegation for better performance
             document.addEventListener('click', function(e) {
-                    const dropdown = e.target.closest('.dropdown');
+                const dropdown = e.target.closest('.dropdown');
                 const isDropdownItem = e.target.closest('.dropdown-item');
-                
+
                 if (isDropdownItem) {
                     const menu = dropdown?.querySelector('.dropdown-menu');
                     if (menu) {
@@ -1655,9 +1773,9 @@ use Illuminate\Support\Facades\Storage;
         // Initialize theme and font settings from session/localStorage
         const savedTheme = localStorage.getItem('theme') || '{{ session('theme', 'light') }}';
         const savedFontSize = localStorage.getItem('font_size') || '{{ session('font_size', 'medium') }}';
-        
+
         document.documentElement.setAttribute('data-bs-theme', savedTheme);
-        
+
         // Apply saved font size (using system fonts for performance)
         const fontSizes = {
             'small': '14px',
@@ -1665,7 +1783,7 @@ use Illuminate\Support\Facades\Storage;
             'large': '16px',
             'xlarge': '18px'
         };
-        
+
         document.documentElement.style.setProperty('--font-size-base', fontSizes[savedFontSize]);
 
         // Mobile sidebar toggle
@@ -1678,19 +1796,20 @@ use Illuminate\Support\Facades\Storage;
         let sidebarClickHandler = null;
         if (window.innerWidth <= 768) {
             sidebarClickHandler = function(event) {
-            const sidebar = document.querySelector('.sidebar');
-            const navbarToggler = document.querySelector('.navbar-toggler');
-            
-                if (sidebar && !sidebar.contains(event.target) && 
+                const sidebar = document.querySelector('.sidebar');
+                const navbarToggler = document.querySelector('.navbar-toggler');
+
+                if (sidebar && !sidebar.contains(event.target) &&
                     navbarToggler && !navbarToggler.contains(event.target)) {
-                sidebar.classList.remove('show');
-            }
+                    sidebar.classList.remove('show');
+                }
             };
             document.addEventListener('click', sidebarClickHandler);
         }
     </script>
-    
+
     @stack('scripts')
     @livewireScripts
 </body>
+
 </html>
