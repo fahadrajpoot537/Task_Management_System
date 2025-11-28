@@ -16,6 +16,8 @@ class Activity extends Model
      * @var array<int, string>
      */
     protected $fillable = [
+        'message_id',
+        'in_reply_to',
         'lead_id',
         'date',
         'type',
@@ -24,6 +26,7 @@ class Activity extends Model
         'field_1',
         'field_2',
         'email',
+        'to',
         'bcc',
         'cc',
         'phone',

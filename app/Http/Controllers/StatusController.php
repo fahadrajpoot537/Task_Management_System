@@ -15,8 +15,25 @@ class StatusController extends Controller
      */
     public function index(Request $request)
     {
+        $user = auth()->user();
+        
+        // Check if user has permission to view statuses
+        $canViewAll = $user->isSuperAdmin() || $user->hasPermission('view_all_statuses');
+        $canViewOwn = $user->isSuperAdmin() || $user->hasPermission('view_own_statuses');
+        
+        if (!$canViewAll && !$canViewOwn) {
+            abort(403, 'You do not have permission to view statuses.');
+        }
+
         $query = Status::with(['project'])
             ->withCount('leads');
+        
+        // If user can only view own statuses, filter by projects they created
+        if (!$canViewAll && $canViewOwn) {
+            $query->whereHas('project', function ($q) use ($user) {
+                $q->where('created_by_user_id', $user->id);
+            });
+        }
 
         // Filter by project
         if ($request->has('project_id') && $request->project_id) {
@@ -63,6 +80,16 @@ class StatusController extends Controller
      */
     public function store(Request $request)
     {
+        $user = auth()->user();
+        
+        // Check permission
+        if (!$user->isSuperAdmin() && !$user->hasPermission('create_status')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You do not have permission to create statuses.'
+            ], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'project_id' => 'required|exists:projects,id',
             'name' => 'required|string|max:255',
@@ -111,7 +138,24 @@ class StatusController extends Controller
      */
     public function show($id)
     {
+        $user = auth()->user();
+        
+        // Check if user has permission to view statuses
+        $canViewAll = $user->isSuperAdmin() || $user->hasPermission('view_all_statuses');
+        $canViewOwn = $user->isSuperAdmin() || $user->hasPermission('view_own_statuses');
+        
+        if (!$canViewAll && !$canViewOwn) {
+            abort(403, 'You do not have permission to view statuses.');
+        }
+
         $status = Status::with(['project', 'leads'])->findOrFail($id);
+        
+        // If user can only view own statuses, check if they created the project
+        if (!$canViewAll && $canViewOwn) {
+            if ($status->project->created_by_user_id !== $user->id) {
+                abort(403, 'You do not have permission to view this status. You can only view statuses for projects you created.');
+            }
+        }
 
         return response()->json([
             'success' => true,
@@ -124,7 +168,28 @@ class StatusController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $status = Status::findOrFail($id);
+        $user = auth()->user();
+        
+        // Check permission
+        if (!$user->isSuperAdmin() && !$user->hasPermission('edit_status')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You do not have permission to edit statuses.'
+            ], 403);
+        }
+
+        $status = Status::with('project')->findOrFail($id);
+        
+        // If user can only view own statuses, check if they created the project
+        $canViewAll = $user->isSuperAdmin() || $user->hasPermission('view_all_statuses');
+        if (!$canViewAll) {
+            if ($status->project->created_by_user_id !== $user->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You can only edit statuses for projects you created.'
+                ], 403);
+            }
+        }
 
         $validator = Validator::make($request->all(), [
             'project_id' => 'required|exists:projects,id',
@@ -173,7 +238,28 @@ class StatusController extends Controller
      */
     public function destroy($id)
     {
-        $status = Status::findOrFail($id);
+        $user = auth()->user();
+        
+        // Check permission
+        if (!$user->isSuperAdmin() && !$user->hasPermission('delete_status')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You do not have permission to delete statuses.'
+            ], 403);
+        }
+
+        $status = Status::with('project')->findOrFail($id);
+        
+        // If user can only view own statuses, check if they created the project
+        $canViewAll = $user->isSuperAdmin() || $user->hasPermission('view_all_statuses');
+        if (!$canViewAll) {
+            if ($status->project->created_by_user_id !== $user->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You can only delete statuses for projects you created.'
+                ], 403);
+            }
+        }
         $statusName = $status->name;
         $projectId = $status->project_id;
 
@@ -193,7 +279,28 @@ class StatusController extends Controller
      */
     public function edit($id)
     {
+        $user = auth()->user();
+        
+        // Check permission
+        if (!$user->isSuperAdmin() && !$user->hasPermission('edit_status')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You do not have permission to edit statuses.'
+            ], 403);
+        }
+
         $status = Status::with(['project'])->findOrFail($id);
+        
+        // If user can only view own statuses, check if they created the project
+        $canViewAll = $user->isSuperAdmin() || $user->hasPermission('view_all_statuses');
+        if (!$canViewAll) {
+            if ($status->project->created_by_user_id !== $user->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You can only edit statuses for projects you created.'
+                ], 403);
+            }
+        }
 
         return response()->json([
             'success' => true,

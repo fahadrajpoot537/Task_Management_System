@@ -15,27 +15,27 @@
 
         <!-- Tabs -->
         <ul class="nav nav-tabs mb-3" id="leadTabs" role="tablist">
-            <li class="nav-item" role="presentation">
+            {{-- <li class="nav-item" role="presentation">
                 <button class="nav-link" id="summary-tab" data-bs-toggle="tab" data-bs-target="#summary" type="button"
                     role="tab">
                     Summary
                 </button>
-            </li>
-            <li class="nav-item" role="presentation">
+            </li> --}}
+            {{-- <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="details-tab" data-bs-toggle="tab" data-bs-target="#details"
                     type="button" role="tab" aria-selected="true">
                     Details
                 </button>
-            </li>
-            <li class="nav-item" role="presentation">
+            </li> --}}
+            {{-- <li class="nav-item" role="presentation">
                 <button class="nav-link" id="transactions-tab" data-bs-toggle="tab" data-bs-target="#transactions"
                     type="button" role="tab">
                     Transactions
                 </button>
-            </li>
+            </li> --}}
             <li class="nav-item ms-auto">
-                <button class="btn btn-sm btn-outline-secondary">
-                    <i class="bi bi-link-45deg me-1"></i>No Linked Leads
+                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#leadEmailModal">
+                    <i class="bi bi-envelope me-1"></i>Copy Lead Email
                 </button>
             </li>
         </ul>
@@ -45,7 +45,8 @@
             <div class="card-body py-2">
                 <div class="d-flex flex-wrap align-items-center gap-2">
                     @if ($lead->received_date || $lead->created_at)
-                        <span class="badge bg-secondary">Open {{ ($lead->received_date ?? $lead->created_at)->diffInHours(now()) }} Hours</span>
+                        <span class="badge bg-secondary">Open
+                            {{ ($lead->received_date ?? $lead->created_at)->diffForHumans() }}</span>
                     @endif
                     @if ($lead->status)
                         <span class="badge bg-{{ $lead->status->color ?? 'primary' }}">{{ $lead->status->name }}</span>
@@ -133,9 +134,11 @@
                 <div class="card mb-3" style="overflow: visible;">
                     <div class="card-body py-2">
                         <div class="d-flex flex-wrap gap-2 align-items-center">
+                            @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('edit_lead'))
                             <button class="btn btn-sm btn-primary" onclick="editLead({{ $lead->id }})">
                                 <i class="bi bi-pencil me-1"></i>Edit
                             </button>
+                            @endif
 
                             <div class="btn-group ">
                                 <button type="button" class="btn btn-sm btn-success dropdown-toggle"
@@ -298,19 +301,19 @@
                             <a href="{{ route('leads.activities.export', $lead->id) }}" class="btn btn-sm btn-success">
                                 <i class="bi bi-download me-1"></i>Export
                             </a>
-                            <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal"
+                            {{-- <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal"
                                 data-bs-target="#importActivitiesModal">
                                 <i class="bi bi-upload me-1"></i>Import
                             </button>
                             <button class="btn btn-sm btn-outline-secondary" onclick="toggleFilters()">
                                 <i class="bi bi-funnel me-1"></i>Filters
-                            </button>
+                            </button> --}}
                         </div>
                     </div>
                     <div class="card-body p-0">
                         <div id="activitiesList">
-                            @if ($lead->activities && $lead->activities->count() > 0)
-                                <div>
+                            @if ($activities && $activities->count() > 0)
+                                <div class="">
                                     <table class="table table-hover">
                                         <thead>
                                             <tr>
@@ -324,7 +327,7 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @foreach ($lead->activities as $activity)
+                                            @foreach ($activities as $activity)
                                                 <tr>
                                                     <td>{{ $activity->date ? $activity->date->format('M d, Y') : '-' }}
                                                     </td>
@@ -383,6 +386,19 @@
                                         </tbody>
                                     </table>
                                 </div>
+                                <!-- Pagination -->
+                                @if ($activities->hasPages())
+                                    <div class="card-footer">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="text-muted small">
+                                                Showing {{ $activities->firstItem() }} to {{ $activities->lastItem() }} of {{ $activities->total() }} activities
+                                            </div>
+                                            <div id="activitiesPagination">
+                                                {{ $activities->links() }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endif
                             @else
                                 <div class="text-center py-5">
                                     <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
@@ -948,22 +964,15 @@
                                 <input type="date" class="form-control" id="activityDate" name="date" required>
                             </div>
 
-                            <!-- Common Fields -->
+                            <!-- Common Description Field (for Letter and other types) -->
                             <div class="col-12" id="descriptionField">
                                 <label for="activityDescription" class="form-label">Description/Notes</label>
-                                <div class="d-flex justify-content-between align-items-center mb-1" id="emailBodyActions"
-                                    style="display: none;">
-                                    <small class="text-muted">Type or paste plain text - it will be automatically converted
-                                        to HTML format when saved</small>
-                                </div>
                                 <textarea class="form-control" id="activityDescription" name="description" rows="4"
                                     placeholder="Enter description or notes..."></textarea>
-                                <small class="text-muted" id="emailBodyHint" style="display: none;">Tip: Type or paste
-                                    plain text here. It will be automatically converted to HTML format (with line breaks and
-                                    links) when saved.</small>
                             </div>
                         </div>
-
+                        <!-- Common Fields -->
+                       
                         <!-- Note Details Section (for Note type) -->
                         <div id="noteDetailsSection" style="display: none;">
                             <label for="activityDescriptionNote" class="form-label text-dark mb-2"
@@ -976,16 +985,10 @@
                         <div class="col-12" id="emailFields" style="display: none;">
                             <div class="row g-2">
                                 <div class="col-12">
-                                    <label for="activityEmail" class="form-label">Email Address <span
+                                    <label for="activityEmail" class="form-label">To <span
                                             class="text-danger">*</span></label>
                                     <input type="email" class="form-control" id="activityEmail" name="email"
                                         placeholder="recipient@example.com" required>
-                                </div>
-                                <div class="col-12">
-                                    <label for="activityEmailSubject" class="form-label">Subject <span
-                                            class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="activityEmailSubject" name="field_1"
-                                        placeholder="Email subject" required>
                                 </div>
                                 <div class="col-md-6">
                                     <label for="activityCC" class="form-label">CC</label>
@@ -996,6 +999,30 @@
                                     <label for="activityBCC" class="form-label">BCC</label>
                                     <input type="text" class="form-control" id="activityBCC" name="bcc"
                                         placeholder="bcc@example.com">
+                                </div>
+                                <div class="col-12">
+                                    <label for="activityEmailSubject" class="form-label">Subject <span
+                                            class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="activityEmailSubject" name="field_1"
+                                        placeholder="Email subject" required>
+                                </div>
+                                <!-- Email Body Field -->
+                                <div class="col-12" id="emailDescriptionField">
+                                    <label for="activityEmailDescription" class="form-label">Email Body (HTML) <span
+                                            class="text-danger">*</span></label>
+                                    <div class="d-flex justify-content-between align-items-center mb-1"
+                                        id="emailBodyActions" style="display: none;">
+                                        <small class="text-muted">Type or paste plain text - it will be automatically
+                                            converted
+                                            to HTML format when saved</small>
+                                    </div>
+                                    <textarea class="form-control" id="activityEmailDescription" name="description" rows="10"
+                                        placeholder="Type or paste plain text here. It will be automatically converted to HTML format (with line breaks and links) when saved." required></textarea>
+                                    <small class="text-muted" id="emailBodyHint" style="display: none;">Tip: Type or
+                                        paste
+                                        plain text here. It will be automatically converted to HTML format (with line breaks
+                                        and
+                                        links) when saved.</small>
                                 </div>
                                 <div class="col-12">
                                     <label for="activityEmailAttachment" class="form-label">Attachments</label>
@@ -1066,10 +1093,10 @@
                     </div>
             </div>
             <div class="modal-footer" style="background-color: #fff; border-top: 1px solid #dee2e6;">
-                <div class="d-flex justify-content-between w-100 align-items-center">
-                    <button type="button" class="btn btn-outline-primary" id="taskNextBtn"
-                        style="display: none;">Next</button>
-                    <div class="d-flex gap-2">
+                <div class="d-flex justify-content-end w-100 align-items-center">
+                    {{-- <button type="button" class="btn btn-outline-primary" id="taskNextBtn"
+                        style="display: none;">Next</button> --}}
+                    <div class="d-flex gap-2 justify-content-end">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                         <button type="button" class="btn btn-primary" id="activitySubmitBtn"
                             style="pointer-events: auto !important; cursor: pointer !important;">Save Activity</button>
@@ -1539,6 +1566,7 @@
 
             // Reset all fields
             $('#activityDescription').val('');
+            $('#activityEmailDescription').val('');
             $('#activityDescriptionNote').val('');
 
             // Show/hide fields based on activity type
@@ -1645,7 +1673,7 @@
                     // Close all other dropdowns first
                     $('.btn-group .dropdown-menu').not($menu).removeClass('show').attr('style',
                         'display: none !important; visibility: hidden !important; opacity: 0 !important;'
-                        );
+                    );
 
                     // Restore and close any other dropdowns that were moved to body
                     $('body > .dropdown-menu-temp').not($menu).each(function() {
@@ -1655,7 +1683,7 @@
                             $otherMenu.removeClass('dropdown-menu-temp show').removeData(
                                 'original-parent').attr('style',
                                 'display: none !important; visibility: hidden !important; opacity: 0 !important;'
-                                ).appendTo($otherParent);
+                            ).appendTo($otherParent);
                         }
                     });
 
@@ -1664,7 +1692,7 @@
                         // Close it
                         $menu.removeClass('show').attr('style',
                             'display: none !important; visibility: hidden !important; opacity: 0 !important;'
-                            );
+                        );
                         // If it was moved to body, move it back
                         if ($menu.parent().is('body')) {
                             $menu.removeClass('dropdown-menu-temp').removeData('original-parent').appendTo(
@@ -1745,11 +1773,11 @@
                             setTimeout(function() {
                                 const finalRect = menuEl.getBoundingClientRect();
                                 const finalDisplay = window.getComputedStyle(menuEl)
-                                .display;
+                                    .display;
                                 const finalVisibility = window.getComputedStyle(menuEl)
                                     .visibility;
                                 const finalOpacity = window.getComputedStyle(menuEl)
-                                .opacity;
+                                    .opacity;
                                 console.log('After opening - Display:', finalDisplay,
                                     'Visibility:', finalVisibility, 'Opacity:',
                                     finalOpacity);
@@ -1761,7 +1789,7 @@
                                 if (finalDisplay !== 'block' || finalRect.width === 0) {
                                     console.error(
                                         'Dropdown still not visible! Trying alternative method...'
-                                        );
+                                    );
                                     // Try alternative: clone and replace
                                     const $clone = $menu.clone(true);
                                     $menu.replaceWith($clone);
@@ -1839,9 +1867,212 @@
             });
         });
 
+        let editingLeadId = null;
+
         function editLead(id) {
-            // Redirect to index page with edit parameter to open edit modal
-            window.location.href = '/leads?edit=' + id;
+            editingLeadId = id;
+            $.ajax({
+                url: `/leads/${id}/edit`,
+                method: 'GET',
+                success: function(response) {
+                    if (response.success) {
+                        const lead = response.lead;
+                        $('#leadModalLabel').text('Edit Lead');
+                        $('#leadId').val(lead.id);
+                        $('#project_id').val(lead.project_id);
+                        
+                        // Load statuses for the selected project and set the status
+                        loadStatusesByProject(lead.project_id, lead.status_id);
+                        
+                        $('#first_name').val(lead.first_name);
+                        $('#last_name').val(lead.last_name || '');
+                        $('#title').val(lead.title || '');
+                        $('#email').val(lead.email || '');
+                        $('#phone').val(lead.phone || '');
+                        $('#alternative_phone').val(lead.alternative_phone || '');
+                        $('#company').val(lead.company || '');
+                        $('#city').val(lead.city || '');
+                        $('#postcode').val(lead.postcode || '');
+                        
+                        // Split address into multiple lines
+                        splitAddress(lead.address || '');
+                        
+                        // Split date of birth into day, month, year
+                        splitDOB(lead.date_of_birth || '');
+                        
+                        $('.invalid-feedback').text('');
+                        $('.form-control, .form-select').removeClass('is-invalid');
+                        
+                        new bootstrap.Modal(document.getElementById('leadModal')).show();
+                    }
+                },
+                error: function(xhr) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Failed to load lead data. Please try again.'
+                    });
+                }
+            });
+        }
+
+        function loadStatusesByProject(projectId, selectedStatusId = null) {
+            if (!projectId) {
+                $('#status_id').html('<option value="">Select Status</option>');
+                return;
+            }
+            
+            $.ajax({
+                url: `/leads/project/${projectId}/statuses`,
+                method: 'GET',
+                success: function(response) {
+                    if (response.success) {
+                        let options = '<option value="">Select Status</option>';
+                        response.statuses.forEach(function(status) {
+                            const selected = (selectedStatusId && status.id == selectedStatusId) ? 'selected' : '';
+                            options += `<option value="${status.id}" ${selected}>${status.name}</option>`;
+                        });
+                        $('#status_id').html(options);
+                    }
+                },
+                error: function() {
+                    $('#status_id').html('<option value="">Select Status</option>');
+                }
+            });
+        }
+
+        function splitAddress(addressString) {
+            if (!addressString) {
+                $('#address_line1').val('');
+                $('#address_line2').val('');
+                $('#address_line3').val('');
+                return;
+            }
+            
+            const lines = addressString.split('\n');
+            $('#address_line1').val(lines[0] || '');
+            $('#address_line2').val(lines[1] || '');
+            $('#address_line3').val(lines[2] || '');
+        }
+
+        function splitDOB(dateString) {
+            if (!dateString) {
+                $('#dob_day').val('');
+                $('#dob_month').val('');
+                $('#dob_year').val('');
+                return;
+            }
+            
+            // Parse date string in YYYY-MM-DD format to avoid timezone issues
+            const dateMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (dateMatch) {
+                $('#dob_year').val(dateMatch[1]);
+                $('#dob_month').val(dateMatch[2]);
+                $('#dob_day').val(dateMatch[3]);
+            } else {
+                // Fallback to Date object parsing
+                const date = new Date(dateString);
+                if (!isNaN(date.getTime())) {
+                    $('#dob_day').val(String(date.getDate()).padStart(2, '0'));
+                    $('#dob_month').val(String(date.getMonth() + 1).padStart(2, '0'));
+                    $('#dob_year').val(date.getFullYear());
+                }
+            }
+        }
+
+        function combineAddressFields() {
+            const line1 = $('#address_line1').val() || '';
+            const line2 = $('#address_line2').val() || '';
+            const line3 = $('#address_line3').val() || '';
+            const address = [line1, line2, line3].filter(line => line.trim() !== '').join('\n');
+            $('#address').val(address);
+        }
+
+        function combineDOBFields() {
+            const day = $('#dob_day').val() || '';
+            const month = $('#dob_month').val() || '';
+            const year = $('#dob_year').val() || '';
+            
+            if (day && month && year) {
+                const dob = `${year}-${month}-${day}`;
+                $('#date_of_birth').val(dob);
+            } else {
+                $('#date_of_birth').val('');
+            }
+        }
+
+        function saveLead() {
+            // Combine address lines and DOB before submission
+            combineAddressFields();
+            combineDOBFields();
+            
+            // Get form data and remove address_line and dob_ fields (we only want the combined fields)
+            const formDataArray = $('#leadForm').serializeArray();
+            const formData = {};
+            
+            formDataArray.forEach(function(item) {
+                // Skip address_line and dob_ fields as we're using the combined 'address' and 'date_of_birth' fields
+                if (!item.name.startsWith('address_line') && !item.name.startsWith('dob_')) {
+                    formData[item.name] = item.value;
+                }
+            });
+            
+            // Add the combined address and date_of_birth
+            formData.address = $('#address').val();
+            formData.date_of_birth = $('#date_of_birth').val() || null;
+            
+            let url = '/leads';
+            let method = 'POST';
+            
+            if (editingLeadId) {
+                url = `/leads/${editingLeadId}`;
+                formData._method = 'PUT';
+            }
+            
+            $.ajax({
+                url: url,
+                method: method,
+                data: formData,
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success',
+                            text: response.message,
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                        
+                        bootstrap.Modal.getInstance(document.getElementById('leadModal')).hide();
+                        // Reload the page to show updated data
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 1000);
+                    }
+                },
+                error: function(xhr) {
+                    if (xhr.status === 422) {
+                        const errors = xhr.responseJSON.errors;
+                        $('.invalid-feedback').text('');
+                        $('.form-control, .form-select').removeClass('is-invalid');
+                        
+                        $.each(errors, function(key, value) {
+                            const field = $(`#${key}`);
+                            field.addClass('is-invalid');
+                            field.siblings('.invalid-feedback').text(value[0]);
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Failed to save lead. Please try again.'
+                        });
+                    }
+                }
+            });
         }
 
         // Make showActivityFields globally accessible
@@ -1861,16 +2092,17 @@
             // Show type-specific fields
             switch (type) {
                 case 'Email':
+                    $('#standardFields').hide();
+                    $('#descriptionField').hide(); // Hide the common description field
                     $('#emailFields').show();
-                    $('#descriptionField label').text('Email Body (HTML)');
-                    $('#descriptionField').show();
-                    $('#activityDescription').attr('rows', '10');
+                    $('#emailDescriptionField').show(); // Show the email-specific description field
                     $('#emailBodyHint').show();
                     $('#emailBodyActions').show();
                     break;
                 case 'Telephone Call':
                 case 'Text Message':
                     $('#phoneFields').show();
+                    $('#descriptionField').show();
                     $('#descriptionField label').text('Call/Message Notes');
                     break;
                 case 'Task':
@@ -1936,8 +2168,25 @@
                     // Note type uses field_1 directly, no sync needed
                     break;
                 case 'Letter':
-                    $('#field1Container, #field2Container').show();
-                    $('#descriptionField label').text('Description');
+                    // Show standard fields (Type, Date, and Description)
+                    $('#standardFields').show();
+                    // Update description label for Letter
+                    $('#descriptionField label').text('Letter Content');
+                    $('#activityDescription').attr('rows', '8');
+                    $('#activityDescription').attr('placeholder', 'Enter letter content...');
+                    // Hide other fields
+                    $('#emailFields').hide();
+                    $('#phoneFields').hide();
+                    $('#priorityField').hide();
+                    $('#dueDateField').hide();
+                    $('#endDateField').hide();
+                    $('#field1Container').hide();
+                    $('#field2Container').hide();
+                    $('#noteDetailsSection').hide();
+                    $('#noteInfoSections').hide();
+                    $('#taskSpecificSection').hide();
+                    $('#eventSpecificSection').hide();
+                    $('#documentUploadSection').hide();
                     break;
                 case 'Document':
                     // Hide standard fields (Type and Date)
@@ -1994,16 +2243,20 @@
             // Prompt user to paste HTML
             const htmlContent = prompt('Paste HTML source code here:');
             if (htmlContent && htmlContent.trim()) {
-                const textarea = document.getElementById('activityDescription');
-                const start = textarea.selectionStart || 0;
-                const end = textarea.selectionEnd || 0;
-                const currentValue = textarea.value;
-                const newValue = currentValue.substring(0, start) + htmlContent + currentValue.substring(end);
-                textarea.value = newValue;
-                // Set cursor position after inserted content
-                const newCursorPos = start + htmlContent.length;
-                textarea.setSelectionRange(newCursorPos, newCursorPos);
-                textarea.focus();
+                // Use email description textarea if email fields are visible, otherwise use regular description
+                const textareaId = $('#emailFields').is(':visible') ? 'activityEmailDescription' : 'activityDescription';
+                const textarea = document.getElementById(textareaId);
+                if (textarea) {
+                    const start = textarea.selectionStart || 0;
+                    const end = textarea.selectionEnd || 0;
+                    const currentValue = textarea.value;
+                    const newValue = currentValue.substring(0, start) + htmlContent + currentValue.substring(end);
+                    textarea.value = newValue;
+                    // Set cursor position after inserted content
+                    const newCursorPos = start + htmlContent.length;
+                    textarea.setSelectionRange(newCursorPos, newCursorPos);
+                    textarea.focus();
+                }
             }
         };
 
@@ -2335,7 +2588,7 @@
             // Show loading state
             previewBody.html(
                 '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>'
-                );
+            );
 
             // Fetch activity data
             $.ajax({
@@ -2486,7 +2739,7 @@
                                         .catch(err => {
                                             $(`#text-preview-${index}`).html(
                                                 `<p class="text-muted">Unable to load file content.</p>`
-                                                );
+                                            );
                                         });
                                 }
                             });
@@ -2512,9 +2765,9 @@
         };
 
         // Handle paste event for Email Body textarea to preserve HTML content
-        $(document).on('paste', '#activityDescription', function(e) {
-            // Only handle if Email fields are visible
-            if ($('#emailFields').is(':visible')) {
+        $(document).on('paste', '#activityEmailDescription, #activityDescription', function(e) {
+            // Only handle if Email fields are visible and this is the email textarea
+            if ($('#emailFields').is(':visible') && $(this).attr('id') === 'activityEmailDescription') {
                 e.preventDefault();
                 const clipboardData = e.originalEvent.clipboardData || window.clipboardData;
 
@@ -2574,7 +2827,7 @@
                             // Convert HTML back to plain text for editing
                             const htmlContent = activity.field_2 || '';
                             const plainText = convertHtmlToText(htmlContent);
-                            $('#activityDescription').val(plainText);
+                            $('#activityEmailDescription').val(plainText);
                         } else {
                             $('#activityDescription').val(activity.field_1 || '');
                         }
@@ -2691,7 +2944,9 @@
                         success: function(response) {
                             if (response.success) {
                                 Swal.fire('Deleted!', 'Activity has been deleted.', 'success');
-                                loadActivities();
+                                // Reload activities - if current page becomes empty, go to previous page
+                                const currentPage = currentActivitiesPage || 1;
+                                loadActivities(currentPage);
                             }
                         },
                         error: function() {
@@ -2702,16 +2957,27 @@
             });
         }
 
-        function loadActivities() {
+        let currentActivitiesPage = 1;
+
+        function loadActivities(page = 1) {
+            currentActivitiesPage = page;
             $.ajax({
                 url: '/leads/{{ $lead->id }}',
                 method: 'GET',
                 data: {
-                    ajax: true
+                    ajax: true,
+                    page: page,
+                    per_page: 10
                 },
                 success: function(response) {
                     if (response.success && response.activities) {
-                        renderActivities(response.activities);
+                        renderActivities(response.activities, response.pagination);
+                        
+                        // If current page is empty and not page 1, go to previous page
+                        if (response.activities.length === 0 && response.pagination && response.pagination.current_page > 1) {
+                            loadActivities(response.pagination.current_page - 1);
+                            return;
+                        }
                     } else {
                         // Reload page if AJAX response not available
                         location.reload();
@@ -2724,7 +2990,7 @@
             });
         }
 
-        function renderActivities(activities) {
+        function renderActivities(activities, pagination = null) {
             const tbody = $('#activitiesList tbody');
             if (!tbody.length) {
                 // If table doesn't exist, reload page
@@ -2816,6 +3082,78 @@
         `;
                 $('#activitiesList tbody').append(row);
             });
+
+            // Render pagination if available
+            if (pagination) {
+                renderActivitiesPagination(pagination);
+            } else {
+                // Remove existing pagination if no pagination data
+                $('#activitiesList').find('.card-footer').remove();
+            }
+        }
+
+        function renderActivitiesPagination(pagination) {
+            // Remove existing pagination
+            $('#activitiesList').find('.card-footer').remove();
+
+            if (pagination.last_page <= 1) {
+                return; // No pagination needed
+            }
+
+            let paginationHtml = '<div class="card-footer"><div class="d-flex justify-content-between align-items-center">';
+            paginationHtml += `<div class="text-muted small">Showing ${pagination.from} to ${pagination.to} of ${pagination.total} activities</div>`;
+            paginationHtml += '<nav><ul class="pagination pagination-sm mb-0">';
+
+            // Previous button
+            if (pagination.current_page > 1) {
+                paginationHtml += `<li class="page-item"><a class="page-link" href="javascript:void(0);" onclick="loadActivities(${pagination.current_page - 1})">Previous</a></li>`;
+            } else {
+                paginationHtml += `<li class="page-item disabled"><span class="page-link">Previous</span></li>`;
+            }
+
+            // Page numbers
+            let startPage = Math.max(1, pagination.current_page - 2);
+            let endPage = Math.min(pagination.last_page, pagination.current_page + 2);
+
+            if (startPage > 1) {
+                paginationHtml += `<li class="page-item"><a class="page-link" href="javascript:void(0);" onclick="loadActivities(1)">1</a></li>`;
+                if (startPage > 2) {
+                    paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                }
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                if (i === pagination.current_page) {
+                    paginationHtml += `<li class="page-item active"><span class="page-link">${i}</span></li>`;
+                } else {
+                    paginationHtml += `<li class="page-item"><a class="page-link" href="javascript:void(0);" onclick="loadActivities(${i})">${i}</a></li>`;
+                }
+            }
+
+            if (endPage < pagination.last_page) {
+                if (endPage < pagination.last_page - 1) {
+                    paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                }
+                paginationHtml += `<li class="page-item"><a class="page-link" href="javascript:void(0);" onclick="loadActivities(${pagination.last_page})">${pagination.last_page}</a></li>`;
+            }
+
+            // Next button
+            if (pagination.has_more_pages) {
+                paginationHtml += `<li class="page-item"><a class="page-link" href="javascript:void(0);" onclick="loadActivities(${pagination.current_page + 1})">Next</a></li>`;
+            } else {
+                paginationHtml += `<li class="page-item disabled"><span class="page-link">Next</span></li>`;
+            }
+
+            paginationHtml += '</ul></nav></div></div>';
+
+            // Insert pagination after the table-responsive div
+            const tableContainer = $('#activitiesList .table-responsive');
+            if (tableContainer.length) {
+                tableContainer.after(paginationHtml);
+            } else {
+                // Fallback: append to activitiesList
+                $('#activitiesList').append(paginationHtml);
+            }
         }
 
         function deleteLead(id) {
@@ -3240,9 +3578,92 @@
             if ($('#emailFields').is(':visible')) {
                 // Email type: field_1 = Subject, field_2 = Email Content
                 field1Value = $('#activityEmailSubject').val() || '';
-                // Convert plain text to HTML in background
-                const plainText = $('#activityDescription').val() || '';
+                
+                // Get the plain text from the email description textarea - try multiple methods
+                const textareaElement = document.getElementById('activityEmailDescription');
+                const emailDescriptionField = document.getElementById('emailDescriptionField');
+                let plainText = '';
+                
+                // Check if email description field is visible
+                const isEmailDescriptionVisible = emailDescriptionField && 
+                    (emailDescriptionField.offsetParent !== null || 
+                     window.getComputedStyle(emailDescriptionField).display !== 'none');
+                
+                if (textareaElement) {
+                    // Try getting value directly
+                    plainText = textareaElement.value || '';
+                    
+                    // If empty, try jQuery as fallback
+                    if (!plainText) {
+                        plainText = $('#activityEmailDescription').val() || '';
+                    }
+                } else {
+                    // Fallback to jQuery
+                    plainText = $('#activityEmailDescription').val() || '';
+                }
+                
+                // Debug logging
+                console.log('Email body validation:', {
+                    textareaExists: !!textareaElement,
+                    emailDescriptionFieldExists: !!emailDescriptionField,
+                    emailDescriptionFieldVisible: isEmailDescriptionVisible,
+                    textareaVisible: textareaElement ? (textareaElement.offsetParent !== null) : false,
+                    plainText: plainText,
+                    plainTextLength: plainText.length,
+                    plainTextTrimmed: plainText.trim(),
+                    plainTextTrimmedLength: plainText.trim().length,
+                    isEmpty: !plainText || plainText.trim() === '',
+                    emailFieldsVisible: $('#emailFields').is(':visible'),
+                    emailDescriptionFieldVisible_jQuery: $('#emailDescriptionField').is(':visible')
+                });
+                
+                // Validate email body is not empty
+                if (!plainText || plainText.trim() === '') {
+                    // Focus on the textarea to help user
+                    if (textareaElement) {
+                        // Ensure the textarea is visible first
+                        if (emailDescriptionField && !isEmailDescriptionVisible) {
+                            $('#emailDescriptionField').show();
+                        }
+                        textareaElement.focus();
+                        textareaElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Email Body Required',
+                        html: 'Please enter a message in the <strong>Email Body</strong> textarea before sending.<br><br>The textarea should be visible below the Subject field.',
+                        confirmButtonText: 'OK'
+                    });
+                    return;
+                }
+                
+                // Convert plain text to HTML
                 field2Value = convertTextToHtml(plainText);
+                
+                // Debug after conversion
+                console.log('After conversion:', {
+                    field2Value: field2Value,
+                    field2ValueLength: field2Value ? field2Value.length : 0,
+                    field2ValueType: typeof field2Value
+                });
+                
+                // Double check after conversion (should not be empty if plainText had content)
+                if (!field2Value || field2Value.trim() === '') {
+                    console.error('Error: field2Value is empty after conversion!', {
+                        plainText: plainText,
+                        plainTextLength: plainText.length
+                    });
+                    if (textareaElement) {
+                        textareaElement.focus();
+                    }
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Email Body Required',
+                        text: 'Please enter a message in the email body before sending.',
+                        confirmButtonText: 'OK'
+                    });
+                    return;
+                }
             } else if ($('#noteDetailsSection').is(':visible') && $('#activityDescriptionNote').length) {
                 // Note type: use the note textarea
                 field1Value = $('#activityDescriptionNote').val() || '';
@@ -3364,7 +3785,14 @@
             formData.append('priority', priority || '');
             formData.append('due_date', dueDate || $('#activityDueDate').val() || '');
             formData.append('end_date', endDate || $('#activityEndDate').val() || '');
-            formData.append('email', $('#activityEmail').val() || '');
+            // For Email type: activityEmail is the recipient (to field), email field is for sender
+            if ($('#emailFields').is(':visible')) {
+                formData.append('to', $('#activityEmail').val() || '');
+                // Sender email can be set from user's email or leave empty
+                formData.append('email', '{{ auth()->user()->email ?? '' }}');
+            } else {
+                formData.append('email', $('#activityEmail').val() || '');
+            }
             formData.append('cc', $('#activityCC').val() || '');
             formData.append('bcc', $('#activityBCC').val() || '');
             formData.append('phone', $('#activityPhone').val() || '');
@@ -3453,11 +3881,13 @@
                             showConfirmButton: false
                         }).then(function() {
                             // Reload activities list via AJAX after modal is closed
-                            loadActivities();
+                            // For new activities, go to page 1 to show the newest
+                            loadActivities(1);
                         });
 
                         // Also reload activities immediately (in case user doesn't wait for timer)
-                        loadActivities();
+                        // For new activities, go to page 1 to show the newest
+                        loadActivities(1);
                     } else {
                         Swal.fire('Error!', response.message || 'Failed to save activity.', 'error');
                     }
@@ -3538,6 +3968,18 @@
                 'z-index': 'auto'
             });
         });
+
+        // Lead form submission handler
+        $('#leadForm').on('submit', function(e) {
+            e.preventDefault();
+            saveLead();
+        });
+
+        // Load statuses when project changes
+        $('#project_id').on('change', function() {
+            const projectId = $(this).val();
+            loadStatusesByProject(projectId);
+        });
     </script>
 
     <!-- Import Activities Modal -->
@@ -3558,7 +4000,8 @@
                                 <li>CSV file must have a <strong>Reference</strong> column matching the lead's Reference
                                     (flg_reference)</li>
                                 <li>Required fields: <strong>Reference</strong>, <strong>ActivityType</strong>,
-                                    <strong>ActivityDateTime</strong></li>
+                                    <strong>ActivityDateTime</strong>
+                                </li>
                                 <li>Activities will be linked to leads based on the Reference column</li>
                                 <li>Date format: <strong>ActivityDateTime</strong> should be in d/m/Y H:i format (e.g.,
                                     07/11/2025 07:55)</li>
@@ -3625,7 +4068,7 @@
                         bootstrap.Modal.getInstance(document.getElementById('importActivitiesModal'))
                             .hide();
                         $('#importActivitiesForm')[0].reset();
-                        loadActivities(); // Reload activities list
+                        loadActivities(1); // Reload activities list (go to page 1 for new activities)
                     } else {
                         // Handle error response (success: false)
                         let message = response.message || 'Import failed.';
@@ -3664,6 +4107,215 @@
                 }
             });
         });
+
+        // Copy Lead Email Functionality
+        function copyLeadEmail() {
+            const leadEmail = 'lead-{{ $lead->id }}@adamsonstrading.co.uk';
+            const emailInput = document.getElementById('leadEmailInput');
+
+            // Select and copy
+            emailInput.select();
+            emailInput.setSelectionRange(0, 99999); // For mobile devices
+
+            try {
+                document.execCommand('copy');
+
+                // Update button text to show success
+                const copyBtn = document.getElementById('copyEmailBtn');
+                const originalText = copyBtn.innerHTML;
+                copyBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Copied!';
+                copyBtn.classList.remove('btn-primary');
+                copyBtn.classList.add('btn-success');
+
+                // Reset after 2 seconds
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalText;
+                    copyBtn.classList.remove('btn-success');
+                    copyBtn.classList.add('btn-primary');
+                }, 2000);
+            } catch (err) {
+                // Fallback: use Clipboard API
+                navigator.clipboard.writeText(leadEmail).then(() => {
+                    const copyBtn = document.getElementById('copyEmailBtn');
+                    const originalText = copyBtn.innerHTML;
+                    copyBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Copied!';
+                    copyBtn.classList.remove('btn-primary');
+                    copyBtn.classList.add('btn-success');
+
+                    setTimeout(() => {
+                        copyBtn.innerHTML = originalText;
+                        copyBtn.classList.remove('btn-success');
+                        copyBtn.classList.add('btn-primary');
+                    }, 2000);
+                }).catch(() => {
+                    alert('Failed to copy email. Please copy manually.');
+                });
+            }
+        }
     </script>
 @endpush
+
+<!-- Lead Edit Modal -->
+<div class="modal fade" id="leadModal" tabindex="-1" aria-labelledby="leadModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="leadModalLabel">Edit Lead</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="leadForm">
+                <div class="modal-body">
+                    <input type="hidden" id="leadId" name="lead_id">
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-12">
+                            <label for="project_id" class="form-label">Project <span class="text-danger">*</span></label>
+                            <select class="form-select" id="project_id" name="project_id" required>
+                                <option value="">Select Project</option>
+                                @foreach($projects as $project)
+                                    <option value="{{ $project->id }}">{{ $project->title }}</option>
+                                @endforeach
+                            </select>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <div class="col-12">
+                            <label for="status_id" class="form-label">Status</label>
+                            <select class="form-select" id="status_id" name="status_id">
+                                <option value="">Select Status</option>
+                            </select>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                    </div>
+                    
+                    <h5 class="mb-3">Contact Details</h5>
+                    
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="title_first_name" class="form-label">Title & First Name:</label>
+                            <div class="row g-2">
+                                <div class="col-md-3">
+                                    <select class="form-select" id="title" name="title">
+                                        <option value="">Select...</option>
+                                        <option value="Mr">Mr</option>
+                                        <option value="Mrs">Mrs</option>
+                                        <option value="Miss">Miss</option>
+                                        <option value="Ms">Ms</option>
+                                        <option value="Dr">Dr</option>
+                                        <option value="Prof">Prof</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-9">
+                                    <input type="text" class="form-control" id="first_name" name="first_name" placeholder="First Name" required>
+                                    <div class="invalid-feedback"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label for="last_name" class="form-label">Last Name:</label>
+                            <input type="text" class="form-control" id="last_name" name="last_name">
+                        </div>
+                        <div class="col-12">
+                            <label for="company" class="form-label">Company:</label>
+                            <input type="text" class="form-control" id="company" name="company">
+                        </div>
+                        <div class="col-12">
+                            <label for="phone" class="form-label">Phone Number:</label>
+                            <input type="text" class="form-control" id="phone" name="phone">
+                        </div>
+                        <div class="col-12">
+                            <label for="alternative_phone" class="form-label">Alternative Phone Number:</label>
+                            <input type="text" class="form-control" id="alternative_phone" name="alternative_phone">
+                        </div>
+                        <div class="col-12">
+                            <label for="email" class="form-label">Email Address:</label>
+                            <input type="email" class="form-control" id="email" name="email">
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <div class="col-12">
+                            <label for="address" class="form-label">Address:</label>
+                            <input type="text" class="form-control mb-2" id="address_line1" name="address_line1" placeholder="Address Line 1">
+                            <input type="text" class="form-control mb-2" id="address_line2" name="address_line2" placeholder="Address Line 2">
+                            <input type="text" class="form-control" id="address_line3" name="address_line3" placeholder="Address Line 3">
+                            <input type="hidden" id="address" name="address">
+                        </div>
+                        <div class="col-12">
+                            <label for="city" class="form-label">Town/City:</label>
+                            <input type="text" class="form-control" id="city" name="city">
+                        </div>
+                        <div class="col-12">
+                            <label for="postcode" class="form-label">Postcode:</label>
+                            <input type="text" class="form-control" id="postcode" name="postcode">
+                        </div>
+                        <div class="col-12">
+                            <label for="date_of_birth" class="form-label">Date of Birth:</label>
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <select class="form-select" id="dob_day" name="dob_day">
+                                        <option value="">dd</option>
+                                        @for($i = 1; $i <= 31; $i++)
+                                            <option value="{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}">{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}</option>
+                                        @endfor
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <select class="form-select" id="dob_month" name="dob_month">
+                                        <option value="">mm</option>
+                                        @for($i = 1; $i <= 12; $i++)
+                                            <option value="{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}">{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}</option>
+                                        @endfor
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="text" class="form-control" id="dob_year" name="dob_year" placeholder="Year" maxlength="4">
+                                </div>
+                            </div>
+                            <input type="hidden" id="date_of_birth" name="date_of_birth">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Lead</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Lead Email Modal -->
+<div class="modal fade" id="leadEmailModal" tabindex="-1" aria-labelledby="leadEmailModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="leadEmailModalLabel">
+                    <i class="bi bi-envelope me-2"></i>Lead Email Address
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Email Address:</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="leadEmailInput"
+                            value="lead-{{ $lead->id }}@adamsonstrading.co.uk" readonly
+                            style="font-family: monospace; font-size: 1.1rem;">
+                        <button class="btn btn-primary" type="button" id="copyEmailBtn" onclick="copyLeadEmail()">
+                            <i class="bi bi-clipboard me-1"></i>Copy
+                        </button>
+                    </div>
+                </div>
+                <div class="alert alert-info mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Note:</strong> Use this email address when sending emails to this lead.
+                    Emails sent to this address will be automatically synced and attached to this lead's activity log.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection

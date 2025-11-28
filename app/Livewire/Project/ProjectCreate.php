@@ -16,8 +16,26 @@ class ProjectCreate extends Component
         'description' => 'required|string|min:10',
     ];
 
+    public function mount()
+    {
+        $user = auth()->user();
+        
+        // Check permission
+        if (!$user->isSuperAdmin() && !$user->hasPermission('create_project')) {
+            abort(403, 'You do not have permission to create projects.');
+        }
+    }
+
     public function createProject()
     {
+        $user = auth()->user();
+        
+        // Check permission
+        if (!$user->isSuperAdmin() && !$user->hasPermission('create_project')) {
+            session()->flash('error', 'You do not have permission to create projects.');
+            return;
+        }
+
         $this->validate();
 
         $project = Project::create([

@@ -74,9 +74,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/lead-types/{id}/edit', [\App\Http\Controllers\LeadTypeController::class, 'edit'])->name('lead-types.edit');
     
     // Activities
+    Route::get('/activities', [\App\Http\Controllers\ActivityController::class, 'index'])->name('activities.index');
     Route::resource('activities', \App\Http\Controllers\ActivityController::class)->except(['index', 'create']);
     Route::get('/activities/{id}/edit', [\App\Http\Controllers\ActivityController::class, 'edit'])->name('activities.edit');
     Route::post('/activities/import', [\App\Http\Controllers\ActivityController::class, 'importActivities'])->name('activities.import');
+    Route::post('/activities/reply', [\App\Http\Controllers\ActivityController::class, 'reply'])->name('activities.reply');
 
     // User Profile
     Route::get('/profile', \App\Livewire\User\ProfileEdit::class)->name('profile.edit');

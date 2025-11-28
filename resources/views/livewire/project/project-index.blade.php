@@ -133,7 +133,7 @@
 
         <!-- Pagination -->
         <div class="d-flex justify-content-center mt-4">
-            {{ $this->projects->links() }}
+           {{ $this->projects->links('pagination::bootstrap-5') }}
         </div>
     @else
         <div class="card">

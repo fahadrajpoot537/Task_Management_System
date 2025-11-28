@@ -6,12 +6,29 @@ use App\Models\Activity;
 use App\Models\Lead;
 use App\Models\User;
 use App\Models\Log;
+use App\Mail\ActivityEmail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log as LogFacade;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Mail\Events\MessageSending;
+use Illuminate\Support\Facades\Event;
 
 class ActivityController extends Controller
 {
+    /**
+     * Display a listing of the resource.
+     */
+    public function index()
+    {
+        $activities = Activity::with(['lead', 'createdBy', 'assignedTo', 'lead.project'])
+            ->orderBy('date', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->paginate(50);
+
+        return view('activities.index', compact('activities'));
+    }
+
     /**
      * Store a newly created resource in storage.
      */
@@ -27,6 +44,7 @@ class ActivityController extends Controller
             'field_1' => 'nullable|string',
             'field_2' => 'nullable|string',
             'email' => 'nullable|email|max:255',
+            'to' => 'nullable|string',
             'bcc' => 'nullable|string',
             'cc' => 'nullable|string',
             'phone' => 'nullable|string|max:255',
@@ -59,8 +77,17 @@ class ActivityController extends Controller
             ], 422);
         }
 
+        // Get field_2 BEFORE using except() to ensure it's captured
+        $field2Value = $request->input('field_2');
+        if (is_null($field2Value)) {
+            $field2Value = '';
+        }
+        
         $data = $request->except(['description', 'file', 'document_files']); // Remove description and file fields as they need special handling
         $data['created_by'] = auth()->id();
+        
+        // CRITICAL: Always set field_2 explicitly (even if empty) to ensure it's included
+        $data['field_2'] = $field2Value;
 
         // Handle file upload for Email type
         if ($request->hasFile('file')) {
@@ -128,18 +155,82 @@ class ActivityController extends Controller
             }
         }
 
-        $activity = Activity::create($data);
+        // For Email type: Send email first, then store in DB only if successful
+        if ($data['type'] === 'Email') {
+            // Validate email body is not empty
+            $emailBody = $data['field_2'] ?? '';
+            if (empty($emailBody) || trim($emailBody) === '') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Email body cannot be empty. Please enter a message.',
+                    'errors' => ['field_2' => 'Email body is required.']
+                ], 422);
+            }
+            
+            try {
+                // Generate message ID for email threading and replies
+                $messageId = $this->generateMessageId();
+                
+                // Ensure field_2 is in data before sending email
+                $data['field_2'] = $emailBody;
+                
+                // Send email first
+                $emailSent = $this->sendActivityEmailBeforeStore($data, $messageId);
+                
+                if ($emailSent) {
+                    // Email sent successfully, now store in database with message_id
+                    $data['message_id'] = $messageId;
+                    
+                    // Ensure field_2 is still in the data array before creating (double check)
+                    $data['field_2'] = $emailBody;
+                    
+                    $activity = Activity::create($data);
+                    
+                    // Log the action
+                    Log::createLog(auth()->id(), 'create_activity', "Created and sent email activity: {$activity->type} for lead #{$activity->lead_id}");
+                    
+                    $activity->load(['lead', 'createdBy']);
+                    
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Email sent and activity created successfully.',
+                        'activity' => $activity
+                    ]);
+                } else {
+                    // Email failed to send
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Failed to send email. Activity was not created.',
+                        'errors' => ['email' => 'Email could not be sent. Please check your email configuration and try again.']
+                    ], 422);
+                }
+            } catch (\Exception $e) {
+                LogFacade::error('Error sending email activity', [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to send email: ' . $e->getMessage(),
+                    'errors' => ['email' => $e->getMessage()]
+                ], 422);
+            }
+        } else {
+            // For non-email activities, create normally
+            $activity = Activity::create($data);
 
-        // Log the action
-        Log::createLog(auth()->id(), 'create_activity', "Created activity: {$activity->type} for lead #{$activity->lead_id}");
+            // Log the action
+            Log::createLog(auth()->id(), 'create_activity', "Created activity: {$activity->type} for lead #{$activity->lead_id}");
 
-        $activity->load(['lead', 'createdBy']);
+            $activity->load(['lead', 'createdBy']);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Activity created successfully.',
-            'activity' => $activity
-        ]);
+            return response()->json([
+                'success' => true,
+                'message' => 'Activity created successfully.',
+                'activity' => $activity
+            ]);
+        }
     }
 
     /**
@@ -170,6 +261,114 @@ class ActivityController extends Controller
     }
 
     /**
+     * Reply to an email activity
+     */
+    public function reply(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'activity_id' => 'required|exists:activities,id',
+            'lead_id' => 'required|exists:leads,id',
+            'message_id' => 'required|string',
+            'to' => 'required|string',
+            'subject' => 'required|string|max:255',
+            'body' => 'required|string',
+            'cc' => 'nullable|string',
+            'bcc' => 'nullable|string',
+            'attachments' => 'nullable|array',
+            'attachments.*' => 'nullable|file|max:10240', // Max 10MB per file
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            // Get the original activity
+            $originalActivity = Activity::findOrFail($request->activity_id);
+            
+            // Get authenticated user
+            $user = auth()->user();
+            
+            // Generate a new unique message_id for the reply
+            $newMessageId = $this->generateMessageId();
+            
+            // Prepare data for the reply activity
+            $data = [
+                'lead_id' => $request->lead_id,
+                'type' => 'Email',
+                'date' => now()->format('Y-m-d'),
+                'field_1' => $request->subject, // Subject
+                'field_2' => $request->body, // Body
+                'to' => $request->to,
+                'cc' => $request->cc,
+                'bcc' => $request->bcc,
+                'email' => $user->email ?? config('mail.from.address'), // Sender email
+                'message_id' => $newMessageId, // New unique message_id for this reply
+                'in_reply_to' => $request->message_id, // Reference to original message for threading
+                'created_by' => $user->id,
+                'actioned' => 1, // Mark as sent
+            ];
+
+            // Handle file uploads
+            if ($request->hasFile('attachments')) {
+                $files = $request->file('attachments');
+                $fileNames = [];
+                
+                foreach ($files as $file) {
+                    if ($file && $file->isValid()) {
+                        $fileName = time() . '_' . $file->getClientOriginalName();
+                        $file->move(public_path('uploads/activities'), $fileName);
+                        $filePath = 'uploads/activities/' . $fileName;
+                        $fileNames[] = $filePath;
+                    }
+                }
+                
+                if (!empty($fileNames)) {
+                    $data['file'] = implode(',', $fileNames);
+                }
+            }
+
+            // Send email first with the new message_id and in_reply_to for threading
+            $inReplyTo = $data['in_reply_to'] ?? null;
+            $emailSent = $this->sendActivityEmailBeforeStore($data, $newMessageId, $inReplyTo);
+            
+            if ($emailSent) {
+                // Email sent successfully, now store in database
+                $replyActivity = Activity::create($data);
+                
+                // Log the action
+                Log::createLog(auth()->id(), 'reply_activity', "Replied to email activity #{$originalActivity->id} for lead #{$replyActivity->lead_id}");
+                
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Reply sent successfully.',
+                    'activity' => $replyActivity
+                ]);
+            } else {
+                // Email failed to send
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to send reply email. Please check your email configuration and try again.'
+                ], 422);
+            }
+        } catch (\Exception $e) {
+            LogFacade::error('Error replying to email activity', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to send reply: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Update the specified resource in storage.
      */
     public function update(Request $request, $id)
@@ -186,6 +385,7 @@ class ActivityController extends Controller
             'field_1' => 'nullable|string',
             'field_2' => 'nullable|string',
             'email' => 'nullable|email|max:255',
+            'to' => 'nullable|string',
             'bcc' => 'nullable|string',
             'cc' => 'nullable|string',
             'phone' => 'nullable|string|max:255',
@@ -863,5 +1063,479 @@ class ActivityController extends Controller
             'imported' => $imported,
             'errors' => $errors
         ]);
+    }
+
+    /**
+     * Generate a unique message ID for email
+     */
+    private function generateMessageId(): string
+    {
+        $domain = parse_url(config('app.url'), PHP_URL_HOST) ?? 'localhost';
+        $timestamp = time();
+        $random = bin2hex(random_bytes(8));
+        return sprintf('<%s.%s.%s@%s>', $timestamp, $random, auth()->id(), $domain);
+    }
+
+    /**
+     * Send email before storing activity (for new emails)
+     * Returns true if at least one email was sent successfully
+     */
+    private function sendActivityEmailBeforeStore(array $data, string $messageId, string $inReplyTo = null): bool
+    {
+        try {
+            // Get authenticated user's email for reply-to
+            $user = auth()->user();
+            $senderEmail = $user->email ?? config('mail.from.address');
+            $senderName = $user->name ?? config('mail.from.name');
+            
+            // Use email credentials from .env file
+            $fromEmail = config('mail.from.address');
+            $fromName = config('mail.from.name');
+            
+            // Get subject and body
+            $subject = $data['field_1'] ?? 'No Subject';
+            $body = $data['field_2'] ?? '';
+            
+            // Body should already be validated before calling this function
+            // But add a safety check - if empty, use a default message
+            if (empty($body) || trim($body) === '') {
+                $body = '<p>This is an email from ' . config('app.name') . '</p>';
+            }
+            
+            // Prepare recipients
+            $toRecipients = [];
+            $ccRecipients = [];
+            $bccRecipients = [];
+            
+            // Parse 'to' field (comma-separated emails)
+            if (!empty($data['to'])) {
+                $toEmails = array_map('trim', explode(',', $data['to']));
+                foreach ($toEmails as $email) {
+                    if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                        $toRecipients[] = $email;
+                    }
+                }
+            }
+            
+            // Parse 'cc' field (comma-separated emails)
+            if (!empty($data['cc'])) {
+                $ccEmails = array_map('trim', explode(',', $data['cc']));
+                foreach ($ccEmails as $email) {
+                    if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                        $ccRecipients[] = $email;
+                    }
+                }
+            }
+            
+            // Parse 'bcc' field (comma-separated emails)
+            if (!empty($data['bcc'])) {
+                $bccEmails = array_map('trim', explode(',', $data['bcc']));
+                foreach ($bccEmails as $email) {
+                    if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                        $bccRecipients[] = $email;
+                    }
+                }
+            }
+            
+            // If no recipients found, try to use lead's email
+            if (empty($toRecipients) && empty($ccRecipients) && empty($bccRecipients)) {
+                $lead = Lead::find($data['lead_id']);
+                if ($lead && $lead->email) {
+                    $toRecipients[] = $lead->email;
+                } else {
+                    LogFacade::warning('No recipients found for email activity', [
+                        'lead_id' => $data['lead_id']
+                    ]);
+                    return false;
+                }
+            }
+            
+            // Prepare attachments
+            $attachmentPaths = [];
+            if (!empty($data['file'])) {
+                $fileString = is_string($data['file']) ? $data['file'] : (string)$data['file'];
+                $files = explode(',', $fileString);
+                
+                foreach ($files as $file) {
+                    $file = trim($file);
+                    if (empty($file)) {
+                        continue;
+                    }
+                    
+                    if (strpos($file, 'uploads/activities/') === 0) {
+                        $filePath = public_path($file);
+                    } else {
+                        $filePath = public_path('uploads/activities/' . $file);
+                    }
+                    
+                    $filePath = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $filePath);
+                    
+                    if (file_exists($filePath) && is_file($filePath) && is_readable($filePath)) {
+                        $attachmentPaths[] = $filePath;
+                    }
+                }
+            }
+            
+            if (!is_array($attachmentPaths)) {
+                $attachmentPaths = [];
+            }
+            
+            // Create a temporary activity object for the email (won't be saved)
+            $tempActivity = new Activity($data);
+            $tempActivity->id = 0; // Temporary ID
+            $tempActivity->setRelation('lead', Lead::find($data['lead_id']));
+            
+            // Track if at least one email was sent successfully
+            $atLeastOneSent = false;
+            $successfulRecipients = [];
+            $failedRecipients = [];
+            
+            // Register event listener to set Message-ID header
+            // addIdHeader() expects the value WITHOUT angle brackets and adds them automatically
+            $messageIdValue = trim($messageId, '<>');
+            $inReplyToValue = $inReplyTo ? trim($inReplyTo, '<>') : null;
+            $listener = Event::listen(MessageSending::class, function ($event) use ($messageIdValue, $inReplyToValue) {
+                if ($messageIdValue) {
+                    $headers = $event->message->getHeaders();
+                    // Remove existing Message-ID header if present
+                    if ($headers->has('Message-ID')) {
+                        $headers->remove('Message-ID');
+                    }
+                    // Add the Message-ID header using addIdHeader (it will add angle brackets automatically)
+                    $headers->addIdHeader('Message-ID', $messageIdValue);
+                    
+                    // Add In-Reply-To header for email threading
+                    if ($inReplyToValue) {
+                        // Remove existing In-Reply-To header if present
+                        if ($headers->has('In-Reply-To')) {
+                            $headers->remove('In-Reply-To');
+                        }
+                        // Set the In-Reply-To header
+                        $headers->addIdHeader('In-Reply-To', $inReplyToValue);
+                        
+                        // Also add References header for better threading
+                        if ($headers->has('References')) {
+                            $existingReferences = $headers->get('References');
+                            $referencesValue = $existingReferences ? $existingReferences->getValue() . ' ' . $inReplyToValue : $inReplyToValue;
+                            $headers->remove('References');
+                            $headers->addTextHeader('References', $referencesValue);
+                        } else {
+                            $headers->addTextHeader('References', $inReplyToValue);
+                        }
+                    }
+                }
+            });
+            
+            try {
+                // Send to 'to' recipients
+                foreach ($toRecipients as $recipient) {
+                    try {
+                        $mail = new ActivityEmail($tempActivity, $subject, $body, $attachmentPaths, $fromEmail, $fromName, $senderEmail, $senderName, $messageId);
+                        Mail::to($recipient)->send($mail);
+                        $successfulRecipients[] = $recipient;
+                        $atLeastOneSent = true;
+                    } catch (\Exception $e) {
+                        $failedRecipients[] = [
+                            'email' => $recipient,
+                            'error' => $e->getMessage()
+                        ];
+                        LogFacade::error('Failed to send activity email to recipient', [
+                            'recipient' => $recipient,
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                }
+                
+                // Send to 'cc' recipients
+                foreach ($ccRecipients as $recipient) {
+                    try {
+                        $mail = new ActivityEmail($tempActivity, $subject, $body, $attachmentPaths, $fromEmail, $fromName, $senderEmail, $senderName, $messageId);
+                        Mail::to($recipient)->send($mail);
+                        $successfulRecipients[] = $recipient . ' (CC)';
+                        $atLeastOneSent = true;
+                    } catch (\Exception $e) {
+                        $failedRecipients[] = [
+                            'email' => $recipient . ' (CC)',
+                            'error' => $e->getMessage()
+                        ];
+                        LogFacade::error('Failed to send activity email to CC recipient', [
+                            'recipient' => $recipient,
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                }
+                
+                // Send to 'bcc' recipients
+                foreach ($bccRecipients as $recipient) {
+                    try {
+                        $mail = new ActivityEmail($tempActivity, $subject, $body, $attachmentPaths, $fromEmail, $fromName, $senderEmail, $senderName, $messageId);
+                        Mail::to($recipient)->send($mail);
+                        $successfulRecipients[] = $recipient . ' (BCC)';
+                        $atLeastOneSent = true;
+                    } catch (\Exception $e) {
+                        $failedRecipients[] = [
+                            'email' => $recipient . ' (BCC)',
+                            'error' => $e->getMessage()
+                        ];
+                        LogFacade::error('Failed to send activity email to BCC recipient', [
+                            'recipient' => $recipient,
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                }
+            } finally {
+                // Remove the event listener after sending
+                Event::forget(MessageSending::class);
+            }
+            
+            // Log results
+            if ($atLeastOneSent) {
+                LogFacade::info('Activity email sent successfully before storing', [
+                    'message_id' => $messageId,
+                    'successful_recipients' => $successfulRecipients,
+                    'failed_count' => count($failedRecipients)
+                ]);
+            }
+            
+            if (!empty($failedRecipients)) {
+                LogFacade::warning('Some recipients failed when sending activity email', [
+                    'message_id' => $messageId,
+                    'failed_recipients' => $failedRecipients,
+                    'successful_count' => count($successfulRecipients)
+                ]);
+            }
+            
+            return $atLeastOneSent;
+            
+        } catch (\Exception $e) {
+            LogFacade::error('Error sending activity email before store', [
+                'message_id' => $messageId ?? 'unknown',
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Send email for Email type activity (for existing activities)
+     */
+    private function sendActivityEmail(Activity $activity)
+    {
+        try {
+            // Get authenticated user's email for reply-to
+            $user = auth()->user();
+            $senderEmail = $user->email ?? config('mail.from.address');
+            $senderName = $user->name ?? config('mail.from.name');
+            
+            // Use email credentials from .env file (MAIL_FROM_ADDRESS and MAIL_FROM_NAME)
+            $fromEmail = config('mail.from.address');
+            $fromName = config('mail.from.name');
+            
+            // Get subject and body
+            $subject = $activity->field_1 ?? 'No Subject';
+            $body = $activity->field_2 ?? '';
+            
+            // If body is empty, use a default message
+            if (empty($body)) {
+                $body = '<p>This is an email from ' . config('app.name') . '</p>';
+            }
+            
+            // Prepare recipients
+            $toRecipients = [];
+            $ccRecipients = [];
+            $bccRecipients = [];
+            
+            // Parse 'to' field (comma-separated emails)
+            if (!empty($activity->to)) {
+                $toEmails = array_map('trim', explode(',', $activity->to));
+                foreach ($toEmails as $email) {
+                    if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                        $toRecipients[] = $email;
+                    }
+                }
+            }
+            
+            // Parse 'cc' field (comma-separated emails)
+            if (!empty($activity->cc)) {
+                $ccEmails = array_map('trim', explode(',', $activity->cc));
+                foreach ($ccEmails as $email) {
+                    if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                        $ccRecipients[] = $email;
+                    }
+                }
+            }
+            
+            // Parse 'bcc' field (comma-separated emails)
+            if (!empty($activity->bcc)) {
+                $bccEmails = array_map('trim', explode(',', $activity->bcc));
+                foreach ($bccEmails as $email) {
+                    if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                        $bccRecipients[] = $email;
+                    }
+                }
+            }
+            
+            // If no recipients found, try to use lead's email
+            if (empty($toRecipients) && empty($ccRecipients) && empty($bccRecipients)) {
+                if ($activity->lead && $activity->lead->email) {
+                    $toRecipients[] = $activity->lead->email;
+                } else {
+                    LogFacade::warning('No recipients found for activity email', [
+                        'activity_id' => $activity->id,
+                        'lead_id' => $activity->lead_id
+                    ]);
+                    return;
+                }
+            }
+            
+            // Prepare attachments - ensure it's always an array
+            $attachmentPaths = [];
+            if (!empty($activity->file)) {
+                // Ensure file is a string before exploding
+                $fileString = is_string($activity->file) ? $activity->file : (string)$activity->file;
+                $files = explode(',', $fileString);
+                
+                foreach ($files as $file) {
+                    $file = trim($file);
+                    if (empty($file)) {
+                        continue;
+                    }
+                    
+                    // Handle both relative and absolute paths
+                    if (strpos($file, 'uploads/activities/') === 0) {
+                        $filePath = public_path($file);
+                    } else {
+                        $filePath = public_path('uploads/activities/' . $file);
+                    }
+                    
+                    // Normalize path separators for Windows
+                    $filePath = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $filePath);
+                    
+                    if (file_exists($filePath) && is_file($filePath) && is_readable($filePath)) {
+                        $attachmentPaths[] = $filePath;
+                    } else {
+                        LogFacade::warning('Attachment file not found or not accessible', [
+                            'activity_id' => $activity->id,
+                            'file_path' => $filePath,
+                            'original_file' => $file,
+                            'exists' => file_exists($filePath),
+                            'is_file' => is_file($filePath),
+                            'readable' => is_readable($filePath)
+                        ]);
+                    }
+                }
+            }
+            
+            // Ensure attachmentPaths is always an array (not null or string)
+            if (!is_array($attachmentPaths)) {
+                $attachmentPaths = [];
+            }
+            
+            // Send email to each recipient
+            $successfulRecipients = [];
+            $failedRecipients = [];
+            
+            // Send to 'to' recipients
+            foreach ($toRecipients as $recipient) {
+                try {
+                    // Ensure we pass a valid array for attachments
+                    // fromEmail: authorized SMTP sender, replyToEmail: actual sender
+                    $mail = new ActivityEmail($activity, $subject, $body, $attachmentPaths, $fromEmail, $fromName, $senderEmail, $senderName);
+                    Mail::to($recipient)->send($mail);
+                    $successfulRecipients[] = $recipient;
+                    LogFacade::info('Activity email sent successfully', [
+                        'activity_id' => $activity->id,
+                        'recipient' => $recipient,
+                        'from_email' => $fromEmail,
+                        'reply_to_email' => $senderEmail,
+                        'sender_name' => $senderName,
+                    ]);
+                } catch (\Exception $e) {
+                    $failedRecipients[] = [
+                        'email' => $recipient,
+                        'error' => $e->getMessage()
+                    ];
+                    LogFacade::error('Failed to send activity email to recipient', [
+                        'activity_id' => $activity->id,
+                        'recipient' => $recipient,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+            
+            // Send to 'cc' recipients
+            foreach ($ccRecipients as $recipient) {
+                try {
+                    $mail = new ActivityEmail($activity, $subject, $body, $attachmentPaths, $fromEmail, $fromName, $senderEmail, $senderName);
+                    Mail::to($recipient)->send($mail);
+                    $successfulRecipients[] = $recipient . ' (CC)';
+                    LogFacade::info('Activity email sent successfully', [
+                        'activity_id' => $activity->id,
+                        'recipient' => $recipient,
+                        'from_email' => $fromEmail,
+                        'reply_to_email' => $senderEmail,
+                        'sender_name' => $senderName,
+                    ]);
+                } catch (\Exception $e) {
+                    $failedRecipients[] = [
+                        'email' => $recipient . ' (CC)',
+                        'error' => $e->getMessage()
+                    ];
+                    LogFacade::error('Failed to send activity email to CC recipient', [
+                        'activity_id' => $activity->id,
+                        'recipient' => $recipient,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+            
+            // Send to 'bcc' recipients
+            foreach ($bccRecipients as $recipient) {
+                try {
+                    $mail = new ActivityEmail($activity, $subject, $body, $attachmentPaths, $fromEmail, $fromName, $senderEmail, $senderName);
+                    Mail::to($recipient)->send($mail);
+                    $successfulRecipients[] = $recipient . ' (BCC)';
+                } catch (\Exception $e) {
+                    $failedRecipients[] = [
+                        'email' => $recipient . ' (BCC)',
+                        'error' => $e->getMessage()
+                    ];
+                    LogFacade::error('Failed to send activity email to BCC recipient', [
+                        'activity_id' => $activity->id,
+                        'recipient' => $recipient,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+            
+            // Log results
+            if (!empty($successfulRecipients)) {
+                LogFacade::info('Activity email sent successfully', [
+                    'activity_id' => $activity->id,
+                    'sender_email' => $senderEmail,
+                    'sender_name' => $senderName,
+                    'successful_recipients' => $successfulRecipients,
+                    'failed_count' => count($failedRecipients)
+                ]);
+            }
+            
+            if (!empty($failedRecipients)) {
+                LogFacade::error('Failed to send activity email to some recipients', [
+                    'activity_id' => $activity->id,
+                    'sender_email' => $senderEmail,
+                    'sender_name' => $senderName,
+                    'failed_recipients' => $failedRecipients,
+                    'successful_count' => count($successfulRecipients)
+                ]);
+            }
+            
+        } catch (\Exception $e) {
+            LogFacade::error('Error sending activity email', [
+                'activity_id' => $activity->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
     }
 }

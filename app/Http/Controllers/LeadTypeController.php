@@ -12,13 +12,48 @@ class LeadTypeController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $leadTypes = LeadType::with('createdBy')
-            ->withCount('leads')
-            ->orderBy('order')
-            ->orderBy('name')
-            ->get();
+        $user = auth()->user();
+        if (!$user->isSuperAdmin() && !$user->hasPermission('view_lead_types')) {
+            abort(403, 'You do not have permission to view lead types.');
+        }
+
+        $query = LeadType::with('createdBy')
+            ->withCount('leads');
+
+        // Search functionality
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%")
+                  ->orWhere('color', 'like', "%{$search}%");
+            });
+        }
+
+        // Sorting
+        $sortField = $request->get('sort_field', 'order');
+        $sortDirection = $request->get('sort_direction', 'asc');
+        $query->orderBy($sortField, $sortDirection);
+        $query->orderBy('name', 'asc'); // Secondary sort
+
+        // Pagination
+        $perPage = $request->get('per_page', 10);
+        $leadTypes = $query->paginate($perPage);
+
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'lead_types' => $leadTypes->items(),
+                'pagination' => [
+                    'current_page' => $leadTypes->currentPage(),
+                    'last_page' => $leadTypes->lastPage(),
+                    'per_page' => $leadTypes->perPage(),
+                    'total' => $leadTypes->total(),
+                ]
+            ]);
+        }
 
         return view('lead-types.index', compact('leadTypes'));
     }
@@ -28,6 +63,11 @@ class LeadTypeController extends Controller
      */
     public function create()
     {
+        $user = auth()->user();
+        if (!$user->isSuperAdmin() && !$user->hasPermission('create_lead_type')) {
+            abort(403, 'You do not have permission to create lead types.');
+        }
+
         return view('lead-types.create');
     }
 
@@ -36,6 +76,17 @@ class LeadTypeController extends Controller
      */
     public function store(Request $request)
     {
+        $user = auth()->user();
+        if (!$user->isSuperAdmin() && !$user->hasPermission('create_lead_type')) {
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You do not have permission to create lead types.'
+                ], 403);
+            }
+            return back()->with('error', 'You do not have permission to create lead types.');
+        }
+
         // Convert is_active to proper boolean before validation
         // Handle various input formats: true/false, "true"/"false", "1"/"0", 1/0, "on"/"off"
         $isActive = $request->input('is_active');
@@ -100,6 +151,11 @@ class LeadTypeController extends Controller
      */
     public function show($id)
     {
+        $user = auth()->user();
+        if (!$user->isSuperAdmin() && !$user->hasPermission('view_lead_types')) {
+            abort(403, 'You do not have permission to view lead types.');
+        }
+
         $leadType = LeadType::with(['createdBy', 'leads'])->findOrFail($id);
         
         return view('lead-types.show', compact('leadType'));
@@ -110,6 +166,17 @@ class LeadTypeController extends Controller
      */
     public function edit($id)
     {
+        $user = auth()->user();
+        if (!$user->isSuperAdmin() && !$user->hasPermission('edit_lead_type')) {
+            if (request()->ajax() || request()->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You do not have permission to edit lead types.'
+                ], 403);
+            }
+            abort(403, 'You do not have permission to edit lead types.');
+        }
+
         $leadType = LeadType::findOrFail($id);
         
         if (request()->ajax() || request()->expectsJson()) {
@@ -127,6 +194,17 @@ class LeadTypeController extends Controller
      */
     public function update(Request $request, $id)
     {
+        $user = auth()->user();
+        if (!$user->isSuperAdmin() && !$user->hasPermission('edit_lead_type')) {
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You do not have permission to edit lead types.'
+                ], 403);
+            }
+            return back()->with('error', 'You do not have permission to edit lead types.');
+        }
+
         $leadType = LeadType::findOrFail($id);
 
         // Convert is_active to proper boolean before validation
@@ -192,6 +270,17 @@ class LeadTypeController extends Controller
      */
     public function destroy($id)
     {
+        $user = auth()->user();
+        if (!$user->isSuperAdmin() && !$user->hasPermission('delete_lead_type')) {
+            if (request()->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You do not have permission to delete lead types.'
+                ], 403);
+            }
+            return back()->with('error', 'You do not have permission to delete lead types.');
+        }
+
         $leadType = LeadType::findOrFail($id);
 
         // Check if lead type is being used by any leads

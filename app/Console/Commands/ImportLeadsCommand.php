@@ -224,6 +224,24 @@ class ImportLeadsCommand extends Command
                     $reference = trim($rowData['REFERENCE']);
                 }
                 
+                // Early duplicate check by reference number - skip if exists
+                if (!empty($reference)) {
+                    $existingLeadByRef = Lead::where('flg_reference', $reference)->first();
+                    
+                    // Also check if reference is numeric and matches an existing lead ID
+                    if (!$existingLeadByRef && is_numeric($reference)) {
+                        $existingLeadByRef = Lead::find($reference);
+                    }
+                    
+                    if ($existingLeadByRef) {
+                        $errorMsg = "Row " . ($index + 2) . ": Duplicate reference '{$reference}' already exists (Lead ID: {$existingLeadByRef->id}, Name: {$existingLeadByRef->first_name} {$existingLeadByRef->last_name})";
+                        $errors[] = $errorMsg;
+                        $errorCategories['duplicate_lead'][] = $errorMsg;
+                        $progressBar->advance();
+                        continue; // Skip this record and move to next
+                    }
+                }
+                
                 // Map CSV columns to database fields
                 $leadData = [
                     'flg_reference' => $reference,
@@ -431,7 +449,8 @@ class ImportLeadsCommand extends Command
                                     $project->flg_group_id = $leadGroupID;
                                     $project->save();
                                 } elseif (!$project) {
-                                    $errorMsg = "Row " . ($index + 2) . ": Failed to create/find project '{$projectTitle}' - " . $e->getMessage();
+                                    $refDisplay = $reference ?: 'No reference';
+                                    $errorMsg = "Row " . ($index + 2) . " (Reference: {$refDisplay}): Failed to create/find project '{$projectTitle}' - " . $e->getMessage();
                                     $errors[] = $errorMsg;
                                     $errorCategories['project_creation_failed'][] = $errorMsg;
                                     $progressBar->advance();
@@ -463,7 +482,8 @@ class ImportLeadsCommand extends Command
                                 // If creation fails (e.g., duplicate name), try to find again (case-insensitive)
                                 $project = Project::whereRaw('LOWER(TRIM(title)) = ?', [strtolower(trim($leadGroup))])->first();
                                 if (!$project) {
-                                    $errorMsg = "Row " . ($index + 2) . ": Failed to create/find project '{$leadGroup}' - " . $e->getMessage();
+                                    $refDisplay = $reference ?: 'No reference';
+                                    $errorMsg = "Row " . ($index + 2) . " (Reference: {$refDisplay}): Failed to create/find project '{$leadGroup}' - " . $e->getMessage();
                                     $errors[] = $errorMsg;
                                     $errorCategories['project_creation_failed'][] = $errorMsg;
                                     $progressBar->advance();
@@ -472,14 +492,16 @@ class ImportLeadsCommand extends Command
                             }
                         }
                     } else {
-                        $errorMsg = "Row " . ($index + 2) . ": Project (LeadGroup or LeadGroupID) is required";
+                        $refDisplay = $reference ?: 'No reference';
+                        $errorMsg = "Row " . ($index + 2) . " (Reference: {$refDisplay}): Project (LeadGroup or LeadGroupID) is required";
                         $errors[] = $errorMsg;
                         $errorCategories['missing_project'][] = $errorMsg;
                         $progressBar->advance();
                         continue;
                     }
                 } else {
-                    $errorMsg = "Row " . ($index + 2) . ": Project (LeadGroup or LeadGroupID) is required";
+                    $refDisplay = $reference ?: 'No reference';
+                    $errorMsg = "Row " . ($index + 2) . " (Reference: {$refDisplay}): Project (LeadGroup or LeadGroupID) is required";
                     $errors[] = $errorMsg;
                     $errorCategories['missing_project'][] = $errorMsg;
                     $progressBar->advance();
@@ -519,7 +541,8 @@ class ImportLeadsCommand extends Command
                                 // If creation fails (e.g., duplicate name), try to find again (case-insensitive)
                                 $leadType = LeadType::whereRaw('LOWER(TRIM(name)) = ?', [strtolower(trim($leadTypeName))])->first();
                                 if (!$leadType) {
-                                    $errorMsg = "Row " . ($index + 2) . ": Failed to create/find lead type '{$leadTypeName}' - " . $e->getMessage();
+                                    $refDisplay = $reference ?: 'No reference';
+                                    $errorMsg = "Row " . ($index + 2) . " (Reference: {$refDisplay}): Failed to create/find lead type '{$leadTypeName}' - " . $e->getMessage();
                                     $errors[] = $errorMsg;
                                     $errorCategories['lead_type_creation_failed'][] = $errorMsg;
                                 }
@@ -563,7 +586,8 @@ class ImportLeadsCommand extends Command
                                     ->whereRaw('LOWER(TRIM(name)) = ?', [strtolower(trim($statusName))])
                                     ->first();
                                 if (!$status) {
-                                    $errorMsg = "Row " . ($index + 2) . ": Failed to create/find status '{$statusName}' for project - " . $e->getMessage();
+                                    $refDisplay = $reference ?: 'No reference';
+                                    $errorMsg = "Row " . ($index + 2) . " (Reference: {$refDisplay}): Failed to create/find status '{$statusName}' for project - " . $e->getMessage();
                                     $errors[] = $errorMsg;
                                     $errorCategories['status_creation_failed'][] = $errorMsg;
                                 }
@@ -606,7 +630,8 @@ class ImportLeadsCommand extends Command
                     // Final validation - check what columns are actually available for debugging
                     if (empty($leadData['first_name']) || trim($leadData['first_name']) === '') {
                         $availableColumns = array_keys(array_filter($rowData, function($v) { return !empty(trim($v)); }));
-                        $errorMsg = "Row " . ($index + 2) . ": First Name is required. Available columns with data: " . implode(', ', array_slice($availableColumns, 0, 10));
+                        $refDisplay = $reference ?: 'No reference';
+                        $errorMsg = "Row " . ($index + 2) . " (Reference: {$refDisplay}): First Name is required. Available columns with data: " . implode(', ', array_slice($availableColumns, 0, 10));
                         $errors[] = $errorMsg;
                         $errorCategories['missing_first_name'][] = $errorMsg;
                         $progressBar->advance();
@@ -614,27 +639,12 @@ class ImportLeadsCommand extends Command
                     }
                 }
                 
-                // Check for duplicate leads - multiple strategies
+                // Additional duplicate checks (email+phone, name+phone) - reference already checked above
                 $existingLead = null;
                 $duplicateReason = '';
                 
-                // Strategy 1: Check by flg_reference (primary check)
-                if (!empty($leadData['flg_reference'])) {
-                    // Check by flg_reference
-                    $existingLead = Lead::where('flg_reference', $leadData['flg_reference'])->first();
-                    
-                    // If not found, check if Reference matches an existing lead ID
-                    if (!$existingLead && is_numeric($leadData['flg_reference'])) {
-                        $existingLead = Lead::find($leadData['flg_reference']);
-                    }
-                    
-                    if ($existingLead) {
-                        $duplicateReason = "Reference '{$leadData['flg_reference']}'";
-                    }
-                }
-                
                 // Strategy 2: Check by email + phone combination (if both provided)
-                if (!$existingLead && !empty($leadData['email']) && !empty($leadData['phone'])) {
+                if (!empty($leadData['email']) && !empty($leadData['phone'])) {
                     $existingLead = Lead::where('email', $leadData['email'])
                         ->where('phone', $leadData['phone'])
                         ->first();
@@ -658,6 +668,7 @@ class ImportLeadsCommand extends Command
                 
                 // If duplicate found, skip this row
                 if ($existingLead) {
+                    $refDisplay = $reference ? "Reference '{$reference}'" : 'No reference';
                     $errorMsg = "Row " . ($index + 2) . ": Duplicate lead found with {$duplicateReason} already exists (Lead ID: {$existingLead->id}, Name: {$existingLead->first_name} {$existingLead->last_name})";
                     $errors[] = $errorMsg;
                     $errorCategories['duplicate_lead'][] = $errorMsg;
@@ -670,7 +681,8 @@ class ImportLeadsCommand extends Command
                     Lead::create($leadData);
                     $imported++;
                 } catch (\Exception $e) {
-                    $errorMsg = "Row " . ($index + 2) . ": " . $e->getMessage();
+                    $refDisplay = $reference ?: 'No reference';
+                    $errorMsg = "Row " . ($index + 2) . " (Reference: {$refDisplay}): " . $e->getMessage();
                     $errors[] = $errorMsg;
                     $errorCategories['database_error'][] = $errorMsg;
                 }
@@ -756,10 +768,16 @@ class ImportLeadsCommand extends Command
                     $this->comment("Run with --verbose flag to see detailed error messages");
                 }
                 
-                // Export errors to file if requested
+                // Export errors to file (always export to errors.csv if errors exist)
                 $exportPath = $this->option('export-errors');
-                if ($exportPath) {
-                    $this->exportErrorsToFile($exportPath, $errors, $errorCategories);
+                if (!$exportPath && count($errors) > 0) {
+                    // Default to errors.csv in the same directory as the import file
+                    $importDir = dirname($filePath);
+                    $exportPath = $importDir . DIRECTORY_SEPARATOR . 'errors.csv';
+                }
+                
+                if ($exportPath && count($errors) > 0) {
+                    $this->exportErrorsToFile($exportPath, $errors, $errorCategories, $filePath);
                 }
             }
 
@@ -848,7 +866,7 @@ class ImportLeadsCommand extends Command
     /**
      * Export errors to a CSV file
      */
-    private function exportErrorsToFile($filePath, $errors, $errorCategories)
+    private function exportErrorsToFile($filePath, $errors, $errorCategories, $sourceFile = null)
     {
         try {
             // Normalize file path (handle Windows paths)
@@ -870,20 +888,34 @@ class ImportLeadsCommand extends Command
                 return;
             }
 
-            // Write CSV header
-            fputcsv($handle, ['Category', 'Row Number', 'Error Message']);
+            // Add BOM for UTF-8
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            // Write CSV header with Reference column
+            fputcsv($handle, ['Reference', 'Row Number', 'Category', 'Error Message']);
 
             // Write errors grouped by category
             foreach ($errorCategories as $category => $categoryErrors) {
                 foreach ($categoryErrors as $error) {
-                    // Extract row number from error message
+                    // Extract row number and reference from error message
                     $rowNumber = '';
+                    $reference = '';
+                    
                     if (preg_match('/Row (\d+):/', $error, $matches)) {
                         $rowNumber = $matches[1];
                     }
                     
+                    // Extract reference number
+                    if (preg_match("/Reference '([^']+)'/", $error, $refMatches)) {
+                        $reference = $refMatches[1];
+                    } elseif (preg_match('/Reference: ([^,)]+)/', $error, $refMatches)) {
+                        $reference = trim($refMatches[1]);
+                    } elseif (preg_match("/Duplicate reference '([^']+)'/", $error, $refMatches)) {
+                        $reference = $refMatches[1];
+                    }
+                    
                     $categoryName = ucwords(str_replace('_', ' ', $category));
-                    fputcsv($handle, [$categoryName, $rowNumber, $error]);
+                    fputcsv($handle, [$reference, $rowNumber, $categoryName, $error]);
                 }
             }
 
@@ -892,14 +924,27 @@ class ImportLeadsCommand extends Command
             $uncategorizedErrors = array_diff($errors, $categorizedErrors);
             foreach ($uncategorizedErrors as $error) {
                 $rowNumber = '';
+                $reference = '';
+                
                 if (preg_match('/Row (\d+):/', $error, $matches)) {
                     $rowNumber = $matches[1];
                 }
-                fputcsv($handle, ['Other', $rowNumber, $error]);
+                
+                // Extract reference number
+                if (preg_match("/Reference '([^']+)'/", $error, $refMatches)) {
+                    $reference = $refMatches[1];
+                } elseif (preg_match('/Reference: ([^,)]+)/', $error, $refMatches)) {
+                    $reference = trim($refMatches[1]);
+                }
+                
+                fputcsv($handle, [$reference, $rowNumber, 'Other', $error]);
             }
 
             fclose($handle);
             $this->info("Errors exported to: {$filePath}");
+            if ($sourceFile) {
+                $this->comment("  Source file: {$sourceFile}");
+            }
         } catch (\Exception $e) {
             $this->warn("Failed to export errors: " . $e->getMessage());
         }

@@ -13,11 +13,44 @@
                     <p class="mb-0 text-white-50 fs-6">Create and manage lead types for categorizing your leads</p>
                 </div>
                 <div class="d-flex gap-3">
+                    @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('create_lead_type'))
                     <button type="button" class="btn btn-light btn-lg px-4 py-2" data-bs-toggle="modal" data-bs-target="#leadTypeModal" onclick="openCreateModal()">
                         <i class="bi bi-plus-circle me-2"></i>Create Lead Type
                     </button>
+                    @endif
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" action="{{ route('lead-types.index') }}" id="searchForm">
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input type="text" class="form-control" name="search" 
+                                   placeholder="Search by name, description, or color..." 
+                                   value="{{ request('search') }}">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select" name="sort_field" onchange="document.getElementById('searchForm').submit()">
+                            <option value="order" {{ request('sort_field', 'order') == 'order' ? 'selected' : '' }}>Sort by Order</option>
+                            <option value="name" {{ request('sort_field') == 'name' ? 'selected' : '' }}>Sort by Name</option>
+                            <option value="created_at" {{ request('sort_field') == 'created_at' ? 'selected' : '' }}>Sort by Date</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select" name="sort_direction" onchange="document.getElementById('searchForm').submit()">
+                            <option value="asc" {{ request('sort_direction', 'asc') == 'asc' ? 'selected' : '' }}>Ascending</option>
+                            <option value="desc" {{ request('sort_direction') == 'desc' ? 'selected' : '' }}>Descending</option>
+                        </select>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -66,12 +99,16 @@
                             <td>{{ $leadType->createdBy->name ?? 'System' }}</td>
                             <td>
                                 <div class="d-flex gap-2">
+                                    @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('edit_lead_type'))
                                     <button class="btn btn-sm btn-primary" onclick="editLeadType({{ $leadType->id }})" title="Edit">
                                         <i class="bi bi-pencil"></i>
                                     </button>
+                                    @endif
+                                    @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('delete_lead_type'))
                                     <button class="btn btn-sm btn-danger" onclick="deleteLeadType({{ $leadType->id }})" title="Delete">
                                         <i class="bi bi-trash"></i>
                                     </button>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -83,6 +120,20 @@
                     </tbody>
                 </table>
             </div>
+            
+            <!-- Pagination -->
+            @if($leadTypes->hasPages())
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <div>
+                    <p class="text-muted mb-0">
+                        Showing {{ $leadTypes->firstItem() }} to {{ $leadTypes->lastItem() }} of {{ $leadTypes->total() }} results
+                    </p>
+                </div>
+                <nav>
+                    {{ $leadTypes->appends(request()->query())->links('pagination::bootstrap-5') }}
+                </nav>
+            </div>
+            @endif
         </div>
     </div>
 </div>

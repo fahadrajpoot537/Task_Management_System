@@ -1771,27 +1771,23 @@ class AttendanceViewer extends Component
         $absentDeduction = $recordedAbsentDays * $dailyWage;
         
         foreach ($attendanceRecords as $record) {
+            // Calculate actual hours worked based on attendance record
             $actualHoursWorked = $this->calculateHoursWorkedWithGrace($record);
-            $hoursWorked = $actualHoursWorked;
             
-            // If no deduction is enabled, pay for full expected hours even if worked less
-            if ($this->noDeduction && $record->status !== 'absent' && $record->status !== 'holiday' && $record->status !== 'pending') {
-                // Pay for full expected hours even if they worked less
-                $hoursWorked = $expectedHoursPerDay;
-            }
-            
-            $wagesEarned = $hoursWorked * $hourlyWage;
+            // Calculate wages based on actual hours worked
+            // Salary should always be calculated on actual hours worked, not adjusted hours
+            $wagesEarned = $actualHoursWorked * $hourlyWage;
             
             $breakdown[] = [
                 'date' => Carbon::parse($record->attendance_date)->format('Y-m-d'),
                 'day' => Carbon::parse($record->attendance_date)->format('l'),
                 'status' => $record->status,
                 'hours_worked' => $actualHoursWorked, // Show actual hours worked
-                'wages_earned' => $wagesEarned, // But pay based on no deduction logic
+                'wages_earned' => $wagesEarned, // Wages calculated based on actual hours worked
             ];
             
             $totalHoursWorked += $actualHoursWorked; // Track actual hours
-            $totalWagesEarned += $wagesEarned; // But wages are calculated with no deduction logic
+            $totalWagesEarned += $wagesEarned; // Wages calculated based on actual hours worked
         }
         
         // Add missing days as absent (0 wages)
@@ -1833,8 +1829,9 @@ class AttendanceViewer extends Component
         $grossWages = $totalWagesEarned;
         
         // Apply deductions only if no deduction option is not checked
+        // Note: Absent deductions are not applied - salary is not cut for absent days
         $actualShortLatePenalty = $this->noDeduction ? 0 : $shortLatePenalty;
-        $actualAbsentDeduction = $this->noDeduction ? 0 : $absentDeduction;
+        $actualAbsentDeduction = 0; // Never deduct salary for absent days
         $totalWagesEarned = max(0, $totalWagesEarned - $actualShortLatePenalty - $actualAbsentDeduction);
 
         // Punctuality bonus: no late, no absent, and no missing working days in month

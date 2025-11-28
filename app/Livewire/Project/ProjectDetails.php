@@ -24,36 +24,23 @@ class ProjectDetails extends Component
 
     public function mount($projectId)
     {
+        $user = auth()->user();
+        
+        // Check if user has permission to view projects
+        $canViewAll = $user->isSuperAdmin() || $user->hasPermission('view_all_projects');
+        $canViewOwn = $user->isSuperAdmin() || $user->hasPermission('view_own_projects');
+        
+        if (!$canViewAll && !$canViewOwn) {
+            abort(403, 'You do not have permission to view projects.');
+        }
+
         $this->project = Project::with(['createdBy', 'tasks.assignedTo', 'tasks.assignedBy'])
             ->findOrFail($projectId);
         
-        // Check if user has permission to view this project
-        $user = auth()->user();
-        
-        if ($user->isSuperAdmin() || $user->isAdmin()) {
-            // Super admin and admin can view all projects
-            return;
-        } elseif ($user->isManager()) {
-            // Managers can view:
-            // 1. Projects they created
-            // 2. Projects where their team members have tasks
-            $teamMemberIds = $user->teamMembers->pluck('id')->push($user->id);
-            
-            $hasAccess = $this->project->created_by_user_id === $user->id || 
-                        $this->project->tasks()->whereIn('assigned_to_user_id', $teamMemberIds)->exists();
-            
-            if (!$hasAccess) {
-                abort(403, 'You do not have permission to view this project.');
-            }
-        } else {
-            // Employees can view:
-            // 1. Projects they created
-            // 2. Projects where they have tasks assigned
-            $hasAccess = $this->project->created_by_user_id === $user->id || 
-                        $this->project->tasks()->where('assigned_to_user_id', $user->id)->exists();
-            
-            if (!$hasAccess) {
-                abort(403, 'You do not have permission to view this project.');
+        // If user can only view own projects, check ownership
+        if (!$canViewAll && $canViewOwn) {
+            if ($this->project->created_by_user_id !== $user->id) {
+                abort(403, 'You do not have permission to view this project. You can only view projects you created.');
             }
         }
     }

@@ -12,6 +12,7 @@ use App\Models\LeadType;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\DB;
 
 class LeadController extends Controller
 {
@@ -20,7 +21,22 @@ class LeadController extends Controller
      */
     public function index(Request $request)
     {
+        $user = auth()->user();
+        
+        // Check if user has permission to view leads
+        $canViewAll = $user->isSuperAdmin() || $user->hasPermission('view_all_leads');
+        $canViewOwn = $user->isSuperAdmin() || $user->hasPermission('view_own_leads');
+        
+        if (!$canViewAll && !$canViewOwn) {
+            abort(403, 'You do not have permission to view leads.');
+        }
+
         $query = Lead::with(['project', 'addedBy', 'status']);
+        
+        // If user can only view own leads, filter by added_by
+        if (!$canViewAll && $canViewOwn) {
+            $query->where('added_by', $user->id);
+        }
 
         // Search functionality
         if ($request->has('search') && $request->search) {
@@ -72,6 +88,14 @@ class LeadController extends Controller
      */
     public function store(Request $request)
     {
+        $user = auth()->user();
+        if (!$user->isSuperAdmin() && !$user->hasPermission('create_lead')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You do not have permission to create leads.'
+            ], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'project_id' => 'required|exists:projects,id',
             'first_name' => 'required|string|max:255',
@@ -121,20 +145,65 @@ class LeadController extends Controller
      */
     public function show($id)
     {
-        $lead = Lead::with(['project.statuses', 'addedBy', 'status', 'activities.createdBy', 'activities.assignedTo'])->findOrFail($id);
+        $user = auth()->user();
+        
+        // Check if user has permission to view leads
+        $canViewAll = $user->isSuperAdmin() || $user->hasPermission('view_all_leads');
+        $canViewOwn = $user->isSuperAdmin() || $user->hasPermission('view_own_leads');
+        
+        if (!$canViewAll && !$canViewOwn) {
+            abort(403, 'You do not have permission to view leads.');
+        }
+
+        $lead = Lead::with(['project.statuses', 'addedBy', 'status'])->findOrFail($id);
+        
+        // If user can only view own leads, check if they created this lead
+        if (!$canViewAll && $canViewOwn) {
+            if ($lead->added_by != $user->id) {
+                abort(403, 'You do not have permission to view this lead. You can only view leads you created.');
+            }
+        }
 
         if (request()->ajax() || request()->has('ajax')) {
+            // Paginate activities for AJAX requests
+            $page = request()->get('page', 1);
+            $perPage = request()->get('per_page', 10);
+            
+            $activities = Activity::with(['createdBy', 'assignedTo'])
+                ->where('lead_id', $id)
+                ->orderBy('date', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->paginate($perPage, ['*'], 'page', $page);
+            
             return response()->json([
                 'success' => true,
                 'lead' => $lead,
-                'activities' => $lead->activities
+                'activities' => $activities->items(),
+                'pagination' => [
+                    'current_page' => $activities->currentPage(),
+                    'last_page' => $activities->lastPage(),
+                    'per_page' => $activities->perPage(),
+                    'total' => $activities->total(),
+                    'from' => $activities->firstItem(),
+                    'to' => $activities->lastItem(),
+                    'has_more_pages' => $activities->hasMorePages(),
+                ]
             ]);
         }
 
         // Get users for assignment dropdown
         $users = User::orderBy('name')->get();
         
-        return view('leads.show', compact('lead', 'users'));
+        $projects = \App\Models\Project::orderBy('title')->get();
+        
+        // Load activities with pagination for initial page load
+        $activities = Activity::with(['createdBy', 'assignedTo'])
+            ->where('lead_id', $id)
+            ->orderBy('date', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
+        
+        return view('leads.show', compact('lead', 'users', 'projects', 'activities'));
     }
 
     /**
@@ -142,6 +211,14 @@ class LeadController extends Controller
      */
     public function update(Request $request, $id)
     {
+        $user = auth()->user();
+        if (!$user->isSuperAdmin() && !$user->hasPermission('edit_lead')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You do not have permission to edit leads.'
+            ], 403);
+        }
+
         $lead = Lead::findOrFail($id);
 
         $validator = Validator::make($request->all(), [
@@ -212,6 +289,14 @@ class LeadController extends Controller
      */
     public function destroy($id)
     {
+        $user = auth()->user();
+        if (!$user->isSuperAdmin() && !$user->hasPermission('delete_lead')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You do not have permission to delete leads.'
+            ], 403);
+        }
+
         $lead = Lead::findOrFail($id);
 
         // Log the action
@@ -230,6 +315,14 @@ class LeadController extends Controller
      */
     public function edit($id)
     {
+        $user = auth()->user();
+        if (!$user->isSuperAdmin() && !$user->hasPermission('edit_lead')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You do not have permission to edit leads.'
+            ], 403);
+        }
+
         $lead = Lead::with(['project', 'addedBy', 'status'])->findOrFail($id);
 
         return response()->json([
@@ -275,7 +368,22 @@ class LeadController extends Controller
      */
     public function exportLeads(Request $request)
     {
+        $user = auth()->user();
+        
+        // Check if user has permission to view leads
+        $canViewAll = $user->isSuperAdmin() || $user->hasPermission('view_all_leads');
+        $canViewOwn = $user->isSuperAdmin() || $user->hasPermission('view_own_leads');
+        
+        if (!$canViewAll && !$canViewOwn) {
+            abort(403, 'You do not have permission to export leads.');
+        }
+
         $query = Lead::with(['project', 'addedBy', 'status', 'activities']);
+        
+        // If user can only view own leads, filter by added_by
+        if (!$canViewAll && $canViewOwn) {
+            $query->where('added_by', $user->id);
+        }
 
         // Apply same filters as index
         if ($request->has('search') && $request->search) {
@@ -516,7 +624,24 @@ class LeadController extends Controller
      */
     public function exportActivities($leadId)
     {
+        $user = auth()->user();
+        
+        // Check if user has permission to view leads
+        $canViewAll = $user->isSuperAdmin() || $user->hasPermission('view_all_leads');
+        $canViewOwn = $user->isSuperAdmin() || $user->hasPermission('view_own_leads');
+        
+        if (!$canViewAll && !$canViewOwn) {
+            abort(403, 'You do not have permission to export lead activities.');
+        }
+
         $lead = Lead::with(['project', 'status', 'addedBy'])->findOrFail($leadId);
+        
+        // If user can only view own leads, check if they created this lead
+        if (!$canViewAll && $canViewOwn) {
+            if ($lead->added_by != $user->id) {
+                abort(403, 'You do not have permission to export activities for this lead. You can only export activities for leads you created.');
+            }
+        }
         // Get activities without date casting to access raw values
         $activities = Activity::with(['createdBy', 'assignedTo'])
             ->where('lead_id', $leadId)
@@ -701,6 +826,14 @@ class LeadController extends Controller
      */
     public function importLeads(Request $request)
     {
+        $user = auth()->user();
+        if (!$user->isSuperAdmin() && !$user->hasPermission('create_lead')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You do not have permission to import leads.'
+            ], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'file' => 'required|mimes:csv,txt',
         ]);
