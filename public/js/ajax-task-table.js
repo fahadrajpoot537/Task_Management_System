@@ -950,65 +950,37 @@ class TaskTableManager {
             await this.loadDropdownData();
         }
         
-        // Store values before populating dropdowns - handle both direct IDs and relationship objects
-        const priorityId = task.priority_id !== null && task.priority_id !== undefined 
-            ? task.priority_id 
-            : (task.priority && task.priority.id ? task.priority.id : null);
-        const categoryId = task.category_id !== null && task.category_id !== undefined 
-            ? task.category_id 
-            : (task.category && task.category.id ? task.category.id : null);
-        const projectId = task.project_id !== null && task.project_id !== undefined 
-            ? task.project_id 
-            : (task.project && task.project.id ? task.project.id : null);
-        
-        // Set basic form field values first
-        document.getElementById('editModalTaskId').value = task.id;
-        document.getElementById('editModalTaskTitle').value = task.title || '';
-        document.getElementById('editModalTaskDescription').value = task.description || '';
-        document.getElementById('editModalTaskDueDate').value = task.due_date ? task.due_date.split(' ')[0] : '';
-        document.getElementById('editModalTaskEstimatedHours').value = task.estimated_hours || '';
-        
-            // Set nature of task
-            const natureField = document.getElementById('editModalTaskNature');
-            const recurrenceField = document.getElementById('editModalTaskRecurrenceFrequency');
-            const recurrenceContainer = document.getElementById('editRecurrenceFrequencyContainer');
-            
-            if (task.is_recurring) {
-                natureField.value = 'recurring';
-                if (recurrenceField) {
-                    recurrenceField.value = task.nature_of_task || 'daily';
-                    recurrenceField.setAttribute('required', 'required');
-                }
-                if (recurrenceContainer) {
-                    recurrenceContainer.style.display = 'block';
-                }
-            } else {
-                natureField.value = 'one_time';
-                if (recurrenceField) {
-                    recurrenceField.removeAttribute('required');
-                }
-                if (recurrenceContainer) {
-                    recurrenceContainer.style.display = 'none';
-                }
-            }
-        
-        // Set reminder time
-        if (task.reminder_time) {
-            const reminderDate = new Date(task.reminder_time);
-            const formattedDate = reminderDate.toISOString().slice(0, 16);
-            document.getElementById('editModalTaskReminderTime').value = formattedDate;
-        } else {
-            document.getElementById('editModalTaskReminderTime').value = '';
-        }
+        // Store task data for use after modal is shown
+        // Handle both direct IDs and relationship objects
+        const taskData = {
+            id: task.id || '',
+            title: task.title || '',
+            description: task.description || '',
+            priorityId: task.priority_id !== null && task.priority_id !== undefined 
+                ? task.priority_id 
+                : (task.priority && task.priority.id ? task.priority.id : null),
+            categoryId: task.category_id !== null && task.category_id !== undefined 
+                ? task.category_id 
+                : (task.category && task.category.id ? task.category.id : null),
+            projectId: task.project_id !== null && task.project_id !== undefined 
+                ? task.project_id 
+                : (task.project && task.project.id ? task.project.id : null),
+            dueDate: task.due_date || null,
+            estimatedHours: task.estimated_hours !== null && task.estimated_hours !== undefined ? task.estimated_hours : '',
+            reminderTime: task.reminder_time || null,
+            isRecurring: task.is_recurring || false,
+            natureOfTask: task.nature_of_task || 'daily',
+            assignees: task.assignees ? task.assignees.map(a => ({
+                id: a.id,
+                name: a.name,
+                email: a.email || '',
+                role: a.role ? a.role.name : 'Employee'
+            })) : []
+        };
         
         // Load assignees
-        this.editSelectedAssignees = task.assignees ? task.assignees.map(a => ({
-            id: a.id,
-            name: a.name,
-            email: a.email || '',
-            role: a.role ? a.role.name : 'Employee'
-        })) : [];
-        this.editTempSelectedAssignees = [...this.editSelectedAssignees];
+        this.editSelectedAssignees = [...taskData.assignees];
+        this.editTempSelectedAssignees = [...taskData.assignees];
         this.updateEditSelectedAssigneesDisplay();
         
         // Show modal first
@@ -1016,48 +988,154 @@ class TaskTableManager {
         const editModal = new bootstrap.Modal(editModalElement);
         editModal.show();
         
-        // Wait for modal to be fully shown, then populate dropdowns and set values
+        // Wait for modal to be fully shown, then populate dropdowns and set ALL values
         editModalElement.addEventListener('shown.bs.modal', function populateAndSetValues() {
             // Remove listener to avoid multiple calls
             editModalElement.removeEventListener('shown.bs.modal', populateAndSetValues);
             
-            // Populate dropdowns
+            // Populate dropdowns first
             taskTableManager.populateEditModalDropdowns();
             
-            // Set dropdown values after they're populated
+            // Set ALL form values after dropdowns are populated
             setTimeout(() => {
-                // Convert IDs to strings for comparison (HTML select values are strings)
-                const projectIdStr = projectId ? String(projectId) : '';
-                const priorityIdStr = priorityId ? String(priorityId) : '';
-                const categoryIdStr = categoryId ? String(categoryId) : '';
+                // Set basic fields
+                const taskIdField = document.getElementById('editModalTaskId');
+                if (taskIdField) {
+                    taskIdField.value = taskData.id;
+                }
+                
+                const titleField = document.getElementById('editModalTaskTitle');
+                if (titleField) {
+                    titleField.value = taskData.title;
+                }
+                
+                const descriptionField = document.getElementById('editModalTaskDescription');
+                if (descriptionField) {
+                    descriptionField.value = taskData.description;
+                }
+                
+                // Set due_date - handle different date formats
+                const dueDateField = document.getElementById('editModalTaskDueDate');
+                if (dueDateField) {
+                    if (taskData.dueDate) {
+                        const dueDateStr = String(taskData.dueDate);
+                        // Extract date part if it includes time (YYYY-MM-DD HH:mm:ss -> YYYY-MM-DD)
+                        const datePart = dueDateStr.includes(' ') ? dueDateStr.split(' ')[0] : dueDateStr;
+                        // Also handle if it's a date object that was stringified
+                        const finalDate = datePart.split('T')[0];
+                        dueDateField.value = finalDate;
+                    } else {
+                        dueDateField.value = '';
+                    }
+                }
+                
+                // Set estimated_hours
+                const estimatedHoursField = document.getElementById('editModalTaskEstimatedHours');
+                if (estimatedHoursField) {
+                    estimatedHoursField.value = taskData.estimatedHours;
+                }
+                
+                // Set reminder_time
+                const reminderTimeField = document.getElementById('editModalTaskReminderTime');
+                if (reminderTimeField) {
+                    if (taskData.reminderTime) {
+                        try {
+                            const reminderDate = new Date(taskData.reminderTime);
+                            if (!isNaN(reminderDate.getTime())) {
+                                const formattedDate = reminderDate.toISOString().slice(0, 16);
+                                reminderTimeField.value = formattedDate;
+                            } else {
+                                reminderTimeField.value = '';
+                            }
+                        } catch (e) {
+                            console.error('Error formatting reminder time:', e);
+                            reminderTimeField.value = '';
+                        }
+                    } else {
+                        reminderTimeField.value = '';
+                    }
+                }
+                
+                // Set nature of task and recurrence frequency
+                const natureField = document.getElementById('editModalTaskNature');
+                const recurrenceField = document.getElementById('editModalTaskRecurrenceFrequency');
+                const recurrenceContainer = document.getElementById('editRecurrenceFrequencyContainer');
+                
+                if (natureField) {
+                    if (taskData.isRecurring) {
+                        natureField.value = 'recurring';
+                        if (recurrenceField) {
+                            recurrenceField.value = taskData.natureOfTask || 'daily';
+                            recurrenceField.setAttribute('required', 'required');
+                        }
+                        if (recurrenceContainer) {
+                            recurrenceContainer.style.display = 'block';
+                        }
+                    } else {
+                        natureField.value = 'one_time';
+                        if (recurrenceField) {
+                            recurrenceField.removeAttribute('required');
+                            recurrenceField.value = '';
+                        }
+                        if (recurrenceContainer) {
+                            recurrenceContainer.style.display = 'none';
+                        }
+                    }
+                }
+                
+                // Set dropdown values - convert IDs to strings for comparison
+                const projectIdStr = taskData.projectId ? String(taskData.projectId) : '';
+                const priorityIdStr = taskData.priorityId ? String(taskData.priorityId) : '';
+                const categoryIdStr = taskData.categoryId ? String(taskData.categoryId) : '';
                 
                 const projectSelect = document.getElementById('editModalTaskProjectId');
-                if (projectSelect && projectIdStr) {
-                    projectSelect.value = projectIdStr;
+                if (projectSelect) {
+                    if (projectIdStr) {
+                        projectSelect.value = projectIdStr;
+                        // Double-check the value was set
+                        if (projectSelect.value !== projectIdStr) {
+                            setTimeout(() => {
+                                projectSelect.value = projectIdStr;
+                            }, 100);
+                        }
+                    } else {
+                        projectSelect.value = '';
+                    }
                 }
                 
                 const prioritySelect = document.getElementById('editModalTaskPriority');
-                if (prioritySelect && priorityIdStr) {
-                    prioritySelect.value = priorityIdStr;
-                    // Double-check the value was set
-                    if (prioritySelect.value !== priorityIdStr) {
-                        setTimeout(() => {
-                            prioritySelect.value = priorityIdStr;
-                        }, 100);
+                if (prioritySelect) {
+                    if (priorityIdStr) {
+                        prioritySelect.value = priorityIdStr;
+                        // Double-check the value was set
+                        if (prioritySelect.value !== priorityIdStr) {
+                            setTimeout(() => {
+                                prioritySelect.value = priorityIdStr;
+                            }, 100);
+                        }
+                    } else {
+                        prioritySelect.value = '';
                     }
                 }
                 
                 const categorySelect = document.getElementById('editModalTaskCategory');
-                if (categorySelect && categoryIdStr) {
-                    categorySelect.value = categoryIdStr;
-                    // Double-check the value was set
-                    if (categorySelect.value !== categoryIdStr) {
-                        setTimeout(() => {
-                            categorySelect.value = categoryIdStr;
-                        }, 100);
+                if (categorySelect) {
+                    if (categoryIdStr) {
+                        categorySelect.value = categoryIdStr;
+                        // Double-check the value was set
+                        if (categorySelect.value !== categoryIdStr) {
+                            setTimeout(() => {
+                                categorySelect.value = categoryIdStr;
+                            }, 100);
+                        }
+                    } else {
+                        categorySelect.value = '';
                     }
                 }
-            }, 200);
+                
+                // Update assignees display
+                taskTableManager.updateEditSelectedAssigneesDisplay();
+            }, 300); // Increased timeout to ensure dropdowns are fully populated
         }, { once: true });
     }
 
