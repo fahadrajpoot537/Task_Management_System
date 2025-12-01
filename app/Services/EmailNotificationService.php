@@ -12,6 +12,7 @@ use App\Mail\TaskNoteCommentAdded;
 use App\Mail\TaskRevisitNotification;
 use App\Mail\TaskReminder;
 use App\Mail\TaskUpdated;
+use App\Mail\TaskApproved;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Support\Facades\Mail;
@@ -44,10 +45,91 @@ class EmailNotificationService
     }
 
     /**
+     * Send email notification to specific assignees only (for task updates)
+     */
+    public function sendTaskAssignedNotificationToUsers(Task $task, array $userIds)
+    {
+        if (empty($userIds)) {
+            return;
+        }
+        
+        // Ensure assignees are loaded
+        if (!$task->relationLoaded('assignees')) {
+            $task->load('assignees');
+        }
+        
+        // Get only the specified users
+        $recipients = \App\Models\User::whereIn('id', $userIds)->get();
+        $successfulRecipients = [];
+        $failedRecipients = [];
+        
+        foreach ($recipients as $recipient) {
+            try {
+                // Validate email address before sending
+                if (empty($recipient->email) || !filter_var($recipient->email, FILTER_VALIDATE_EMAIL)) {
+                    Log::warning('Invalid email address for task assigned notification', [
+                        'task_id' => $task->id,
+                        'recipient_id' => $recipient->id,
+                        'recipient_email' => $recipient->email,
+                        'recipient_name' => $recipient->name ?? 'Unknown'
+                    ]);
+                    $failedRecipients[] = [
+                        'email' => $recipient->email,
+                        'error' => 'Invalid email address format'
+                    ];
+                    continue;
+                }
+                
+                // For new assignees, they are being assigned the task themselves
+                // So they should receive the "Task Assigned to You" email regardless of their role
+                // (Even if they're a manager or admin, if they're being assigned, they get the employee email)
+                Mail::to($recipient->email)->send(new TaskAssignedToEmployee($task, 'New Task Assigned to You', $recipient));
+                
+                $successfulRecipients[] = $recipient->email;
+            } catch (\Exception $e) {
+                $failedRecipients[] = [
+                    'email' => $recipient->email ?? 'Unknown',
+                    'error' => $e->getMessage()
+                ];
+                
+                Log::error('Failed to send task assigned email to recipient', [
+                    'task_id' => $task->id,
+                    'recipient_id' => $recipient->id ?? 'Unknown',
+                    'recipient_email' => $recipient->email ?? 'Unknown',
+                    'recipient_name' => $recipient->name ?? 'Unknown',
+                    'error' => $e->getMessage(),
+                    'error_code' => method_exists($e, 'getCode') ? $e->getCode() : null
+                ]);
+            }
+        }
+        
+        if (!empty($successfulRecipients)) {
+            Log::info('Task assigned email sent to new assignees', [
+                'task_id' => $task->id,
+                'successful_recipients' => $successfulRecipients,
+                'failed_count' => count($failedRecipients)
+            ]);
+        }
+        
+        if (!empty($failedRecipients)) {
+            Log::error('Failed to send task assigned email to some new assignees', [
+                'task_id' => $task->id,
+                'failed_recipients' => $failedRecipients,
+                'successful_count' => count($successfulRecipients)
+            ]);
+        }
+    }
+
+    /**
      * Send email notification when a task is assigned
      */
     public function sendTaskAssignedNotification(Task $task)
     {
+        // Ensure assignees are loaded
+        if (!$task->relationLoaded('assignees')) {
+            $task->load('assignees');
+        }
+        
         $recipients = $this->getTaskAssignedRecipients($task);
         $successfulRecipients = [];
         $failedRecipients = [];
@@ -69,16 +151,36 @@ class EmailNotificationService
                     continue;
                 }
                 
+                // Determine which employee was assigned (for manager notifications)
+                $assignedEmployee = null;
+                $assigneeIds = $task->assignees ? $task->assignees->pluck('id')->toArray() : [];
+                
+                if (!empty($assigneeIds)) {
+                    // Check if recipient is one of the assignees
+                    $assignedEmployee = $task->assignees->firstWhere('id', $recipient->id);
+                    // If not, use the first assignee (for manager notifications)
+                    if (!$assignedEmployee) {
+                        $assignedEmployee = $task->assignees->first();
+                    }
+                } else {
+                    // Fallback to primary assignee
+                    $assignedEmployee = $task->assignedTo;
+                }
+                
+                // Check if recipient is an assignee
+                $isAssignee = in_array($recipient->id, $assigneeIds) || $recipient->id === $task->assigned_to_user_id;
+                
                 // Send different emails based on recipient role
                 if ($recipient->role && $recipient->role->name === 'super_admin') {
                     // SuperAdmin gets manager-style notification about employee assignment
-                    Mail::to($recipient->email)->send(new TaskAssignedToManager($task, 'Employee Assigned to Task'));
+                    Mail::to($recipient->email)->send(new TaskAssignedToManager($task, 'Employee Assigned to Task', $assignedEmployee));
                 } elseif ($recipient->role && $recipient->role->name === 'manager') {
                     // Manager gets notification about their employee's assignment
-                    Mail::to($recipient->email)->send(new TaskAssignedToManager($task, 'Your Employee Has Been Assigned a Task'));
-                } elseif ($recipient->id === $task->assigned_to_user_id) {
+                    Mail::to($recipient->email)->send(new TaskAssignedToManager($task, 'Your Employee Has Been Assigned a Task', $assignedEmployee));
+                } elseif ($isAssignee) {
                     // Assigned employee gets notification about their assignment
-                    Mail::to($recipient->email)->send(new TaskAssignedToEmployee($task, 'New Task Assigned to You'));
+                    // Pass the recipient so the email shows the correct name
+                    Mail::to($recipient->email)->send(new TaskAssignedToEmployee($task, 'New Task Assigned to You', $recipient));
                 } else {
                     // Fallback for other roles (admin, etc.)
                     Mail::to($recipient->email)->send(new TaskAssigned($task, 'Task Assignment Notification'));
@@ -247,8 +349,20 @@ class EmailNotificationService
         })->get();
         $recipients = $recipients->merge($admins);
         
-        // Notify assigned user if exists
-        if ($task->assignedTo) {
+        // Notify all assignees from the assignees relationship
+        if ($task->assignees && $task->assignees->count() > 0) {
+            foreach ($task->assignees as $assignee) {
+                $recipients->push($assignee);
+                
+                // Notify assignee's manager if exists
+                if ($assignee->manager) {
+                    $recipients->push($assignee->manager);
+                }
+            }
+        }
+        
+        // Also notify primary assigned user if different from assignees
+        if ($task->assignedTo && !$recipients->contains('id', $task->assignedTo->id)) {
             $recipients->push($task->assignedTo);
             
             // Notify assigned user's manager if exists
@@ -434,6 +548,51 @@ class EmailNotificationService
      * Get recipients for task reminder notifications
      */
     private function getTaskReminderRecipients(Task $task)
+    {
+        $recipients = collect();
+        
+        // Notify all assignees of the task
+        foreach ($task->assignees as $assignee) {
+            $recipients->push($assignee);
+        }
+        
+        // Also notify the legacy assigned user if different from assignees
+        if ($task->assignedTo && !$recipients->contains('id', $task->assignedTo->id)) {
+            $recipients->push($task->assignedTo);
+        }
+        
+        return $recipients->unique('id');
+    }
+
+    /**
+     * Send email notification when a task is approved
+     */
+    public function sendTaskApprovedNotification(Task $task, $adminComments = null, $adminName = null)
+    {
+        try {
+            $recipients = $this->getTaskApprovedRecipients($task);
+            
+            foreach ($recipients as $recipient) {
+                Mail::to($recipient->email)->send(new TaskApproved($task, $adminComments, $adminName));
+            }
+            
+            Log::info('Task approved email sent', [
+                'task_id' => $task->id,
+                'recipients' => $recipients->pluck('email')->toArray(),
+                'admin_comments' => $adminComments
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to send task approved email', [
+                'task_id' => $task->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Get recipients for task approved notifications
+     */
+    private function getTaskApprovedRecipients(Task $task)
     {
         $recipients = collect();
         

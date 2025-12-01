@@ -22,7 +22,8 @@ class TaskAssigned extends Mailable
      */
     public function __construct(Task $task, string $subject = 'New Task Assigned')
     {
-        $this->task = $task;
+        // Load relationships to ensure they're available in the email template
+        $this->task = $task->load(['priority', 'status', 'project', 'assignedTo', 'assignedBy']);
         $this->subject = $subject;
     }
 
@@ -41,13 +42,16 @@ class TaskAssigned extends Mailable
      */
     public function content(): Content
     {
+        // Get fresh instance and load relationships to ensure they're available
+        $task = $this->task->fresh(['priority', 'status', 'project', 'assignedTo', 'assignedBy']);
+        
         return new Content(
             view: 'emails.task-assigned',
             with: [
-                'task' => $this->task,
-                'assignedUser' => $this->task->assignedTo,
-                'assignedBy' => $this->task->assignedBy,
-                'project' => $this->task->project,
+                'task' => $task,
+                'assignedUser' => $task->assignedTo,
+                'assignedBy' => $task->assignedBy,
+                'project' => $task->project,
             ],
         );
     }
