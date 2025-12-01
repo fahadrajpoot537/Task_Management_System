@@ -74,17 +74,61 @@
                 <p><strong>Description:</strong><br>{{ $task->description }}</p>
             @endif
             
+            @if($task->project)
             <p><strong>Project:</strong> {{ $task->project->title }}</p>
+            @endif
+            
+            @if($task->priority)
             <p><strong>Priority:</strong> 
-                <span class="badge badge-{{ $task->priority }}">
-                    {{ ucfirst($task->priority) }}
+                    @php
+                        $priority = $task->priority;
+                        // Handle if priority is a JSON string
+                        if (is_string($priority)) {
+                            $priority = json_decode($priority, true);
+                        }
+                        // Get priority name and color
+                        if (is_array($priority)) {
+                            $priorityName = $priority['name'] ?? 'Medium';
+                            $priorityColor = strtolower($priority['color'] ?? 'medium');
+                        } elseif (is_object($priority)) {
+                            $priorityName = $priority->name ?? 'Medium';
+                            $priorityColor = strtolower($priority->color ?? 'medium');
+                        } else {
+                            $priorityName = 'Medium';
+                            $priorityColor = 'medium';
+                        }
+                    @endphp
+                    <span class="badge badge-{{ $priorityColor }}">
+                        {{ $priorityName }}
                 </span>
             </p>
+            @endif
+            
+            @if($task->status)
             <p><strong>Status:</strong> 
-                <span class="badge badge-{{ str_replace('_', '-', $task->status) }}">
-                    {{ ucfirst(str_replace('_', ' ', $task->status)) }}
+                    @php
+                        $status = $task->status;
+                        // Handle if status is a JSON string
+                        if (is_string($status)) {
+                            $status = json_decode($status, true);
+                        }
+                        // Get status name and color
+                        if (is_array($status)) {
+                            $statusName = $status['name'] ?? 'Pending';
+                            $statusColor = strtolower(str_replace(' ', '-', $status['color'] ?? 'pending'));
+                        } elseif (is_object($status)) {
+                            $statusName = $status->name ?? 'Pending';
+                            $statusColor = strtolower(str_replace(' ', '-', $status->color ?? 'pending'));
+                        } else {
+                            $statusName = 'Pending';
+                            $statusColor = 'pending';
+                        }
+                    @endphp
+                    <span class="badge badge-{{ $statusColor }}">
+                        {{ $statusName }}
                 </span>
             </p>
+            @endif
             
             @if($task->due_date)
                 <p><strong>Due Date:</strong> {{ $task->due_date->format('M d, Y') }}</p>

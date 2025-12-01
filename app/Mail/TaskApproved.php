@@ -10,21 +10,22 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class TaskAssignedToSuperAdmin extends Mailable
+class TaskApproved extends Mailable
 {
     use Queueable, SerializesModels;
 
     public $task;
-    public $subject;
+    public $adminComments;
+    public $adminName;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(Task $task, string $subject = 'Employee Assigned to Task')
+    public function __construct(Task $task, $adminComments = null, $adminName = null)
     {
-        // Load relationships to ensure they're available in the email template
-        $this->task = $task->load(['priority', 'status', 'project', 'assignedTo', 'assignedBy']);
-        $this->subject = $subject;
+        $this->task = $task;
+        $this->adminComments = $adminComments;
+        $this->adminName = $adminName;
     }
 
     /**
@@ -33,7 +34,7 @@ class TaskAssignedToSuperAdmin extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: $this->subject,
+            subject: 'Task Approved: ' . $this->task->title,
         );
     }
 
@@ -42,17 +43,8 @@ class TaskAssignedToSuperAdmin extends Mailable
      */
     public function content(): Content
     {
-        // Get fresh instance and load relationships to ensure they're available
-        $task = $this->task->fresh(['priority', 'status', 'project', 'assignedTo', 'assignedBy']);
-        
         return new Content(
-            view: 'emails.task-assigned-to-superadmin',
-            with: [
-                'task' => $task,
-                'assignedUser' => $task->assignedTo,
-                'assignedBy' => $task->assignedBy,
-                'project' => $task->project,
-            ],
+            view: 'emails.task-approved',
         );
     }
 
@@ -66,3 +58,4 @@ class TaskAssignedToSuperAdmin extends Mailable
         return [];
     }
 }
+

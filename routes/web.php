@@ -87,9 +87,55 @@ Route::middleware('auth')->group(function () {
     Route::get('/settings', \App\Livewire\Settings::class)->name('settings');
 
     // Tasks
-    Route::get('/tasks', \App\Livewire\Task\TaskTable::class)->name('tasks.index');
-    Route::get('/tasks/create', TaskCreate::class)->name('tasks.create');
-    Route::get('/tasks/{taskId}', TaskDetails::class)->name('tasks.details');
+    Route::prefix('/tasks')->name('tasks.')->group(function () {
+        // Task Table - Main index
+        Route::get('/', [\App\Http\Controllers\Ajax\Task\TaskTableController::class, 'index'])->name('index');
+        Route::get('/data', [\App\Http\Controllers\Ajax\Task\TaskTableController::class, 'getTasks'])->name('data');
+        Route::get('/dropdown-data', [\App\Http\Controllers\Ajax\Task\TaskTableController::class, 'getDropdownData'])->name('dropdown');
+        Route::post('/store', [\App\Http\Controllers\Ajax\Task\TaskTableController::class, 'createTask'])->name('store');
+        
+        // Bulk routes must come before {taskId} routes to avoid route conflicts
+        Route::post('/bulk/status', [\App\Http\Controllers\Ajax\Task\TaskTableController::class, 'bulkUpdateStatus'])->name('bulk.status');
+        Route::post('/bulk/priority', [\App\Http\Controllers\Ajax\Task\TaskTableController::class, 'bulkUpdatePriority'])->name('bulk.priority');
+        Route::post('/bulk/assignee', [\App\Http\Controllers\Ajax\Task\TaskTableController::class, 'bulkUpdateAssignee'])->name('bulk.assignee');
+        Route::post('/bulk/delete', [\App\Http\Controllers\Ajax\Task\TaskTableController::class, 'bulkDeleteTasks'])->name('bulk.delete');
+        
+        // Task Create (must come before {taskId} routes)
+        Route::get('/create', TaskCreate::class)->name('create');
+        
+        // Individual task routes
+        Route::get('/{taskId}', [\App\Http\Controllers\Ajax\Task\TaskTableController::class, 'getTask'])->name('get');
+        Route::put('/{taskId}', [\App\Http\Controllers\Ajax\Task\TaskTableController::class, 'updateTask'])->name('update');
+        Route::delete('/{taskId}', [\App\Http\Controllers\Ajax\Task\TaskTableController::class, 'deleteTask'])->name('delete');
+        Route::post('/{taskId}/status', [\App\Http\Controllers\Ajax\Task\TaskTableController::class, 'updateTaskStatus'])->name('status');
+        Route::post('/{taskId}/priority', [\App\Http\Controllers\Ajax\Task\TaskTableController::class, 'updateTaskPriority'])->name('priority');
+        Route::post('/{taskId}/category', [\App\Http\Controllers\Ajax\Task\TaskTableController::class, 'updateTaskCategory'])->name('category');
+        Route::post('/{taskId}/stop-recurring', [\App\Http\Controllers\Ajax\Task\TaskTableController::class, 'stopRecurringTask'])->name('stop-recurring');
+        Route::post('/{taskId}/clone', [\App\Http\Controllers\Ajax\Task\TaskTableController::class, 'cloneTask'])->name('clone');
+        Route::post('/{taskId}/approve', [\App\Http\Controllers\Ajax\Task\TaskTableController::class, 'approveTask'])->name('approve');
+        Route::post('/{taskId}/revisit', [\App\Http\Controllers\Ajax\Task\TaskTableController::class, 'revisitTask'])->name('revisit');
+
+        // Task Create AJAX routes
+        Route::get('/create/dropdown-data', [\App\Http\Controllers\Ajax\Task\TaskCreateController::class, 'getDropdownData'])->name('create.dropdown');
+        Route::post('/create/store', [\App\Http\Controllers\Ajax\Task\TaskCreateController::class, 'createTask'])->name('create.store');
+        Route::post('/create/priority', [\App\Http\Controllers\Ajax\Task\TaskCreateController::class, 'addNewPriority'])->name('create.priority');
+        Route::post('/create/category', [\App\Http\Controllers\Ajax\Task\TaskCreateController::class, 'addNewCategory'])->name('create.category');
+        Route::post('/create/status', [\App\Http\Controllers\Ajax\Task\TaskCreateController::class, 'addNewStatus'])->name('create.status');
+
+        // Task Details
+        Route::get('/{taskId}/details', [\App\Http\Controllers\Ajax\Task\TaskDetailsController::class, 'index'])->name('details');
+        Route::get('/{taskId}/details/data', [\App\Http\Controllers\Ajax\Task\TaskDetailsController::class, 'getTask'])->name('details.data');
+        Route::get('/{taskId}/details/statuses', [\App\Http\Controllers\Ajax\Task\TaskDetailsController::class, 'getStatuses'])->name('details.statuses');
+        Route::post('/{taskId}/details/status', [\App\Http\Controllers\Ajax\Task\TaskDetailsController::class, 'updateTaskStatus'])->name('details.status');
+        Route::post('/{taskId}/details/note', [\App\Http\Controllers\Ajax\Task\TaskDetailsController::class, 'addNote'])->name('details.note');
+        Route::post('/{taskId}/details/attachments', [\App\Http\Controllers\Ajax\Task\TaskDetailsController::class, 'addAttachments'])->name('details.attachments');
+        Route::delete('/{taskId}/details/attachments/{attachmentId}', [\App\Http\Controllers\Ajax\Task\TaskDetailsController::class, 'deleteAttachment'])->name('details.attachment.delete');
+        Route::post('/{taskId}/details/stop-recurring', [\App\Http\Controllers\Ajax\Task\TaskDetailsController::class, 'stopRecurringTask'])->name('details.stop-recurring');
+        Route::post('/{taskId}/details/comment', [\App\Http\Controllers\Ajax\Task\TaskDetailsController::class, 'addComment'])->name('details.comment');
+        Route::delete('/{taskId}/details/comments/{commentId}', [\App\Http\Controllers\Ajax\Task\TaskDetailsController::class, 'deleteComment'])->name('details.comment.delete');
+        Route::post('/{taskId}/details/approve', [\App\Http\Controllers\Ajax\Task\TaskDetailsController::class, 'approveTask'])->name('details.approve');
+        Route::post('/{taskId}/details/revisit', [\App\Http\Controllers\Ajax\Task\TaskDetailsController::class, 'revisitTask'])->name('details.revisit');
+    });
 
     // Attendance Routes
     Route::get('/attendance', AttendanceManager::class)->name('attendance');

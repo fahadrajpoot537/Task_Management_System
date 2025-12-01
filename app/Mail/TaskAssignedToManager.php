@@ -16,14 +16,17 @@ class TaskAssignedToManager extends Mailable
 
     public $task;
     public $subject;
+    public $employee;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(Task $task, string $subject = 'Your Employee Has Been Assigned a Task')
+    public function __construct(Task $task, string $subject = 'Your Employee Has Been Assigned a Task', $employee = null)
     {
-        $this->task = $task;
+        // Load relationships to ensure they're available in the email template
+        $this->task = $task->load(['priority', 'status', 'project', 'assignedTo', 'assignedBy', 'assignees']);
         $this->subject = $subject;
+        $this->employee = $employee;
     }
 
     /**
@@ -41,13 +44,20 @@ class TaskAssignedToManager extends Mailable
      */
     public function content(): Content
     {
+        // Get fresh instance and load relationships to ensure they're available
+        $task = $this->task->fresh(['priority', 'status', 'project', 'assignedTo', 'assignedBy', 'assignees']);
+        
+        // Use the employee if provided, otherwise fall back to primary assignee
+        // For manager emails, we want to show which employee was assigned
+        $assignedUser = $this->employee ?? $task->assignedTo;
+        
         return new Content(
             view: 'emails.task-assigned-to-manager',
             with: [
-                'task' => $this->task,
-                'assignedUser' => $this->task->assignedTo,
-                'assignedBy' => $this->task->assignedBy,
-                'project' => $this->task->project,
+                'task' => $task,
+                'assignedUser' => $assignedUser,
+                'assignedBy' => $task->assignedBy,
+                'project' => $task->project,
             ],
         );
     }
